@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Spelling Scavenger</title>
+   <script src="https://cdn.tailwindcss.com"></script>
+   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+   <style>
+       :root {
+           --game-width: 606px;
+           --game-height: 302px;
+           --neon-cyan: #0ff;
+           --neon-pink: #f0f;
+           --neon-green: #0f0;
+           --neon-red: #f00;
+       }
+       body {
+           background-color: #050510;
+           background-image: radial-gradient(circle at center, #1a1a2e 0%, #000 100%);
+           color: #fff;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           min-height: 100vh;
+           margin: 0;
+           font-family: 'Orbitron', sans-serif;
+           letter-spacing: 1px;
+       }
+       #game-container {
+           width: var(--game-width);
+           height: var(--game-height);
+           background-color: #000;
+           border: 2px solid var(--neon-cyan);
+           position: relative;
+           overflow: hidden;
+           box-shadow: 0 0 15px var(--neon-cyan), inset 0 0 10px var(--neon-cyan);
+       }
+       .entity {
+           position: absolute;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           transition: transform 0.1s linear;
+       }
+       #player {
+           width: 20px;
+           height: 20px;
+           background-color: var(--neon-cyan);
+           border-radius: 4px;
+           z-index: 20;
+           box-shadow: 0 0 12px var(--neon-cyan);
+       }
+       #player::after {
+           content: '👾';
+           font-size: 12px;
+       }
+       .rock {
+           width: 36px;
+           height: 36px;
+           background-color: #000;
+           border: 2px solid var(--neon-pink);
+           border-radius: 50%;
+           font-size: 20px;
+           font-weight: bold;
+           color: #ffffff;
+           cursor: pointer;
+           z-index: 10;
+           box-shadow: 0 0 8px var(--neon-pink), inset 0 0 4px var(--neon-pink);
+       }
+       .portal {
+           width: 24px;
+           height: 24px;
+           position: absolute;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           font-size: 10px;
+           font-weight: bold;
+           text-shadow: 0 0 4px currentColor;
+       }
+       #exit {
+           bottom: 0;
+           right: 0;
+           background-color: rgba(255, 0, 0, 0.2);
+           border-top: 2px solid var(--neon-red);
+           border-left: 2px solid var(--neon-red);
+           color: var(--neon-red);
+           border-top-left-radius: 8px;
+           box-shadow: 0 0 10px var(--neon-red);
+       }
+       #entrance {
+           top: 0;
+           left: 0;
+           background-color: rgba(0, 255, 0, 0.2);
+           border-bottom: 2px solid var(--neon-green);
+           border-right: 2px solid var(--neon-green);
+           color: var(--neon-green);
+           border-bottom-right-radius: 8px;
+           box-shadow: 0 0 10px var(--neon-green);
+       }
+       #enemy {
+           width: 20px;
+           height: 20px;
+           background-color: #000;
+           border: 2px solid var(--neon-red);
+           border-radius: 50%;
+           z-index: 15;
+           box-shadow: 0 0 15px var(--neon-red);
+       }
+       #enemy::after {
+           content: '💀';
+           font-size: 10px;
+           text-shadow: 0 0 5px var(--neon-red);
+       }
+       #center-timer {
+           position: absolute;
+           top: 50%;
+           left: 50%;
+           transform: translate(-50%, -50%);
+           font-size: 180px;
+           font-weight: 900;
+           color: rgba(204, 255, 0, 0.2);
+           text-shadow: 0 0 20px rgba(204, 255, 0, 0.5);
+           z-index: 5;
+           pointer-events: none;
+           user-select: none;
+       }
+       .time-warning {
+           color: rgba(255, 0, 0, 0.3) !important;
+           text-shadow: 0 0 30px rgba(255, 0, 0, 0.8) !important;
+       }
+       @keyframes shake {
+           0% { transform: translate(1px, 1px) rotate(0deg); }
+           10% { transform: translate(-1px, -2px) rotate(-1deg); }
+           20% { transform: translate(-3px, 0px) rotate(1deg); }
+           30% { transform: translate(3px, 2px) rotate(0deg); }
+           40% { transform: translate(1px, -1px) rotate(1deg); }
+           50% { transform: translate(-1px, 2px) rotate(-1deg); }
+           60% { transform: translate(-3px, 1px) rotate(0deg); }
+           70% { transform: translate(3px, 1px) rotate(-1deg); }
+           80% { transform: translate(-1px, -1px) rotate(1deg); }
+           90% { transform: translate(1px, 2px) rotate(0deg); }
+           100% { transform: translate(1px, -2px) rotate(-1deg); }
+       }
+       .shake-effect {
+           animation: shake 0.4s infinite cubic-bezier(.36,.07,.19,.97) both;
+       }
+       .star {
+           position: absolute;
+           background-color: #fff;
+           border-radius: 50%;
+           z-index: 1;
+           pointer-events: none;
+           animation: sparkle linear infinite;
+       }
+       @keyframes sparkle {
+           0%, 100% { opacity: 0.1; transform: scale(0.8); }
+           50% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 5px currentColor; }
+       }
+       @keyframes fadeLetter {
+           0%, 100% { color: #ffffff; }
+           50% { color: transparent; }
+       }
+       .fade-letter {
+           animation: fadeLetter 1.5s infinite ease-in-out;
+       }
+       #center-message {
+           position: absolute;
+           top: 50%;
+           left: 50%;
+           transform: translate(-50%, -50%);
+           font-size: 64px;
+           font-weight: 900;
+           text-align: center;
+           z-index: 50;
+           pointer-events: none;
+           width: 100%;
+           text-transform: uppercase;
+           letter-spacing: 4px;
+       }
+       .msg-win { color: var(--neon-green); text-shadow: 0 0 20px var(--neon-green), 0 0 40px var(--neon-green); }
+       .msg-lose { color: var(--neon-red); text-shadow: 0 0 20px var(--neon-red), 0 0 40px var(--neon-red); }
+       .laser {
+           position: absolute;
+           left: 0;
+           width: 100%;
+           height: 4px;
+           background-color: transparent;
+           z-index: 12;
+           transition: background-color 0.1s, box-shadow 0.1s;
+       }
+       .laser.active {
+           background-color: var(--neon-red);
+           box-shadow: 0 0 10px var(--neon-red), 0 0 20px var(--neon-red);
+       }
+       #setup-screen {
+           background: rgba(10, 10, 26, 0.9);
+           padding: 2rem;
+           border-radius: 1rem;
+           border: 1px solid var(--neon-cyan);
+           box-shadow: 0 0 20px var(--neon-cyan);
+           width: 320px;
+       }
+       .spelling-input {
+           background: #000;
+           border: 1px solid var(--neon-cyan);
+           color: var(--neon-cyan);
+           box-shadow: inset 0 0 5px var(--neon-cyan);
+       }
+       .spelling-input:focus {
+           outline: none;
+           box-shadow: 0 0 8px var(--neon-cyan), inset 0 0 5px var(--neon-cyan);
+       }
+       /* Style specifically for the difficulty dropdown */
+       select.spelling-input option {
+           background-color: #000;
+           color: var(--neon-cyan);
+       }
+       .neon-text-cyan {
+           color: var(--neon-cyan);
+           text-shadow: 0 0 8px var(--neon-cyan);
+       }
+       .neon-text-pink {
+           color: var(--neon-pink);
+           text-shadow: 0 0 8px var(--neon-pink);
+       }
+       .neon-text-green {
+           color: var(--neon-green);
+           text-shadow: 0 0 8px var(--neon-green);
+       }
+       .neon-text-red {
+           color: var(--neon-red);
+           text-shadow: 0 0 8px var(--neon-red);
+       }
+       .neon-btn {
+           background: transparent;
+           border: 1px solid var(--neon-cyan);
+           color: var(--neon-cyan);
+           box-shadow: 0 0 8px var(--neon-cyan), inset 0 0 4px var(--neon-cyan);
+           text-shadow: 0 0 4px var(--neon-cyan);
+           transition: all 0.1s;
+       }
+       .neon-btn:hover, .neon-btn:active {
+           background: var(--neon-cyan);
+           color: #000;
+           box-shadow: 0 0 15px var(--neon-cyan);
+       }
+       .neon-btn-primary {
+           border-color: var(--neon-pink);
+           color: var(--neon-pink);
+           box-shadow: 0 0 8px var(--neon-pink), inset 0 0 4px var(--neon-pink);
+           text-shadow: 0 0 4px var(--neon-pink);
+       }
+       .neon-btn-primary:hover, .neon-btn-primary:active {
+           background: var(--neon-pink);
+           color: #000;
+           box-shadow: 0 0 15px var(--neon-pink);
+       }
+   </style>
+</head>
+<body>
+
+
+   <!-- Setup Screen -->
+   <div id="setup-screen">
+       <h2 class="text-xl font-bold mb-4 neon-text-cyan">Spelling Words</h2>
+       <p class="text-xs text-cyan-200 mb-4 opacity-80 leading-relaxed">Enter up to 10 words. Leave blank and click "Start" to begin with current list.</p>
+      
+       <!-- Difficulty Dropdown -->
+       <div class="mb-4">
+           <label for="difficulty-select" class="block text-xs text-cyan-200 mb-1 uppercase tracking-wider">Difficulty:</label>
+           <select id="difficulty-select" class="w-full p-2 rounded spelling-input cursor-pointer">
+               <option value="10">Easy (10s per letter)</option>
+               <option value="8">Medium (8s per letter)</option>
+               <option value="6" selected>Hard (6s per letter)</option>
+           </select>
+       </div>
+
+
+       <div id="word-inputs" class="space-y-3 mb-5">
+           <input type="text" class="w-full p-2 rounded spelling-input word-input" placeholder="Word 1">
+       </div>
+       <div class="flex gap-3">
+           <button id="add-input-btn" class="neon-btn px-3 py-2 rounded text-sm font-bold">Add Word</button>
+           <button id="start-game-btn" class="neon-btn-primary flex-1 py-2 rounded font-bold uppercase tracking-wider">Start Game</button>
+       </div>
+   </div>
+
+
+   <!-- Game Screen -->
+   <div id="game-ui" class="hidden flex flex-col items-center w-full max-w-xl">
+       <div class="flex justify-between w-full mb-1 px-1 font-bold text-sm neon-text-cyan">
+           <span id="round-disp">Round 1</span>
+           <span id="time-disp" class="hidden">Time: ∞</span>
+       </div>
+       <div id="msg-area" class="mb-2 font-bold neon-text-pink h-6 uppercase tracking-wider text-center w-full"></div>
+       <div id="game-container">
+           <div id="stars-layer"></div>
+           <div id="lasers-layer"></div>
+           <div id="center-timer" class="hidden"></div>
+           <div id="center-message" class="hidden"></div>
+           <div id="entrance" class="portal">IN</div>
+           <div id="exit" class="portal">OUT</div>
+           <div id="player" class="entity"></div>
+           <div id="enemy" class="entity hidden"></div>
+           <div id="rocks-layer"></div>
+       </div>
+       <div class="mt-2 text-[10px] text-cyan-200 opacity-80 text-center uppercase tracking-wider">
+           Arrows/D-Pad to Walk • 'A' to Pick/Drop<br>
+           Arrange Left->Right OR Top->Bottom, then hit Exit!
+       </div>
+
+
+       <!-- Mobile Controls -->
+       <div id="mobile-controls" class="mt-5 flex gap-6 select-none touch-none">
+           <div class="grid grid-cols-3 gap-2">
+               <div></div>
+               <button id="btn-up" class="w-12 h-12 rounded-lg font-bold text-xl neon-btn">↑</button>
+               <div></div>
+               <button id="btn-left" class="w-12 h-12 rounded-lg font-bold text-xl neon-btn">←</button>
+               <button id="btn-down" class="w-12 h-12 rounded-lg font-bold text-xl neon-btn">↓</button>
+               <button id="btn-right" class="w-12 h-12 rounded-lg font-bold text-xl neon-btn">→</button>
+           </div>
+           <div class="flex items-center justify-center pl-4">
+               <button id="btn-a" class="w-16 h-16 rounded-full font-bold text-2xl neon-btn-primary active:translate-y-1">A</button>
+           </div>
+       </div>
+   </div>
+
+
+   <script>
+       const setupScreen = document.getElementById('setup-screen');
+       const gameUI = document.getElementById('game-ui');
+       const gameContainer = document.getElementById('game-container');
+       const rocksLayer = document.getElementById('rocks-layer');
+       const playerEl = document.getElementById('player');
+       const msgArea = document.getElementById('msg-area');
+       const addBtn = document.getElementById('add-input-btn');
+       const startBtn = document.getElementById('start-game-btn');
+       const roundDisp = document.getElementById('round-disp');
+       const timeDisp = document.getElementById('time-disp');
+       const centerTimer = document.getElementById('center-timer');
+       const enemyEl = document.getElementById('enemy');
+       const starsLayer = document.getElementById('stars-layer');
+       const lasersLayer = document.getElementById('lasers-layer');
+       const centerMsg = document.getElementById('center-message');
+      
+       const GAME_WIDTH = 606;
+       const GAME_HEIGHT = 302;
+       const PLAYER_SIZE = 20;
+       const SPEED = 3;
+
+
+       let words = [];
+       let currentWordIndex = 0;
+       let player = { x: 5, y: 5, vx: 0, vy: 0, carrying: null };
+       let rocks = [];
+       let keys = {};
+       let gameActive = false;
+
+
+       let currentRound = 1;
+       let timeRemaining = 0;
+       let timePerLetter = 6;
+       let enemySpeedMultiplier = 0.75; // Default for Hard
+       let lastTime = 0;
+       let enemyState = { x: 100, y: 100, vx: 1.5, vy: 1.5, active: false };
+       let isTransitioning = false;
+
+
+       let hasLasers = false;
+       let laserTimer = 0;
+       let lasersActive = false;
+       const laserPositions = [75, 150, 225];
+
+
+       // --- Stars Background Logic ---
+       function initStars() {
+           const numStars = 60;
+           for (let i = 0; i < numStars; i++) {
+               const star = document.createElement('div');
+               star.className = 'star';
+               const size = Math.random() * 2 + 1; // 1px to 3px
+               star.style.width = `${size}px`;
+               star.style.height = `${size}px`;
+               star.style.left = `${Math.random() * (GAME_WIDTH - 5)}px`;
+               star.style.top = `${Math.random() * (GAME_HEIGHT - 5)}px`;
+               star.style.animationDuration = `${Math.random() * 3 + 1.5}s`;
+               star.style.animationDelay = `${Math.random() * 2}s`;
+              
+               if (Math.random() > 0.8) {
+                   star.style.color = 'var(--neon-cyan)';
+                   star.style.backgroundColor = 'var(--neon-cyan)';
+               } else if (Math.random() > 0.9) {
+                   star.style.color = 'var(--neon-pink)';
+                   star.style.backgroundColor = 'var(--neon-pink)';
+               } else {
+                   star.style.color = '#fff';
+               }
+              
+               starsLayer.appendChild(star);
+           }
+       }
+       initStars();
+
+
+       // --- Setup / Reset Logic ---
+
+
+       function resetToSetup() {
+           gameActive = false;
+           isTransitioning = false;
+           gameUI.classList.add('hidden');
+           setupScreen.classList.remove('hidden');
+           centerMsg.className = 'hidden';
+          
+           // Reset input fields to a single blank entry
+           document.getElementById('word-inputs').innerHTML = '<input type="text" class="w-full p-2 rounded spelling-input word-input" placeholder="Word 1">';
+           words = [];
+           msgArea.innerText = "";
+       }
+
+
+       addBtn.onclick = () => {
+           const inputs = document.querySelectorAll('#word-inputs input');
+           if (inputs.length < 10) {
+               const input = document.createElement('input');
+               input.type = 'text';
+               input.className = 'w-full p-2 rounded spelling-input word-input';
+               input.placeholder = `Word ${inputs.length + 1}`;
+               document.getElementById('word-inputs').appendChild(input);
+           }
+       };
+
+
+       startBtn.onclick = () => {
+           const inputs = document.querySelectorAll('#word-inputs input');
+           words = Array.from(inputs)
+               .map(i => i.value.trim().toUpperCase())
+               .filter(w => w.length > 0);
+          
+           if (words.length === 0) {
+               words = ["APPLE", "DOG", "STAR"]; // Default if empty
+           }
+
+
+           const diffSelect = document.getElementById('difficulty-select');
+           timePerLetter = parseInt(diffSelect.value, 10) || 6;
+          
+           // Set Enemy Speed Based on Difficulty
+           // Easy: 0.25, Hard: 0.75, Medium: 0.50
+           if (timePerLetter === 10) {
+               enemySpeedMultiplier = 0.25;  // Easy (Half of previous 0.5)
+           } else if (timePerLetter === 8) {
+               enemySpeedMultiplier = 0.50;  // Medium (Halfway between 0.25 and 0.75)
+           } else {
+               enemySpeedMultiplier = 0.75;  // Hard
+           }
+
+
+           currentRound = 1;
+           currentWordIndex = 0;
+           setupScreen.classList.add('hidden');
+           gameUI.classList.remove('hidden');
+          
+           requestAnimationFrame((t) => {
+               lastTime = t;
+               initLevel();
+               gameActive = true;
+               gameLoop(t);
+           });
+       };
+
+
+       // --- Game Logic ---
+
+
+       function initLevel() {
+           const word = words[currentWordIndex];
+           msgArea.innerText = `Spell: ${word}`;
+           roundDisp.innerText = `Round ${currentRound}`;
+          
+           if (currentRound >= 2) {
+               timeRemaining = word.length * timePerLetter;
+               timeDisp.classList.remove('hidden');
+               timeDisp.innerText = `Time: ${Math.ceil(timeRemaining)}s`;
+               timeDisp.className = 'neon-text-cyan'; // reset color
+               centerTimer.classList.remove('hidden');
+               centerTimer.innerText = Math.ceil(timeRemaining);
+               centerTimer.classList.remove('time-warning');
+               gameContainer.classList.remove('shake-effect');
+           } else {
+               timeDisp.classList.add('hidden');
+               centerTimer.classList.add('hidden');
+               gameContainer.classList.remove('shake-effect');
+           }
+
+
+           if (currentRound === 3 || currentRound === 4 || currentRound >= 6) {
+               enemyEl.classList.remove('hidden');
+               enemyState.active = true;
+               enemyState.x = 5; // Bottom left start
+               enemyState.y = GAME_HEIGHT - 25;
+               enemyState.vx = 0;
+               enemyState.vy = 0;
+           } else {
+               enemyEl.classList.add('hidden');
+               enemyState.active = false;
+           }
+
+
+           hasLasers = (currentRound === 5 || currentRound >= 6);
+           lasersLayer.innerHTML = '';
+           if (hasLasers) {
+               laserPositions.forEach(y => {
+                   const l = document.createElement('div');
+                   l.className = 'laser';
+                   l.style.top = `${y}px`;
+                   lasersLayer.appendChild(l);
+               });
+               laserTimer = 0;
+               lasersActive = false;
+           }
+
+
+           rocksLayer.innerHTML = '';
+           rocks = [];
+           player.carrying = null;
+           player.x = 5;
+           player.y = 5;
+
+
+           // Create rocks for each letter
+           for (let i = 0; i < word.length; i++) {
+               const char = word[i];
+               const rock = {
+                   id: i,
+                   char: char,
+                   x: Math.random() * (GAME_WIDTH - 60) + 20,
+                   y: Math.random() * (GAME_HEIGHT - 60) + 20,
+                   el: document.createElement('div')
+               };
+               rock.el.className = 'entity rock';
+              
+               // Add fade effect for Level 4 and 6
+               if (currentRound === 4 || currentRound >= 6) {
+                   rock.el.classList.add('fade-letter');
+               }
+              
+               rock.el.innerText = char;
+               rocksLayer.appendChild(rock.el);
+               rocks.push(rock);
+           }
+           updateEntityPositions();
+       }
+
+
+       function updateEntityPositions() {
+           playerEl.style.transform = `translate(${player.x}px, ${player.y}px)`;
+           rocks.forEach(r => {
+               r.el.style.transform = `translate(${r.x}px, ${r.y}px)`;
+           });
+       }
+
+
+       window.addEventListener('keydown', e => {
+           keys[e.key.toLowerCase()] = true;
+           if (e.key.toLowerCase() === 'a') handleAction();
+       });
+       window.addEventListener('keyup', e => {
+           keys[e.key.toLowerCase()] = false;
+       });
+
+
+       // Mobile Controls Binding
+       function setupButton(id, key) {
+           const btn = document.getElementById(id);
+           if(!btn) return;
+           const press = (e) => { e.preventDefault(); keys[key] = true; if(key === 'a') handleAction(); };
+           const release = (e) => { e.preventDefault(); keys[key] = false; };
+           btn.addEventListener('touchstart', press, {passive: false});
+           btn.addEventListener('touchend', release, {passive: false});
+           btn.addEventListener('mousedown', press);
+           btn.addEventListener('mouseup', release);
+           btn.addEventListener('mouseleave', release);
+       }
+
+
+       setupButton('btn-up', 'arrowup');
+       setupButton('btn-down', 'arrowdown');
+       setupButton('btn-left', 'arrowleft');
+       setupButton('btn-right', 'arrowright');
+       setupButton('btn-a', 'a');
+
+
+       function handleAction() {
+           if (player.carrying) {
+               // Drop
+               player.carrying = null;
+           } else {
+               // Pick up - find closest rock
+               const reachableRock = rocks.find(r => {
+                   const dx = (player.x + PLAYER_SIZE/2) - (r.x + 18);
+                   const dy = (player.y + PLAYER_SIZE/2) - (r.y + 18);
+                   return Math.sqrt(dx*dx + dy*dy) < 30;
+               });
+               if (reachableRock) {
+                   player.carrying = reachableRock;
+               }
+           }
+       }
+
+
+       function checkWin() {
+           const targetWord = words[currentWordIndex];
+          
+           // Determine if the word is placed horizontally or vertically
+           const xs = rocks.map(r => r.x);
+           const ys = rocks.map(r => r.y);
+           const xSpread = Math.max(...xs) - Math.min(...xs);
+           const ySpread = Math.max(...ys) - Math.min(...ys);
+
+
+           // Sort left-to-right OR top-to-bottom based on how they spread it
+           const sortedRocks = [...rocks].sort((a, b) => {
+               return xSpread >= ySpread ? (a.x - b.x) : (a.y - b.y);
+           });
+           const spelled = sortedRocks.map(r => r.char).join('');
+          
+           if (spelled === targetWord) {
+               gameContainer.classList.remove('shake-effect');
+               centerTimer.classList.add('hidden');
+
+
+               currentWordIndex++;
+               isTransitioning = true;
+               if (currentWordIndex >= words.length) {
+                   currentRound++;
+                   if (currentRound > 6) {
+                       centerMsg.innerText = "YOU WON!";
+                       centerMsg.className = 'msg-win';
+                       msgArea.innerText = "";
+                       gameActive = false; // Freeze the game
+                       setTimeout(() => {
+                           resetToSetup();
+                       }, 3000);
+                   } else {
+                       currentWordIndex = 0;
+                       msgArea.innerText = `Round ${currentRound} starting!`;
+                       setTimeout(() => {
+                           if(gameActive) { isTransitioning = false; initLevel(); }
+                       }, 2000);
+                   }
+               } else {
+                   setTimeout(() => {
+                       if(gameActive) { isTransitioning = false; initLevel(); }
+                   }, 500); // small pause between words
+               }
+           } else {
+               isTransitioning = true;
+               msgArea.innerText = `Spelled: ${spelled}. Try again!`;
+               player.x -= 15; // Bump back so they don't spam the exit
+               player.y -= 15;
+               setTimeout(() => {
+                   if(gameActive) {
+                       msgArea.innerText = `Spell: ${words[currentWordIndex]}`;
+                       isTransitioning = false;
+                   }
+               }, 2000);
+           }
+       }
+
+
+       function gameLoop(timestamp) {
+           if (!gameActive) return;
+
+
+           const dt = (timestamp - lastTime) / 1000;
+           lastTime = timestamp;
+
+
+           // Timer logic
+           if (currentRound >= 2 && timeRemaining > 0 && !isTransitioning) {
+               timeRemaining -= dt;
+               if (timeRemaining <= 0) {
+                   timeRemaining = 0;
+                   timeDisp.className = 'neon-text-red';
+                   gameContainer.classList.remove('shake-effect');
+                   centerTimer.classList.add('hidden');
+                  
+                   // Game Over triggering
+                   isTransitioning = true;
+                   gameActive = false; // Stop the player and enemy from moving
+                   centerMsg.innerText = "GAME OVER";
+                   centerMsg.className = 'msg-lose';
+                   msgArea.innerText = "";
+                  
+                   setTimeout(() => {
+                       resetToSetup();
+                   }, 3000);
+
+
+               } else {
+                   centerTimer.innerText = Math.ceil(timeRemaining);
+                   if (timeRemaining <= 5) {
+                       gameContainer.classList.add('shake-effect');
+                       centerTimer.classList.add('time-warning');
+                   }
+               }
+               timeDisp.innerText = `Time: ${Math.ceil(timeRemaining)}s`;
+           }
+
+
+           // Movement
+           let moveX = 0;
+           let moveY = 0;
+           if (keys['arrowup'] || keys['w']) moveY -= SPEED;
+           if (keys['arrowdown'] || keys['s']) moveY += SPEED;
+           if (keys['arrowleft']) moveX -= SPEED;
+           if (keys['arrowright']) moveX += SPEED;
+
+
+           player.x = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, player.x + moveX));
+           player.y = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, player.y + moveY));
+
+
+           if (player.carrying) {
+               player.carrying.x = player.x - 8;
+               player.carrying.y = player.y - 8;
+           }
+
+
+           // Lasers logic
+           if (hasLasers && !isTransitioning) {
+               laserTimer += dt;
+               if (laserTimer >= 1.5) {
+                   laserTimer = 0;
+                   lasersActive = !lasersActive;
+                   const laserEls = document.querySelectorAll('.laser');
+                   laserEls.forEach(l => lasersActive ? l.classList.add('active') : l.classList.remove('active'));
+               }
+
+
+               if (lasersActive) {
+                   for (let y of laserPositions) {
+                       // Player height is 20px, laser is 4px
+                       if (player.y < y + 4 && player.y + 20 > y) {
+                           player.x = 5;
+                           player.y = 5;
+                           if (player.carrying) player.carrying = null;
+                          
+                           enemyState.x = 5;
+                           enemyState.y = GAME_HEIGHT - 25;
+
+
+                           msgArea.innerText = "Zap! Watch the lasers!";
+                           setTimeout(() => {
+                               if (gameActive && msgArea.innerText === "Zap! Watch the lasers!") {
+                                   msgArea.innerText = `Spell: ${words[currentWordIndex]}`;
+                               }
+                           }, 1000);
+                           break; // Only trigger collision once per frame
+                       }
+                   }
+               }
+           }
+
+
+           // Enemy logic
+           if (enemyState.active) {
+               // Chase player based on chosen difficulty multiplier
+               const dx = player.x - enemyState.x;
+               const dy = player.y - enemyState.y;
+               const dist = Math.sqrt(dx * dx + dy * dy);
+
+
+               if (dist > 0) {
+                   const enemySpeed = SPEED * enemySpeedMultiplier;
+                   enemyState.vx = (dx / dist) * enemySpeed;
+                   enemyState.vy = (dy / dist) * enemySpeed;
+               }
+
+
+               enemyState.x += enemyState.vx;
+               enemyState.y += enemyState.vy;
+
+
+               enemyEl.style.transform = `translate(${enemyState.x}px, ${enemyState.y}px)`;
+
+
+               // Collision with player
+               const pDx = (player.x + 10) - (enemyState.x + 10);
+               const pDy = (player.y + 10) - (enemyState.y + 10);
+               if (Math.sqrt(pDx*pDx + pDy*pDy) < 18) {
+                   player.x = 5;
+                   player.y = 5;
+                   if (player.carrying) player.carrying = null;
+                  
+                   // Reset enemy to bottom-left starting corner
+                   enemyState.x = 5;
+                   enemyState.y = GAME_HEIGHT - 25;
+
+
+                   msgArea.innerText = "Ouch! Watch out!";
+                   setTimeout(() => {
+                       if (gameActive && msgArea.innerText === "Ouch! Watch out!") {
+                           msgArea.innerText = `Spell: ${words[currentWordIndex]}`;
+                       }
+                   }, 1000);
+               }
+           }
+
+
+           // Check Exit Collision
+           if (player.x > GAME_WIDTH - 30 && player.y > GAME_HEIGHT - 30 && !isTransitioning) {
+               checkWin();
+           }
+
+
+           updateEntityPositions();
+           if (gameActive) {
+               requestAnimationFrame(gameLoop);
+           }
+       }
+   </script>
+</body>
+</html>
+
