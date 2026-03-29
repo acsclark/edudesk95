@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+   <title>Neon Spelling Tetris</title>
+   <script src="https://cdn.tailwindcss.com"></script>
+   <style>
+       @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+
+       :root {
+           --neon-blue: #00f3ff;
+           --neon-pink: #ff00ff;
+           --neon-green: #39ff14;
+           --neon-red: #ff3131;
+       }
+
+
+       body {
+           background-color: #050505;
+           color: white;
+           font-family: 'Orbitron', sans-serif;
+           overflow: hidden;
+           touch-action: none;
+           display: flex;
+           flex-direction: row;
+           align-items: center;
+           justify-content: center;
+           height: 100vh;
+           margin: 0;
+           padding: 5mm 0;
+           box-sizing: border-box;
+       }
+
+
+       #game-layout {
+           display: flex;
+           align-items: center;
+           gap: 15px;
+       }
+
+
+       #game-container {
+           position: relative;
+           width: 324px;
+           height: 580px;
+           box-sizing: border-box;
+           background: rgba(10, 10, 20, 0.9);
+           border: 2px solid var(--neon-blue);
+           box-shadow: 0 0 20px var(--neon-blue), inset 0 0 15px rgba(0, 243, 255, 0.1);
+           border-radius: 4px;
+           overflow: hidden;
+       }
+
+
+       #board {
+           position: relative;
+           width: 320px;
+           height: 576px;
+       }
+
+
+       .grid-cell {
+           width: 32px;
+           height: 32px;
+           border: 1px solid rgba(0, 243, 255, 0.1);
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           font-weight: 900;
+           font-size: 1.1rem;
+           position: absolute;
+           box-sizing: border-box;
+           text-shadow: 0 0 5px currentColor;
+       }
+
+
+       .active-block {
+           background: rgba(255, 0, 255, 0.25);
+           border: 1.5px solid var(--neon-pink);
+           color: var(--neon-pink);
+           box-shadow: 0 0 10px var(--neon-pink);
+           z-index: 20;
+       }
+
+
+       .locked-block {
+           background: rgba(0, 243, 255, 0.2);
+           border: 1.5px solid var(--neon-blue);
+           color: var(--neon-blue);
+           box-shadow: 0 0 8px var(--neon-blue);
+           z-index: 10;
+       }
+
+
+       /* Blocks that were dropped safely but aren't part of the target */
+       .junk-block {
+           background: rgba(255, 255, 255, 0.05);
+           border: 1.5px solid rgba(255, 255, 255, 0.2);
+           color: rgba(255, 255, 255, 0.4);
+           z-index: 5;
+       }
+
+
+       .fixed-block {
+           background: #330000;
+           border: 1.5px solid var(--neon-red);
+           color: var(--neon-red);
+           box-shadow: inset 0 0 12px rgba(255,0,0,0.6);
+       }
+
+
+       .ghost-letter {
+           color: rgba(57, 255, 20, 0.5);
+           border: 1.5px dashed rgba(57, 255, 20, 0.4);
+           font-size: 1rem;
+           background: rgba(57, 255, 20, 0.08);
+           z-index: 1;
+       }
+
+
+       #score-overlay {
+           position: absolute;
+           top: 50%;
+           left: 50%;
+           transform: translate(-50%, -50%);
+           font-size: 9rem;
+           font-weight: 900;
+           color: rgba(255, 255, 255, 0.15);
+           pointer-events: none;
+           z-index: 5;
+           letter-spacing: -5px;
+       }
+
+
+       #target-display {
+           position: absolute;
+           top: 10px;
+           left: 0;
+           width: 100%;
+           text-align: center;
+           color: var(--neon-green);
+           font-size: 0.9rem;
+           text-transform: uppercase;
+           letter-spacing: 2px;
+           text-shadow: 0 0 8px var(--neon-green);
+           z-index: 30;
+       }
+
+
+       .input-overlay {
+           position: absolute;
+           inset: 0;
+           background: rgba(0, 0, 0, 0.98);
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+           justify-content: center;
+           z-index: 100;
+           padding: 20px;
+       }
+
+
+       #setup-screen input {
+           color: #000 !important;
+           background-color: #fff !important;
+           padding: 12px;
+           width: 85%;
+           margin-bottom: 10px;
+           font-family: 'Orbitron', sans-serif;
+           font-size: 1rem;
+           border: none;
+           text-align: center;
+       }
+
+
+       .word-list-container {
+           width: 85%;
+           max-height: 150px;
+           overflow-y: auto;
+           margin-bottom: 20px;
+           border: 1px solid rgba(0, 243, 255, 0.3);
+           background: rgba(255, 255, 255, 0.05);
+           padding: 10px;
+           display: flex;
+           flex-wrap: wrap;
+           gap: 8px;
+           justify-content: center;
+       }
+
+
+       .word-tag {
+           background: var(--neon-blue);
+           color: black;
+           padding: 2px 8px;
+           border-radius: 4px;
+           font-size: 0.75rem;
+           font-weight: bold;
+           text-transform: uppercase;
+       }
+
+
+       .btn-neon {
+           border: 2px solid var(--neon-blue);
+           color: var(--neon-blue);
+           background: transparent;
+           padding: 12px 24px;
+           font-size: 1rem;
+           text-transform: uppercase;
+           cursor: pointer;
+           box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+       }
+
+
+       .controls-side {
+           display: flex;
+           flex-direction: column;
+           gap: 12px;
+           justify-content: center;
+       }
+
+
+       .ctrl-btn {
+           background: rgba(255, 255, 255, 0.08);
+           border: 2px solid var(--neon-blue);
+           width: 65px;
+           height: 65px;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           border-radius: 8px;
+           font-size: 1.5rem;
+           color: var(--neon-blue);
+           cursor: pointer;
+           box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+       }
+
+
+       .ctrl-btn:active {
+           background: var(--neon-blue);
+           color: black;
+       }
+
+
+       .drop-btn {
+           height: 180px;
+           font-size: 1.1rem;
+           writing-mode: vertical-lr;
+           text-orientation: mixed;
+           transform: rotate(180deg);
+       }
+
+
+       .flash-screen {
+           animation: flash 0.3s ease-out;
+       }
+       @keyframes flash {
+           0% { background: rgba(255,255,255,0.5); }
+           100% { background: transparent; }
+       }
+   </style>
+</head>
+<body>
+
+
+   <div id="game-layout">
+       <div id="game-container">
+           <div id="target-display">INITIATING...</div>
+           <div id="score-overlay">0</div>
+          
+           <div id="setup-screen" class="input-overlay">
+               <h2 class="text-lg mb-4 tracking-widest text-blue-400 font-bold">WORD_UPLOADER</h2>
+               <input type="text" id="word-input" placeholder="TYPE WORD..." autocomplete="off">
+               <div id="word-list" class="word-list-container"></div>
+               <p id="word-count" class="mb-6 text-sm opacity-60">UPLOADS: 0/10</p>
+               <button id="start-btn" class="btn-neon">EXECUTE</button>
+           </div>
+
+
+           <div id="game-over-screen" class="input-overlay hidden">
+               <h2 class="text-3xl text-red-500 mb-4 font-black">FAILURE</h2>
+               <p class="text-lg mb-8 opacity-70">SCORE: <span id="final-score">0</span></p>
+               <button onclick="location.reload()" class="btn-neon">REBOOT</button>
+           </div>
+
+
+           <div id="board"></div>
+       </div>
+
+
+       <div class="controls-side">
+           <button class="ctrl-btn" id="ctrl-rot">↻</button>
+           <button class="ctrl-btn" id="ctrl-left">←</button>
+           <button class="ctrl-btn" id="ctrl-right">→</button>
+           <button class="ctrl-btn drop-btn" id="ctrl-down">DESCEND</button>
+       </div>
+   </div>
+
+
+   <script>
+       const COLS = 10;
+       const ROWS = 18;
+       const CELL_W = 32;
+      
+       let spellingList = [];
+       let board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+       let ghostBoard = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+       let currentPiece = null;
+       let gameActive = false;
+       let score = 0;
+       let level = 1;
+       let dropCounter = 0;
+       let dropInterval = 1000;
+       let lastTime = 0;
+      
+       let targetWord = "";
+       let ghostRowIndex = ROWS - 1;
+
+
+       const boardEl = document.getElementById('board');
+       const setupScreen = document.getElementById('setup-screen');
+       const wordInput = document.getElementById('word-input');
+       const wordListEl = document.getElementById('word-list');
+       const startBtn = document.getElementById('start-btn');
+       const wordCountEl = document.getElementById('word-count');
+       const scoreOverlay = document.getElementById('score-overlay');
+       const targetDisplay = document.getElementById('target-display');
+       const gameContainer = document.getElementById('game-container');
+
+
+       const SHAPES = [
+           [[1, 1, 1, 1]], [[1, 1, 1], [0, 0, 1]], [[1, 1, 1], [1, 0, 0]],
+           [[1, 1], [1, 1]], [[0, 1, 1], [1, 1, 0]], [[0, 1, 0], [1, 1, 1]], [[1, 1, 0], [0, 1, 1]]
+       ];
+
+
+       const BAD_WORDS = ["FUCK", "SHIT", "BITCH", "ASS", "ASSHOLE", "CUNT", "DICK", "COCK", "PUSSY", "WHORE", "SLUT", "FAG", "FAGGOT", "NIGGA", "NIGGER", "BASTARD", "CUM", "PORN", "SEX", "TITS", "PENIS", "VAGINA", "BOOBS", "ANAL", "DILDO", "BULLSHIT", "MOTHERFUCKER", "DUMBASS", "JACKASS", "WANKER", "CROCK"];
+
+
+       wordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addWord(); });
+       startBtn.addEventListener('click', () => { if (spellingList.length > 0) startGame(); });
+
+
+       function addWord() {
+           const val = wordInput.value.trim().toUpperCase();
+           if (val === "" && spellingList.length > 0) { startGame(); return; }
+          
+           // Profanity Filter Check
+           if (BAD_WORDS.includes(val)) {
+               wordInput.value = "";
+               wordInput.placeholder = "BLOCKED: PROFANITY";
+               setTimeout(() => wordInput.placeholder = "TYPE WORD...", 2000);
+               return;
+           }
+
+
+           if (val !== "" && spellingList.length < 10) {
+               spellingList.push(val);
+               wordInput.value = "";
+               wordCountEl.innerText = `UPLOADS: ${spellingList.length}/10`;
+               const tag = document.createElement('span');
+               tag.className = 'word-tag';
+               tag.innerText = val;
+               wordListEl.appendChild(tag);
+           }
+       }
+
+
+       function startGame() {
+           setupScreen.classList.add('hidden');
+           gameActive = true;
+           pickNextWord();
+           spawnPiece();
+           requestAnimationFrame(gameLoop);
+       }
+
+
+       function updateGhostBoard() {
+           ghostBoard = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+           const wordLen = targetWord.length;
+           const startGap = Math.floor((COLS - wordLen) / 2);
+          
+           let topPenaltyRow = ROWS;
+           for (let r = 0; r < ROWS; r++) {
+               if (board[r].some(cell => cell && cell.type === 'fixed')) {
+                   topPenaltyRow = r;
+                   break;
+               }
+           }
+           ghostRowIndex = topPenaltyRow - 1;
+
+
+           if (ghostRowIndex < 0) {
+               gameOver();
+               return;
+           }
+
+
+           for(let c = 0; c < COLS; c++) {
+               if (c >= startGap && c < startGap + wordLen) {
+                   const letterIdx = c - startGap;
+                   ghostBoard[ghostRowIndex][c] = { letter: targetWord[letterIdx], class: 'ghost-letter' };
+               }
+           }
+       }
+
+
+       function pickNextWord() {
+           targetWord = spellingList[Math.floor(Math.random() * spellingList.length)];
+           targetDisplay.innerText = `TARGET: ${targetWord}`;
+           updateGhostBoard();
+       }
+
+
+       // Calculates the widest available gap of missing letters
+       function getMaxGap() {
+           let maxGap = 0;
+           let currentGap = 0;
+           for (let c = 0; c < COLS; c++) {
+               const ghost = ghostBoard[ghostRowIndex][c];
+               if (ghost) {
+                   const existingCell = board[ghostRowIndex][c];
+                   if (!existingCell || existingCell.letter !== ghost.letter) {
+                       currentGap++;
+                       maxGap = Math.max(maxGap, currentGap);
+                   } else {
+                       currentGap = 0;
+                   }
+               } else {
+                   currentGap = 0;
+               }
+           }
+           return maxGap;
+       }
+
+
+       function getNeededLetters() {
+           let needed = [];
+           for (let c = 0; c < COLS; c++) {
+               const ghost = ghostBoard[ghostRowIndex][c];
+               if (ghost) {
+                   const existingCell = board[ghostRowIndex][c];
+                   if (!existingCell || existingCell.letter !== ghost.letter) {
+                       needed.push(ghost.letter);
+                   }
+               }
+           }
+           // If we somehow need letters but none are left, fallback to first char
+           return needed.length > 0 ? needed : [targetWord[0]];
+       }
+
+
+       function spawnPiece() {
+           if (!gameActive) return;
+          
+           const maxGap = getMaxGap();
+          
+           // Smart Spawning: Filter out shapes that physically cannot fit into the max gap
+           let availableShapes = SHAPES.filter(shape => {
+               const minWidth = Math.min(shape.length, shape[0].length);
+               return minWidth <= maxGap;
+           });
+
+
+           // If the gap is only 1 block wide, add a single 1x1 block to the spawn pool for fairness
+           if (maxGap === 1) {
+               availableShapes.push([[1]]);
+           }
+
+
+           // Fallback just in case
+           if (availableShapes.length === 0) {
+               availableShapes = [[[1]]];
+           }
+
+
+           const shapeIdx = Math.floor(Math.random() * availableShapes.length);
+           const shape = availableShapes[shapeIdx].map(row => [...row]);
+          
+           const neededLetters = getNeededLetters();
+           let letterMap = [];
+           let lIdx = 0;
+
+
+           // Map the needed letters sequentially onto the blocks of the shape
+           for (let y = 0; y < shape.length; y++) {
+               letterMap[y] = [];
+               for (let x = 0; x < shape[y].length; x++) {
+                   if (shape[y][x] !== 0) {
+                       letterMap[y][x] = neededLetters[lIdx % neededLetters.length];
+                       lIdx++;
+                   } else {
+                       letterMap[y][x] = null;
+                   }
+               }
+           }
+
+
+           currentPiece = {
+               pos: { x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 },
+               shape: shape,
+               letterMap: letterMap
+           };
+
+
+           if (collide()) gameOver();
+       }
+
+
+       function collide() {
+           const { shape, pos } = currentPiece;
+           for (let y = 0; y < shape.length; y++) {
+               for (let x = 0; x < shape[y].length; x++) {
+                   if (shape[y][x] !== 0) {
+                       const nX = pos.x + x;
+                       const nY = pos.y + y;
+                       if (nX < 0 || nX >= COLS || nY >= ROWS || (nY >= 0 && board[nY][nX])) return true;
+                   }
+               }
+           }
+           return false;
+       }
+
+
+       function playerRotate() {
+           if (!currentPiece) return;
+           const oldShape = currentPiece.shape;
+           const oldLetterMap = currentPiece.letterMap;
+          
+           // Rotate the physical shape
+           const rotatedShape = currentPiece.shape[0].map((_, i) =>
+               currentPiece.shape.map(row => row[i]).reverse()
+           );
+          
+           // Re-map the letters so they always read in the correct order left-to-right, top-to-bottom
+           const neededLetters = getNeededLetters();
+           let rotatedLetterMap = [];
+           let lIdx = 0;
+           for (let y = 0; y < rotatedShape.length; y++) {
+               rotatedLetterMap[y] = [];
+               for (let x = 0; x < rotatedShape[y].length; x++) {
+                   if (rotatedShape[y][x] !== 0) {
+                       rotatedLetterMap[y][x] = neededLetters[lIdx % neededLetters.length];
+                       lIdx++;
+                   } else {
+                       rotatedLetterMap[y][x] = null;
+                   }
+               }
+           }
+
+
+           currentPiece.shape = rotatedShape;
+           currentPiece.letterMap = rotatedLetterMap;
+          
+           if (collide()) {
+               currentPiece.shape = oldShape;
+               currentPiece.letterMap = oldLetterMap;
+           }
+       }
+
+
+       function playerMove(dir) {
+           if (!currentPiece) return;
+           currentPiece.pos.x += dir;
+           if (collide()) currentPiece.pos.x -= dir;
+       }
+
+
+       function playerDrop() {
+           if (!currentPiece) return;
+           currentPiece.pos.y++;
+           if (collide()) {
+               currentPiece.pos.y--;
+               lockPiece();
+           }
+           dropCounter = 0;
+       }
+
+
+       function lockPiece() {
+           const { shape, pos, letterMap } = currentPiece;
+           const occupiedCells = [];
+           let correctBlocks = [];
+           let mistakeMade = false;
+
+
+           for (let y = 0; y < shape.length; y++) {
+               for (let x = 0; x < shape[y].length; x++) {
+                   if (shape[y][x] !== 0) {
+                       occupiedCells.push({
+                           x: pos.x + x,
+                           y: pos.y + y,
+                           letter: letterMap[y][x]
+                       });
+                   }
+               }
+           }
+
+
+           // PASS 1: Did ANY block land successfully on a target letter?
+           occupiedCells.forEach(cell => {
+               if (cell.y === ghostRowIndex) {
+                   const ghost = ghostBoard[cell.y][cell.x];
+                   if (ghost && ghost.letter === cell.letter) {
+                       correctBlocks.push(cell);
+                   }
+               }
+           });
+
+
+           if (correctBlocks.length > 0) {
+               // SUCCESS! Lock the correct letters
+               correctBlocks.forEach(cell => {
+                   board[cell.y][cell.x] = { letter: cell.letter, type: 'locked', class: 'locked-block' };
+                   // Shatter all stacked blocks above this specific correctly-placed letter
+                   for (let r = 0; r < cell.y; r++) {
+                       board[r][cell.x] = null;
+                   }
+               });
+               // Note: The remaining blocks of the piece are completely discarded (shattered).
+              
+           } else {
+               // NO CORRECT LETTERS PLACED. Check for penalties.
+               occupiedCells.forEach(cell => {
+                   if (cell.y >= 0) {
+                       if (cell.y === ghostRowIndex) {
+                           // Penalty: Landed exactly on a target cell but it's the wrong letter
+                           const ghost = ghostBoard[cell.y][cell.x];
+                           if (ghost) mistakeMade = true;
+                       } else if (cell.y < ghostRowIndex) {
+                           // Penalty: Landed ABOVE an empty target cell (blocking it)
+                           const ghost = ghostBoard[ghostRowIndex][cell.x];
+                           if (ghost) {
+                               const targetCell = board[ghostRowIndex][cell.x];
+                               if (!targetCell || targetCell.letter !== ghost.letter) {
+                                   mistakeMade = true;
+                               }
+                           }
+                       }
+                   }
+               });
+
+
+               if (mistakeMade) {
+                   occupiedCells.forEach(cell => {
+                       if (cell.y >= 0) board[cell.y][cell.x] = { letter: cell.letter, type: 'fixed', class: 'fixed-block' };
+                   });
+                   applyPenalty();
+                   return; // Stop and handle penalty
+               } else {
+                   // Safe Junk: It landed somewhere harmless (like the edges away from the word).
+                   occupiedCells.forEach(cell => {
+                       if (cell.y >= 0) board[cell.y][cell.x] = { letter: cell.letter, type: 'junk', class: 'junk-block' };
+                   });
+               }
+           }
+
+
+           currentPiece = null;
+
+
+           if (checkWordComplete()) {
+               handleComplete();
+           } else {
+               spawnPiece();
+           }
+       }
+
+
+       function checkWordComplete() {
+           let complete = true;
+           let targetCount = 0;
+           for (let c = 0; c < COLS; c++) {
+               const ghost = ghostBoard[ghostRowIndex][c];
+               if (ghost) {
+                   targetCount++;
+                   const targetCell = board[ghostRowIndex][c];
+                   if (!targetCell || targetCell.letter !== ghost.letter) {
+                       complete = false;
+                   }
+               }
+           }
+           return targetCount > 0 && complete;
+       }
+
+
+       function applyPenalty() {
+           gameContainer.classList.add('penalty-flash');
+           setTimeout(() => gameContainer.classList.remove('penalty-flash'), 400);
+
+
+           // Convert all blocks to solid penalties and move up
+           for (let r = 0; r < ROWS; r++) {
+               for (let c = 0; c < COLS; c++) {
+                   if (board[r][c]) {
+                       board[r][c] = { letter: '!', type: 'fixed', class: 'fixed-block' };
+                   }
+               }
+           }
+          
+           pickNextWord();
+           if (gameActive) spawnPiece();
+       }
+
+
+       function handleComplete() {
+           score++;
+           scoreOverlay.innerText = score.toString();
+          
+           if (score % 3 === 0) {
+               level++;
+               dropInterval = Math.max(80, 1000 - (level * 150));
+           }
+
+
+           gameContainer.classList.add('flash-screen');
+           setTimeout(() => gameContainer.classList.remove('flash-screen'), 300);
+
+
+           // Wipe out the entire board, satisfying "dissolve that whole row and the rows above it"
+           setTimeout(() => {
+               board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+               pickNextWord();
+               if (gameActive) spawnPiece();
+           }, 400);
+       }
+
+
+       function gameOver() {
+           gameActive = false;
+           document.getElementById('final-score').innerText = score;
+           document.getElementById('game-over-screen').classList.remove('hidden');
+       }
+
+
+       function renderBoard() {
+           boardEl.innerHTML = '';
+          
+           ghostBoard.forEach((row, r) => {
+               row.forEach((cell, c) => {
+                   if (cell) createCell(c, r, cell.letter, cell.class);
+               });
+           });
+
+
+           board.forEach((row, r) => {
+               row.forEach((cell, c) => {
+                   if (cell) createCell(c, r, cell.letter, cell.class);
+               });
+           });
+
+
+           if (currentPiece) {
+               const { shape, pos, letterMap } = currentPiece;
+               for (let y = 0; y < shape.length; y++) {
+                   for (let x = 0; x < shape[y].length; x++) {
+                       if (shape[y][x] !== 0) {
+                           createCell(pos.x + x, pos.y + y, letterMap[y][x], 'active-block');
+                       }
+                   }
+               }
+           }
+       }
+
+
+       function createCell(x, y, char, className) {
+           const cell = document.createElement('div');
+           cell.className = `grid-cell ${className}`;
+           cell.style.left = (x * CELL_W) + 'px';
+           cell.style.top = (y * CELL_W) + 'px';
+           cell.innerText = char;
+           boardEl.appendChild(cell);
+       }
+
+
+       function gameLoop(time = 0) {
+           if (!gameActive) return;
+           const delta = time - lastTime;
+           lastTime = time;
+           dropCounter += delta;
+           if (dropCounter > dropInterval) playerDrop();
+           renderBoard();
+           requestAnimationFrame(gameLoop);
+       }
+
+
+       window.addEventListener('keydown', (e) => {
+           if (!gameActive) return;
+           if (e.key === 'ArrowLeft') playerMove(-1);
+           if (e.key === 'ArrowRight') playerMove(1);
+           if (e.key === 'ArrowDown') playerDrop();
+           if (e.key === 'ArrowUp') playerRotate();
+       });
+
+
+       document.getElementById('ctrl-left').onclick = () => playerMove(-1);
+       document.getElementById('ctrl-right').onclick = () => playerMove(1);
+       document.getElementById('ctrl-down').onclick = () => playerDrop();
+       document.getElementById('ctrl-rot').onclick = () => playerRotate();
+   </script>
+</body>
+</html>
+
