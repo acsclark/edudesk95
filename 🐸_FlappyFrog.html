@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+   <title>Flappy Frog Math</title>
+   <script src="https://cdn.tailwindcss.com"></script>
+   <style>
+       /* Prevent selection and default touch actions to ensure smooth gameplay */
+       body {
+           touch-action: none;
+           -webkit-user-select: none;
+           user-select: none;
+           -webkit-touch-callout: none;
+       }
+
+
+       /* Custom UI Animations */
+       @keyframes waggle {
+           0%, 100% { transform: rotate(-15deg) translateY(0); }
+           25% { transform: rotate(0deg) translateY(-15px); }
+           50% { transform: rotate(15deg) translateY(0); }
+           75% { transform: rotate(0deg) translateY(-15px); }
+       }
+       .animate-waggle {
+           animation: waggle 1.5s ease-in-out infinite;
+       }
+
+
+       @keyframes orbit {
+           0% { transform: rotate(0deg); }
+           100% { transform: rotate(360deg); }
+       }
+       .animate-orbit {
+           animation: orbit 2s linear infinite;
+       }
+   </style>
+</head>
+<body class="bg-gray-900 h-screen w-screen flex items-center justify-center overflow-hidden font-sans">
+
+
+   <!-- Game Container -->
+   <div id="gameContainer" class="relative w-full max-w-[800px] aspect-[4/3] max-h-screen bg-sky-300 shadow-2xl rounded-lg overflow-hidden border-4 border-gray-800 cursor-pointer">
+      
+       <!-- The Game Canvas (Tapping here triggers the jump) -->
+       <canvas id="gameCanvas" width="800" height="600" class="w-full h-full block touch-none"></canvas>
+
+
+       <!-- Heads Up Display (HUD) -->
+       <div id="hud" class="absolute inset-0 w-full h-full hidden pointer-events-none">
+           <div class="absolute top-4 left-4 text-white text-3xl font-black drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" id="scoreDisplay">Score: 0</div>
+          
+           <!-- Instructions helper for touch screens -->
+           <div class="absolute bottom-8 left-0 right-0 text-center animate-pulse opacity-50 pointer-events-none sm:hidden">
+               <p class="text-white text-xl font-bold drop-shadow-md">Tap anywhere to flap!</p>
+           </div>
+       </div>
+
+
+       <!-- Main Menu Screen -->
+       <div id="menuScreen" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-6 text-center z-10 transition-opacity duration-300">
+           <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm cursor-default">
+              
+               <!-- Happy Wagging Frog Face -->
+               <svg viewBox="0 0 100 100" class="w-24 h-24 mx-auto mb-2 animate-waggle drop-shadow-md">
+                   <circle cx="50" cy="55" r="35" fill="#22c55e" stroke="#166534" stroke-width="4"/>
+                   <circle cx="30" cy="30" r="15" fill="white" stroke="#166534" stroke-width="4"/>
+                   <circle cx="70" cy="30" r="15" fill="white" stroke="#166534" stroke-width="4"/>
+                   <circle cx="30" cy="30" r="6" fill="black"/>
+                   <circle cx="70" cy="30" r="6" fill="black"/>
+                   <path d="M 35 65 Q 50 80 65 65" fill="none" stroke="#166534" stroke-width="4" stroke-linecap="round"/>
+               </svg>
+
+
+               <h1 class="text-4xl font-black text-green-600 mb-2 drop-shadow-sm">Flappy Frog</h1>
+               <h2 class="text-xl font-bold text-gray-600 mb-6">Adventure</h2>
+              
+               <div class="flex justify-center gap-6 mb-6 bg-gray-100 p-3 rounded-xl">
+                   <label class="flex items-center gap-2 cursor-pointer">
+                       <input type="radio" name="gameMode" value="math" checked class="w-5 h-5 text-green-600 focus:ring-green-500">
+                       <span class="font-bold text-gray-700 text-lg">Math</span>
+                   </label>
+                   <label class="flex items-center gap-2 cursor-pointer">
+                       <input type="radio" name="gameMode" value="spelling" class="w-5 h-5 text-blue-600 focus:ring-blue-500">
+                       <span class="font-bold text-gray-700 text-lg">Spelling</span>
+                   </label>
+               </div>
+
+
+               <div id="mathInputGroup" class="mb-6">
+                   <p class="text-gray-600 mb-2 text-sm font-medium">Which multiplication table?</p>
+                   <input type="number" id="tableInput" value="5" min="1" max="15"
+                          class="w-32 p-3 border-4 border-green-200 rounded-xl text-center text-3xl font-black text-green-700 focus:outline-none focus:border-green-500 transition-colors">
+               </div>
+
+
+               <div id="spellingInputGroup" class="mb-6 hidden">
+                   <p class="text-gray-600 mb-2 text-sm font-medium">Which word to spell?</p>
+                   <input type="text" id="wordInput" value="FROG" maxlength="12"
+                          class="w-full p-3 border-4 border-blue-200 rounded-xl text-center text-3xl font-black text-blue-700 uppercase focus:outline-none focus:border-blue-500 transition-colors">
+               </div>
+
+
+               <p class="text-sm text-gray-500 mb-6 font-medium">Tap anywhere or press Space to jump!</p>
+
+
+               <button id="startBtn" class="w-full bg-green-500 hover:bg-green-600 text-white font-black text-xl py-4 rounded-xl shadow-lg transform transition active:scale-95">
+                   PLAY NOW
+               </button>
+           </div>
+       </div>
+
+
+       <!-- Game Over Screen -->
+       <div id="gameOverScreen" class="absolute inset-0 bg-black/80 hidden flex-col items-center justify-center p-6 text-center z-20">
+           <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm transform scale-100 animate-[pop_0.2s_ease-out] cursor-default">
+              
+               <!-- Dizzy Frog Face with Orbiting Birds -->
+               <div class="relative w-24 h-24 mx-auto mb-6">
+                   <!-- Knocked-out Frog -->
+                   <svg viewBox="0 0 100 100" class="w-full h-full relative z-10 drop-shadow-md">
+                       <circle cx="50" cy="55" r="35" fill="#22c55e" stroke="#166534" stroke-width="4"/>
+                       <circle cx="30" cy="30" r="15" fill="white" stroke="#166534" stroke-width="4"/>
+                       <circle cx="70" cy="30" r="15" fill="white" stroke="#166534" stroke-width="4"/>
+                       <!-- X Eyes -->
+                       <path d="M 23 23 L 37 37 M 23 37 L 37 23" stroke="black" stroke-width="4" stroke-linecap="round"/>
+                       <path d="M 63 23 L 77 37 M 63 37 L 77 23" stroke="black" stroke-width="4" stroke-linecap="round"/>
+                       <!-- Dizzy Wavy Mouth -->
+                       <path d="M 30 70 Q 40 55 50 70 T 70 70" fill="none" stroke="#166534" stroke-width="4" stroke-linecap="round"/>
+                   </svg>
+                   <!-- Orbiting Birds Container -->
+                   <div class="absolute -inset-6 animate-orbit origin-center z-20 pointer-events-none">
+                       <div class="absolute top-0 left-1/2 transform -translate-x-1/2 text-2xl drop-shadow-lg">🐦</div>
+                       <div class="absolute bottom-2 right-0 transform translate-x-1/2 text-2xl drop-shadow-lg scale-x-[-1]">🐦</div>
+                       <div class="absolute bottom-2 left-0 transform -translate-x-1/2 text-2xl drop-shadow-lg">🐦</div>
+                   </div>
+               </div>
+
+
+               <h2 class="text-4xl font-black text-red-500 mb-2">GAME OVER</h2>
+              
+               <p id="deathReason" class="text-lg font-bold text-gray-700 mb-6 min-h-[3rem] flex items-center justify-center">
+                   Ouch! You hit a pipe.
+               </p>
+
+
+               <div class="bg-gray-100 rounded-xl p-4 mb-6 border-2 border-gray-200">
+                   <p class="text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">Final Score</p>
+                   <p id="finalScore" class="text-5xl font-black text-green-600">0</p>
+               </div>
+
+
+               <div class="flex gap-3">
+                   <button id="menuBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 rounded-xl transition active:scale-95">
+                       Menu
+                   </button>
+                   <button id="restartBtn" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl shadow-lg transition active:scale-95">
+                       Play Again
+                   </button>
+               </div>
+           </div>
+       </div>
+   </div>
+
+
+   <script>
+       const canvas = document.getElementById('gameCanvas');
+       const ctx = canvas.getContext('2d');
+
+
+       // UI Elements
+       const menuScreen = document.getElementById('menuScreen');
+       const gameOverScreen = document.getElementById('gameOverScreen');
+       const hud = document.getElementById('hud');
+       const scoreDisplay = document.getElementById('scoreDisplay');
+       const startBtn = document.getElementById('startBtn');
+       const restartBtn = document.getElementById('restartBtn');
+       const menuBtn = document.getElementById('menuBtn');
+       const tableInput = document.getElementById('tableInput');
+       const wordInput = document.getElementById('wordInput');
+       const mathInputGroup = document.getElementById('mathInputGroup');
+       const spellingInputGroup = document.getElementById('spellingInputGroup');
+       const modeRadios = document.querySelectorAll('input[name="gameMode"]');
+       const deathReason = document.getElementById('deathReason');
+       const finalScore = document.getElementById('finalScore');
+
+
+       // Mode Toggler
+       modeRadios.forEach(radio => {
+           radio.addEventListener('change', (e) => {
+               if (e.target.value === 'math') {
+                   mathInputGroup.classList.remove('hidden');
+                   spellingInputGroup.classList.add('hidden');
+               } else {
+                   mathInputGroup.classList.add('hidden');
+                   spellingInputGroup.classList.remove('hidden');
+               }
+           });
+       });
+
+
+       // Game Configuration
+       const GRAVITY = 0.4;
+       const JUMP_STRENGTH = -7;
+       const BASE_PIPE_SPEED = 2.5;
+       const PIPE_WIDTH = 70;
+       const GAP_SIZE = 120;
+       const BASE_SPAWN_RATE = 160;
+
+
+       // Game State Variables
+       let frames = 0;
+       let score = 0;
+       let isGameOver = false;
+       let isPlaying = false;
+       let animationId;
+      
+       let currentPipeSpeed = BASE_PIPE_SPEED;
+       let currentSpawnRate = BASE_SPAWN_RATE;
+       let spawnTimer = BASE_SPAWN_RATE;
+      
+       let gameMode = 'math';
+       let currentTable = 5;
+       let targetWord = 'FROG';
+       let nextSpawningLetterIndex = 0;
+
+
+       let pipes = [];
+       let clouds = [];
+       let currentEquationText = "Get Ready!";
+
+
+       // Frog Object
+       const frog = {
+           x: 100,
+           y: 300,
+           radius: 16,
+           velocity: 0,
+          
+           draw() {
+               ctx.save();
+               ctx.translate(this.x, this.y);
+              
+               // Tilt frog based on velocity
+               let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (this.velocity * 0.08)));
+               ctx.rotate(rotation);
+
+
+               // Body
+               ctx.fillStyle = '#22c55e'; // Tailwind green-500
+               ctx.strokeStyle = '#166534'; // Tailwind green-800
+               ctx.lineWidth = 2;
+               ctx.beginPath();
+               ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+               ctx.fill();
+               ctx.stroke();
+
+
+               // Eyes (Background)
+               ctx.fillStyle = 'white';
+               ctx.beginPath();
+               ctx.arc(-8, -12, 7, 0, Math.PI * 2);
+               ctx.arc(8, -12, 7, 0, Math.PI * 2);
+               ctx.fill();
+               ctx.stroke();
+
+
+               // Pupils
+               ctx.fillStyle = 'black';
+               ctx.beginPath();
+               ctx.arc(-8, -12, 3, 0, Math.PI * 2);
+               ctx.arc(8, -12, 3, 0, Math.PI * 2);
+               ctx.fill();
+
+
+               // Smile
+               ctx.strokeStyle = '#166534';
+               ctx.lineWidth = 2;
+               ctx.beginPath();
+               ctx.arc(0, 3, 8, 0.1 * Math.PI, 0.9 * Math.PI);
+               ctx.stroke();
+
+
+               ctx.restore();
+           },
+          
+           update() {
+               this.velocity += GRAVITY;
+               this.y += this.velocity;
+           },
+
+
+           jump() {
+               this.velocity = JUMP_STRENGTH;
+           },
+          
+           getBounds() {
+               return {
+                   x: this.x - this.radius + 2,
+                   y: this.y - this.radius + 2,
+                   w: (this.radius * 2) - 4,
+                   h: (this.radius * 2) - 4
+               };
+           }
+       };
+
+
+       // Pipe Class
+       class Pipe {
+           constructor() {
+               this.x = canvas.width;
+               this.width = PIPE_WIDTH;
+               this.passed = false;
+
+
+               if (gameMode === 'math') {
+                   // Determine math logic
+                   this.multiplier = Math.floor(Math.random() * 12) + 1;
+                   this.correctAnswer = currentTable * this.multiplier;
+                  
+                   // Generate a plausible wrong answer
+                   let offset = Math.floor(Math.random() * 3) + 1;
+                   let wrongMultiplier = this.multiplier + (Math.random() > 0.5 ? offset : -offset);
+                   if (wrongMultiplier <= 0) wrongMultiplier = this.multiplier + offset;
+                   if (wrongMultiplier === this.multiplier) wrongMultiplier++;
+                   this.wrongAnswer = currentTable * wrongMultiplier;
+               } else {
+                   // Spelling logic
+                   this.letterIndex = nextSpawningLetterIndex % targetWord.length;
+                   this.correctAnswer = targetWord[this.letterIndex];
+                  
+                   // Generate wrong letter
+                   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                   let wrongChar = this.correctAnswer;
+                   while (wrongChar === this.correctAnswer) {
+                       wrongChar = alphabet[Math.floor(Math.random() * alphabet.length)];
+                   }
+                   this.wrongAnswer = wrongChar;
+                  
+                   nextSpawningLetterIndex++;
+               }
+
+
+               // Randomize gap heights
+               let gap1Center = 120 + Math.random() * 120;
+               let gap2Center = 360 + Math.random() * 120;
+
+
+               this.gap1Top = gap1Center - GAP_SIZE / 2;
+               this.gap1Bottom = gap1Center + GAP_SIZE / 2;
+              
+               this.gap2Top = gap2Center - GAP_SIZE / 2;
+               this.gap2Bottom = gap2Center + GAP_SIZE / 2;
+
+
+               // 1 = Gap 1 is correct, 2 = Gap 2 is correct
+               this.correctGap = Math.random() > 0.5 ? 1 : 2;
+               this.gap1Answer = this.correctGap === 1 ? this.correctAnswer : this.wrongAnswer;
+               this.gap2Answer = this.correctGap === 2 ? this.correctAnswer : this.wrongAnswer;
+           }
+
+
+           draw() {
+               ctx.fillStyle = '#4ade80'; // green-400
+               ctx.strokeStyle = '#14532d'; // green-900
+               ctx.lineWidth = 3;
+
+
+               // Helper to draw a pipe segment
+               const drawSegment = (y, height) => {
+                   ctx.fillRect(this.x, y, this.width, height);
+                   ctx.strokeRect(this.x, y, this.width, height);
+                  
+                   // Add cap details
+                   ctx.fillRect(this.x - 4, y === 0 ? height - 15 : y, this.width + 8, 15);
+                   ctx.strokeRect(this.x - 4, y === 0 ? height - 15 : y, this.width + 8, 15);
+               };
+
+
+               // Draw Top, Middle, Bottom sections
+               drawSegment(0, this.gap1Top);
+               drawSegment(this.gap1Bottom, this.gap2Top - this.gap1Bottom);
+               drawSegment(this.gap2Bottom, canvas.height - this.gap2Bottom);
+
+
+               // Draw Text inside the gaps
+               ctx.fillStyle = 'white';
+               ctx.strokeStyle = 'black';
+               ctx.lineWidth = 4;
+               ctx.font = '900 32px sans-serif';
+               ctx.textAlign = 'center';
+               ctx.textBaseline = 'middle';
+
+
+               // Gap 1 text
+               ctx.strokeText(this.gap1Answer, this.x + this.width / 2, this.gap1Top + GAP_SIZE / 2);
+               ctx.fillText(this.gap1Answer, this.x + this.width / 2, this.gap1Top + GAP_SIZE / 2);
+
+
+               // Gap 2 text
+               ctx.strokeText(this.gap2Answer, this.x + this.width / 2, this.gap2Top + GAP_SIZE / 2);
+               ctx.fillText(this.gap2Answer, this.x + this.width / 2, this.gap2Top + GAP_SIZE / 2);
+           }
+
+
+           update() {
+               this.x -= currentPipeSpeed;
+           }
+
+
+           getCollisionRects() {
+               let rects = [
+                   { x: this.x, y: 0, w: this.width, h: this.gap1Top, type: 'pipe' },
+                   { x: this.x, y: this.gap1Bottom, w: this.width, h: this.gap2Top - this.gap1Bottom, type: 'pipe' },
+                   { x: this.x, y: this.gap2Bottom, w: this.width, h: canvas.height - this.gap2Bottom, type: 'pipe' }
+               ];
+
+
+               // The wrong gap is an invisible wall
+               if (this.correctGap === 1) {
+                   rects.push({ x: this.x, y: this.gap2Top, w: this.width, h: GAP_SIZE, type: 'wrong' });
+               } else {
+                   rects.push({ x: this.x, y: this.gap1Top, w: this.width, h: GAP_SIZE, type: 'wrong' });
+               }
+              
+               return rects;
+           }
+       }
+
+
+       // Initialize Background Clouds
+       function initClouds() {
+           clouds = [];
+           for (let i = 0; i < 6; i++) {
+               clouds.push({
+                   x: Math.random() * canvas.width,
+                   y: Math.random() * (canvas.height / 2),
+                   speed: 0.2 + Math.random() * 0.4,
+                   size: 20 + Math.random() * 30
+               });
+           }
+       }
+
+
+       function drawClouds() {
+           ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+           clouds.forEach(c => {
+               ctx.beginPath();
+               ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+               ctx.arc(c.x + c.size * 0.8, c.y - c.size * 0.2, c.size * 0.8, 0, Math.PI * 2);
+               ctx.arc(c.x + c.size * 1.4, c.y, c.size * 0.6, 0, Math.PI * 2);
+               ctx.fill();
+              
+               c.x -= c.speed;
+               if (c.x + (c.size * 2) < 0) {
+                   c.x = canvas.width + c.size;
+                   c.y = Math.random() * (canvas.height / 2);
+               }
+           });
+       }
+
+
+       function checkCollision(rect1, rect2) {
+           return (
+               rect1.x < rect2.x + rect2.w &&
+               rect1.x + rect1.w > rect2.x &&
+               rect1.y < rect2.y + rect2.h &&
+               rect1.y + rect1.h > rect2.y
+           );
+       }
+
+
+       function triggerGameOver(reasonText) {
+           isGameOver = true;
+           isPlaying = false;
+          
+           deathReason.innerText = reasonText;
+           finalScore.innerText = score;
+          
+           hud.classList.add('hidden');
+           gameOverScreen.classList.remove('hidden');
+           gameOverScreen.style.display = 'flex';
+       }
+
+
+       function update() {
+           if (isGameOver || !isPlaying) return;
+
+
+           frames++;
+           frog.update();
+
+
+           // Floor and Ceiling Collision
+           if (frog.y + frog.radius >= canvas.height || frog.y - frog.radius <= 0) {
+               triggerGameOver("You hit the ground!");
+               return;
+           }
+
+
+           // Pipe Spawning
+           spawnTimer--;
+           if (spawnTimer <= 0) {
+               pipes.push(new Pipe());
+               spawnTimer = currentSpawnRate;
+           }
+
+
+           const frogBox = frog.getBounds();
+           let nextActivePipe = null;
+
+
+           // Pipe Logic
+           for (let i = 0; i < pipes.length; i++) {
+               let p = pipes[i];
+               p.update();
+
+
+               let hitboxes = p.getCollisionRects();
+               for (let box of hitboxes) {
+                   if (checkCollision(frogBox, box)) {
+                       if (box.type === 'pipe') {
+                           triggerGameOver("Ouch! You crashed into a pipe.");
+                       } else {
+                           if (gameMode === 'math') {
+                               triggerGameOver(`Wrong answer! ${currentTable} × ${p.multiplier} = ${p.correctAnswer}`);
+                           } else {
+                               triggerGameOver(`Wrong letter! You needed '${p.correctAnswer}' to spell ${targetWord}`);
+                           }
+                       }
+                       return;
+                   }
+               }
+
+
+               if (p.x + p.width < frog.x && !p.passed) {
+                   p.passed = true;
+                   score++;
+                   scoreDisplay.innerText = `Score: ${score}`;
+                  
+                   // Increase difficulty every 3 points
+                   let speedLevel = Math.floor(score / 3);
+                   currentPipeSpeed = BASE_PIPE_SPEED + (speedLevel * 0.5);
+                   currentSpawnRate = 400 / currentPipeSpeed; // Keep horizontal distance between pipes constant
+               }
+
+
+               if (!p.passed && !nextActivePipe) {
+                   nextActivePipe = p;
+               }
+
+
+               if (p.x + p.width < 0) {
+                   pipes.shift();
+                   i--;
+               }
+           }
+
+
+           // Update Equation Text
+           if (nextActivePipe) {
+               if (gameMode === 'math') {
+                   currentEquationText = `${currentTable} × ${nextActivePipe.multiplier} = ?`;
+               } else {
+                   if (score === 0) {
+                       currentEquationText = targetWord.split('').join(' ');
+                   } else {
+                       let displayStr = "";
+                       for (let j = 0; j < targetWord.length; j++) {
+                           if (j < nextActivePipe.letterIndex) {
+                               displayStr += targetWord[j] + " ";
+                           } else if (j === nextActivePipe.letterIndex) {
+                               displayStr += "? ";
+                           } else {
+                               displayStr += "_ ";
+                           }
+                       }
+                       currentEquationText = displayStr.trim();
+                   }
+               }
+           } else {
+               if (gameMode === 'spelling' && score === 0) {
+                   currentEquationText = targetWord.split('').join(' ');
+               } else {
+                   currentEquationText = "Get Ready!";
+               }
+           }
+       }
+
+
+       function draw() {
+           ctx.clearRect(0, 0, canvas.width, canvas.height);
+          
+           drawClouds();
+
+
+           // Draw Equation in background
+           ctx.save();
+           ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+           ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+           ctx.lineWidth = 5;
+           ctx.font = '900 64px sans-serif';
+           ctx.textAlign = 'right';
+           ctx.textBaseline = 'middle';
+           ctx.strokeText(currentEquationText, canvas.width - 40, canvas.height / 2);
+           ctx.fillText(currentEquationText, canvas.width - 40, canvas.height / 2);
+           ctx.restore();
+
+
+           if (!isPlaying && !isGameOver) {
+               frog.x = canvas.width / 2;
+               frog.y = canvas.height / 2 + Math.sin(Date.now() / 200) * 10;
+               frog.velocity = 0;
+               frog.draw();
+               return;
+           }
+
+
+           pipes.forEach(p => p.draw());
+           frog.draw();
+       }
+
+
+       function loop() {
+           update();
+           draw();
+           animationId = requestAnimationFrame(loop);
+       }
+
+
+       // ---------- Jump Input Handlers ----------
+      
+       function handleJumpEvent(e) {
+           // Only jump if game is actively running
+           if (isPlaying && !isGameOver) {
+               // Prevent scrolling/zooming default behaviors on touch devices
+               if (e.type === 'touchstart' || e.type === 'mousedown') {
+                   e.preventDefault();
+               }
+               frog.jump();
+           }
+       }
+
+
+       // Listen for keyboard spacebar
+       window.addEventListener('keydown', (e) => {
+           if (e.code === 'Space') {
+               e.preventDefault();
+               handleJumpEvent(e);
+           }
+       });
+
+
+       // Listen for touches and clicks specifically on the canvas
+       // We use passive: false to ensure e.preventDefault() works cleanly on iPads
+       canvas.addEventListener('touchstart', handleJumpEvent, { passive: false });
+       canvas.addEventListener('mousedown', handleJumpEvent);
+
+
+       // -----------------------------------------
+
+
+       function resetGame() {
+           frames = 0;
+           score = 0;
+           pipes = [];
+           nextSpawningLetterIndex = 0;
+           isGameOver = false;
+          
+           currentPipeSpeed = BASE_PIPE_SPEED;
+           currentSpawnRate = BASE_SPAWN_RATE;
+           spawnTimer = BASE_SPAWN_RATE;
+          
+           frog.x = 100;
+           frog.y = 300;
+           frog.velocity = 0;
+          
+           scoreDisplay.innerText = "Score: 0";
+          
+           if (gameMode === 'spelling') {
+               currentEquationText = targetWord.split('').join(' ');
+           } else {
+               currentEquationText = "Get Ready!";
+           }
+          
+           initClouds();
+       }
+
+
+       function startGame() {
+           const selectedRadio = document.querySelector('input[name="gameMode"]:checked');
+           gameMode = selectedRadio ? selectedRadio.value : 'math';
+
+
+           if (gameMode === 'math') {
+               let parsedTable = parseInt(tableInput.value);
+               if (isNaN(parsedTable) || parsedTable < 1) parsedTable = 1;
+               currentTable = parsedTable;
+           } else {
+               let parsedWord = wordInput.value.trim().toUpperCase().replace(/[^A-Z]/g, '');
+               if (parsedWord.length === 0) parsedWord = 'FROG';
+               targetWord = parsedWord;
+               wordInput.value = targetWord;
+           }
+
+
+           resetGame();
+           isPlaying = true;
+          
+           menuScreen.classList.add('hidden');
+           gameOverScreen.classList.add('hidden');
+           gameOverScreen.style.display = 'none';
+           hud.classList.remove('hidden');
+          
+           frog.jump();
+       }
+
+
+       function showMenu() {
+           isPlaying = false;
+           gameOverScreen.classList.add('hidden');
+           gameOverScreen.style.display = 'none';
+           hud.classList.add('hidden');
+           menuScreen.classList.remove('hidden');
+       }
+
+
+       startBtn.addEventListener('click', startGame);
+       restartBtn.addEventListener('click', startGame);
+       menuBtn.addEventListener('click', showMenu);
+
+
+       initClouds();
+       loop();
+
+
+   </script>
+</body>
+</html>
+
