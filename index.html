@@ -123,7 +123,625 @@
     "name": "Typing Speed",
     "icon": "⌨️",
     "html": "<!DOCTYPE html><html><head><style>body{font-family:'Courier New',monospace;background:#1a1a2e;color:#e0e0e0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0}h1{color:#00d4ff;letter-spacing:3px}.container{background:#16213e;padding:24px;border:1px solid #00d4ff;min-width:400px;max-width:520px}.target{font-size:18px;line-height:1.6;margin-bottom:16px;padding:12px;background:#0f3460;border-radius:4px}.correct{color:#00ff7f}.wrong{color:#ff4444;background:#330000}.current{background:#00d4ff;color:#000}textarea{width:100%;font-size:16px;font-family:'Courier New',monospace;padding:10px;background:#0a0a1a;color:#e0e0e0;border:1px solid #444;resize:none;height:80px}.stats{display:flex;gap:20px;margin-top:12px;font-size:14px}.stat{text-align:center}.stat-val{font-size:24px;color:#00d4ff;font-weight:bold}button{margin-top:12px;padding:8px 20px;background:#00d4ff;color:#000;border:none;font-size:14px;cursor:pointer;font-weight:bold}</style></head><body><h1>TYPING TEST</h1><div class=\"container\"><div class=\"target\" id=\"tgt\"></div><textarea id=\"inp\" placeholder=\"Start typing here...\"></textarea><div class=\"stats\"><div class=\"stat\"><div class=\"stat-val\" id=\"wpm\">0</div><div>WPM</div></div><div class=\"stat\"><div class=\"stat-val\" id=\"acc\">100</div><div>% ACC</div></div><div class=\"stat\"><div class=\"stat-val\" id=\"tmr\">60</div><div>SEC</div></div></div><button onclick=\"restart()\">New Test</button></div><script>var sents=['The quick brown fox jumps over the lazy dog','Science is the key to our future and our past','Reading is to the mind what exercise is to the body','The more that you read the more things you will know','Education is the most powerful weapon to change the world'];var cur,typed,started,iv,tLeft,errs;function render(){var h='';for(var i=0;i<cur.length;i++){var c=cur[i]===' '?'&nbsp;':cur[i];if(i<typed.length)h+='<span class=\"'+(typed[i]===cur[i]?'correct':'wrong')+'\">'+c+'<\/span>';else if(i===typed.length)h+='<span class=\"current\">'+c+'<\/span>';else h+='<span>'+c+'<\/span>';}document.getElementById('tgt').innerHTML=h;}function tick(){tLeft--;document.getElementById('tmr').textContent=tLeft;if(tLeft<=0){clearInterval(iv);document.getElementById('inp').disabled=true;}}function restart(){clearInterval(iv);tLeft=60;started=false;typed='';errs=0;var el=document.getElementById('inp');el.value='';el.disabled=false;document.getElementById('wpm').textContent=0;document.getElementById('acc').textContent=100;document.getElementById('tmr').textContent=60;cur=sents[Math.floor(Math.random()*sents.length)];render();}document.getElementById('inp').oninput=function(){if(!started){started=true;iv=setInterval(tick,1000);}typed=this.value;var e=0;for(var i=0;i<typed.length;i++)if(typed[i]!==cur[i])e++;errs=e;var w=typed.trim().split(/\\s+/).filter(function(x){return x;}).length;var a=typed.length?Math.round(((typed.length-errs)/typed.length)*100):100;document.getElementById('wpm').textContent=w;document.getElementById('acc').textContent=a;render();if(typed===cur){this.value='';typed='';cur=sents[Math.floor(Math.random()*sents.length)];render();}};restart();<\/script></body></html>"
-  }
+  },
+  {
+    "id": "app_sample4",
+    "name": "Mouse Spell",
+    "icon": "🐭",
+    "html":"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Spelling Mouse Game</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes bounce-in {
+      0% { transform: scale(0.8); opacity: 0; }
+      60% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-bounce-in {
+      animation: bounce-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    /* Prevent accidental selection on mobile */
+    .touch-none { touch-action: none; }
+  </style>
+</head>
+<body class="min-h-screen bg-amber-50 font-sans text-slate-800 selection:bg-amber-200">
+
+  <header class="bg-amber-400 p-4 shadow-md text-center">
+    <h1 class="text-3xl font-extrabold text-amber-900 tracking-wide drop-shadow-sm">
+      🧀 Spelling Mouse 🐁
+    </h1>
+  </header>
+
+  <main class="max-w-4xl mx-auto p-4 flex flex-col items-center justify-center mt-4 relative">
+    
+    <!-- MENU SCREEN -->
+    <div id="screen-menu" class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border-4 border-amber-300">
+      <h2 class="text-2xl font-bold mb-4 text-center text-amber-800">Setup Your Words</h2>
+      <p class="text-sm text-slate-600 mb-4 text-center">
+        Enter your spelling list below, one word per line.
+      </p>
+      <textarea id="word-input" class="w-full h-48 p-3 border-2 border-amber-200 rounded-lg focus:outline-none focus:border-amber-500 font-mono text-lg uppercase resize-none">CAT&#10;MOUSE&#10;CHEESE&#10;SMILE</textarea>
+      <button id="btn-start" class="mt-6 w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-transform active:scale-95 text-xl">
+        Start Game!
+      </button>
+    </div>
+
+    <!-- INTERLUDE SCREEN -->
+    <div id="screen-interlude" class="hidden bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border-4 border-orange-400 text-center animate-bounce-in">
+      <div class="text-6xl mb-4">🙀🐈</div>
+      <h2 class="text-3xl font-bold mb-4 text-orange-600">Level 1 Complete!</h2>
+      <p class="text-lg text-slate-600 mb-8">
+        Great job! Now spell them again... but watch out for the hungry cat!
+      </p>
+      <button id="btn-level2" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-transform active:scale-95 text-xl">
+        Start Level 2
+      </button>
+    </div>
+
+    <!-- FINISHED SCREEN -->
+    <div id="screen-finished" class="hidden bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border-4 border-emerald-400 text-center animate-bounce-in">
+      <div class="text-6xl mb-4">🏆🐁🧀</div>
+      <h2 class="text-3xl font-bold mb-4 text-emerald-600">You Did It!</h2>
+      <p class="text-lg text-slate-600 mb-8">
+        You helped the mouse collect all the spelling cheese!
+      </p>
+      <button id="btn-restart" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-transform active:scale-95 text-xl">
+        Play Again
+      </button>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="screen-game" class="hidden w-full flex flex-col items-center">
+      <!-- HUD -->
+      <div class="w-full max-w-2xl bg-white p-4 rounded-t-xl border-x-4 border-t-4 border-amber-300 shadow-sm flex justify-between items-center z-10">
+        <button id="btn-quit" class="text-slate-400 hover:text-red-500 font-bold px-2 py-1 bg-slate-100 rounded">
+          Quit
+        </button>
+        
+        <div class="text-center">
+          <p id="hud-level-text" class="text-sm font-bold text-amber-600 uppercase tracking-widest mb-1">
+            Level 1 - Word 1 of 4
+          </p>
+          <div id="hud-letters" class="flex space-x-2 justify-center">
+            <!-- Letters injected by JS -->
+          </div>
+        </div>
+
+        <div class="w-16 flex flex-col items-center">
+          <span class="text-xs font-bold text-slate-400">STATUS</span>
+          <span id="hud-status" class="text-sm font-bold text-blue-500">
+            Hunting
+          </span>
+        </div>
+      </div>
+
+      <!-- Game Canvas Container -->
+      <div class="relative w-full max-w-2xl bg-white border-4 border-amber-300 rounded-b-xl overflow-hidden shadow-lg touch-none" style="aspect-ratio: 3/2;">
+        <canvas id="game-canvas" width="600" height="400" class="w-full h-full object-contain"></canvas>
+
+        <!-- Feedback Overlay -->
+        <div class="absolute top-4 left-0 w-full text-center pointer-events-none">
+          <span id="feedback-text" class="inline-block bg-black/50 text-white px-4 py-1 rounded-full text-sm font-bold shadow-md transition-opacity">
+            Find the first letter!
+          </span>
+        </div>
+
+        <!-- Mobile D-Pad -->
+        <div class="absolute bottom-4 left-4 grid grid-cols-3 gap-1 opacity-70 md:hidden touch-none">
+          <div></div>
+          <button data-dir="up" class="dpad-btn w-12 h-12 bg-slate-800 text-white rounded-lg flex items-center justify-center text-xl active:bg-amber-500 touch-none shadow-md">▲</button>
+          <div></div>
+          <button data-dir="left" class="dpad-btn w-12 h-12 bg-slate-800 text-white rounded-lg flex items-center justify-center text-xl active:bg-amber-500 touch-none shadow-md">◀</button>
+          <button data-dir="down" class="dpad-btn w-12 h-12 bg-slate-800 text-white rounded-lg flex items-center justify-center text-xl active:bg-amber-500 touch-none shadow-md">▼</button>
+          <button data-dir="right" class="dpad-btn w-12 h-12 bg-slate-800 text-white rounded-lg flex items-center justify-center text-xl active:bg-amber-500 touch-none shadow-md">▶</button>
+        </div>
+      </div>
+      
+      <p class="mt-4 text-slate-500 text-sm font-medium flex items-center gap-2">
+        <span class="hidden md:inline">Use Arrow Keys or W, A, S, D to move.</span>
+        <span class="md:hidden">Use the on-screen buttons to move.</span>
+      </p>
+    </div>
+
+  </main>
+
+  <script>
+    // --- Global Game State ---
+    let words = [];
+    let level = 1;
+    let currentWordIndex = 0;
+    let collectedCount = 0;
+    
+    // Engine State
+    const state = {
+      mouse: { x: 100, y: 100, radius: 18, speed: 4, dx: 0, dy: 0, angle: 0 },
+      cat: { x: 300, y: 200, radius: 24, speed: 1.5, angle: 0, active: false },
+      house: { x: 700, y: 500, radius: 40 },
+      cheeses: [],
+      particles: [],
+      keys: { up: false, down: false, left: false, right: false },
+      lastTime: 0,
+      cameraShake: 0,
+      levelComplete: false,
+      isDead: false,
+      animationFrameId: null
+    };
+
+    // --- DOM Elements ---
+    const screens = {
+      menu: document.getElementById('screen-menu'),
+      interlude: document.getElementById('screen-interlude'),
+      finished: document.getElementById('screen-finished'),
+      game: document.getElementById('screen-game')
+    };
+
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const hudLetters = document.getElementById('hud-letters');
+    const hudLevelText = document.getElementById('hud-level-text');
+    const hudStatus = document.getElementById('hud-status');
+    const feedbackText = document.getElementById('feedback-text');
+
+    // --- Navigation Functions ---
+    function showScreen(screenName) {
+      Object.values(screens).forEach(s => s.classList.add('hidden'));
+      screens[screenName].classList.remove('hidden');
+    }
+
+    function setFeedback(msg) {
+      feedbackText.innerText = msg;
+    }
+
+    function updateHUD() {
+      const currentWord = words[currentWordIndex] || '';
+      const isReturningHome = collectedCount >= currentWord.length;
+
+      hudLevelText.innerText = `Level ${level} - Word ${currentWordIndex + 1} of ${words.length}`;
+      
+      if (isReturningHome) {
+        hudStatus.innerText = 'Go Home!';
+        hudStatus.className = 'text-sm font-bold text-emerald-500 animate-bounce';
+      } else {
+        hudStatus.innerText = 'Hunting';
+        hudStatus.className = 'text-sm font-bold text-blue-500';
+      }
+
+      hudLetters.innerHTML = '';
+      for (let i = 0; i < currentWord.length; i++) {
+        const div = document.createElement('div');
+        div.className = `w-10 h-12 flex items-center justify-center text-2xl font-black rounded-lg border-b-4 `;
+        
+        if (i < collectedCount) {
+          div.className += 'bg-amber-400 text-white border-amber-500';
+          div.innerText = currentWord[i];
+        } else if (i === collectedCount && !isReturningHome) {
+          div.className += 'bg-blue-100 border-blue-300 text-blue-400 animate-pulse';
+          div.innerText = '_';
+        } else {
+          div.className += 'bg-slate-100 border-slate-200 text-slate-300';
+          div.innerText = '_';
+        }
+        hudLetters.appendChild(div);
+      }
+    }
+
+    // --- Game Engine Logic ---
+    function initLevel(word) {
+      state.levelComplete = false;
+      state.isDead = false;
+      state.mouse.x = 60;
+      state.mouse.y = 60;
+      state.mouse.dx = 0;
+      state.mouse.dy = 0;
+      state.house.x = canvas.width - 60;
+      state.house.y = canvas.height - 60;
+
+      state.cat.x = canvas.width / 2;
+      state.cat.y = canvas.height / 2;
+      state.cat.active = (level >= 2);
+
+      const newCheeses = [];
+      for (let i = 0; i < word.length; i++) {
+        let placed = false;
+        let attempts = 0;
+        while (!placed && attempts < 100) {
+          attempts++;
+          const cx = Math.random() * (canvas.width - 120) + 60;
+          const cy = Math.random() * (canvas.height - 120) + 60;
+          
+          const distMouse = Math.hypot(cx - 60, cy - 60);
+          const distHouse = Math.hypot(cx - (canvas.width - 60), cy - (canvas.height - 60));
+          
+          if (distMouse > 120 && distHouse > 120) {
+            const overlap = newCheeses.some(c => Math.hypot(cx - c.x, cy - c.y) < 60);
+            if (!overlap) {
+              newCheeses.push({ x: cx, y: cy, radius: 22, letter: word[i], orderIndex: i, active: true, scale: 0 });
+              placed = true;
+            }
+          }
+        }
+      }
+      state.cheeses = newCheeses;
+      collectedCount = 0;
+      setFeedback('Find the first letter!');
+      updateHUD();
+    }
+
+    function startGame() {
+      if (state.animationFrameId) cancelAnimationFrame(state.animationFrameId);
+      currentWordIndex = 0;
+      initLevel(words[currentWordIndex]);
+      state.lastTime = performance.now();
+      gameLoop(state.lastTime);
+    }
+
+    function handleWordComplete() {
+      setFeedback("Word Complete!");
+      setTimeout(() => {
+        if (currentWordIndex + 1 >= words.length) {
+          // Finished all words for this level
+          cancelAnimationFrame(state.animationFrameId);
+          if (level === 1) {
+            showScreen('interlude');
+          } else {
+            showScreen('finished');
+          }
+        } else {
+          currentWordIndex++;
+          initLevel(words[currentWordIndex]);
+        }
+      }, 800);
+    }
+
+    function update(deltaTime) {
+      if (state.isDead) return;
+      const currentWord = words[currentWordIndex] || '';
+      const { mouse, house, cheeses, keys } = state;
+
+      // Input
+      if (keys.up) mouse.dy -= 0.5;
+      if (keys.down) mouse.dy += 0.5;
+      if (keys.left) mouse.dx -= 0.5;
+      if (keys.right) mouse.dx += 0.5;
+
+      mouse.dx *= 0.85;
+      mouse.dy *= 0.85;
+
+      const speed = Math.hypot(mouse.dx, mouse.dy);
+      if (speed > mouse.speed) {
+        mouse.dx = (mouse.dx / speed) * mouse.speed;
+        mouse.dy = (mouse.dy / speed) * mouse.speed;
+      }
+
+      mouse.x += mouse.dx;
+      mouse.y += mouse.dy;
+      if (speed > 0.5) mouse.angle = Math.atan2(mouse.dy, mouse.dx);
+
+      const margin = mouse.radius;
+      if (mouse.x < margin) { mouse.x = margin; mouse.dx *= -0.5; }
+      if (mouse.x > canvas.width - margin) { mouse.x = canvas.width - margin; mouse.dx *= -0.5; }
+      if (mouse.y < margin) { mouse.y = margin; mouse.dy *= -0.5; }
+      if (mouse.y > canvas.height - margin) { mouse.y = canvas.height - margin; mouse.dy *= -0.5; }
+
+      if (state.cameraShake > 0) {
+        state.cameraShake -= deltaTime * 0.05;
+        if (state.cameraShake < 0) state.cameraShake = 0;
+      }
+
+      // Cat Logic
+      if (state.cat.active && !state.levelComplete) {
+        const dx = mouse.x - state.cat.x;
+        const dy = mouse.y - state.cat.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 0) {
+          state.cat.x += (dx / dist) * state.cat.speed;
+          state.cat.y += (dy / dist) * state.cat.speed;
+          state.cat.angle = Math.atan2(dy, dx);
+        }
+
+        if (dist < mouse.radius + state.cat.radius) {
+          state.isDead = true;
+          state.cameraShake = 10;
+          setFeedback("The cat caught you! Try again.");
+          for(let i=0; i<20; i++) {
+            state.particles.push({
+              x: mouse.x, y: mouse.y,
+              vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15,
+              life: 1, size: Math.random() * 6 + 2, color: '#ef4444'
+            });
+          }
+          setTimeout(() => initLevel(currentWord), 1500);
+          return;
+        }
+      }
+
+      cheeses.forEach(c => {
+        if (c.active && c.scale < 1) c.scale = Math.min(1, c.scale + 0.05);
+      });
+
+      state.particles = state.particles.filter(p => p.life > 0);
+      state.particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= deltaTime * 0.01;
+        p.size *= 0.95;
+      });
+
+      const currentTargetIndex = cheeses.filter(c => !c.active).length;
+      
+      cheeses.forEach(c => {
+        if (c.active) {
+          const dist = Math.hypot(mouse.x - c.x, mouse.y - c.y);
+          if (dist < mouse.radius + c.radius) {
+            if (c.orderIndex === currentTargetIndex) {
+              c.active = false;
+              collectedCount = currentTargetIndex + 1;
+              updateHUD();
+              
+              if (collectedCount >= currentWord.length) setFeedback("Great! Now go to the house!");
+              else setFeedback("Got it! Find the next one.");
+              
+              for(let i=0; i<10; i++) {
+                state.particles.push({
+                  x: c.x, y: c.y,
+                  vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10,
+                  life: 1, size: Math.random() * 5 + 3, color: '#FBBF24'
+                });
+              }
+            } else {
+              mouse.dx *= -2;
+              mouse.dy *= -2;
+              state.cameraShake = 5;
+              setFeedback("Oops! Wrong letter!");
+            }
+          }
+        }
+      });
+
+      if (currentTargetIndex >= currentWord.length && !state.levelComplete) {
+        const dist = Math.hypot(mouse.x - house.x, mouse.y - house.y);
+        if (dist < mouse.radius + house.radius) {
+          state.levelComplete = true;
+          handleWordComplete();
+        }
+      }
+    }
+
+    function draw() {
+      const currentWord = words[currentWordIndex] || '';
+      const { mouse, house, cheeses, particles, cameraShake } = state;
+
+      ctx.save();
+      if (cameraShake > 0) {
+        const dx = (Math.random() - 0.5) * cameraShake;
+        const dy = (Math.random() - 0.5) * cameraShake;
+        ctx.translate(dx, dy);
+      }
+
+      // Background
+      ctx.fillStyle = '#a7f3d0';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Grid
+      ctx.strokeStyle = '#6ee7b7';
+      ctx.lineWidth = 2;
+      for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
+      for(let i=0; i<canvas.height; i+=40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+
+      // House
+      const currentTargetIndex = cheeses.filter(c => !c.active).length;
+      const homeActive = currentTargetIndex >= currentWord.length;
+      
+      ctx.save();
+      ctx.translate(house.x, house.y);
+      if (homeActive) {
+        ctx.beginPath();
+        ctx.arc(0, 0, house.radius + 10 + Math.sin(Date.now() / 150) * 5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(252, 211, 77, 0.5)';
+        ctx.fill();
+      }
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(-house.radius - 20, -house.radius, (house.radius + 20) * 2, house.radius * 2);
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(-house.radius - 20, -house.radius, (house.radius + 20) * 2, 10);
+      ctx.beginPath();
+      ctx.arc(0, house.radius, house.radius, Math.PI, 0);
+      ctx.fillStyle = '#000000';
+      ctx.fill();
+      ctx.restore();
+
+      // Cheeses
+      cheeses.forEach(c => {
+        if (c.active) {
+          ctx.save();
+          ctx.translate(c.x, c.y);
+          ctx.scale(c.scale, c.scale);
+          ctx.translate(0, Math.sin(Date.now() / 200 + c.orderIndex) * 3);
+
+          ctx.beginPath();
+          ctx.moveTo(-c.radius, c.radius); ctx.lineTo(c.radius, c.radius); ctx.lineTo(0, -c.radius);
+          ctx.closePath();
+          ctx.fillStyle = '#fbbf24'; ctx.fill();
+          ctx.lineWidth = 3; ctx.strokeStyle = '#d97706'; ctx.stroke();
+
+          ctx.fillStyle = '#d97706';
+          ctx.beginPath(); ctx.arc(-5, 5, 3, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(8, 8, 4, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(0, -5, 2, 0, Math.PI*2); ctx.fill();
+
+          ctx.fillStyle = '#1e293b';
+          ctx.font = 'bold 24px sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          if (c.orderIndex === currentTargetIndex) {
+            ctx.fillStyle = '#dc2626'; ctx.font = 'bold 28px sans-serif';
+            ctx.shadowColor = "white"; ctx.shadowBlur = 10;
+          }
+          ctx.fillText(c.letter, 0, 5);
+          ctx.shadowBlur = 0;
+          ctx.restore();
+        }
+      });
+
+      // Particles
+      particles.forEach(p => {
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color; ctx.globalAlpha = p.life; ctx.fill(); ctx.globalAlpha = 1.0;
+      });
+
+      // Cat
+      if (state.cat.active) {
+        ctx.save();
+        ctx.translate(state.cat.x, state.cat.y);
+        ctx.rotate(state.cat.angle);
+
+        ctx.beginPath(); ctx.moveTo(-state.cat.radius, 0);
+        const catTailWiggle = Math.sin(Date.now() / 150) * 15;
+        ctx.quadraticCurveTo(-state.cat.radius - 30, catTailWiggle, -state.cat.radius - 50, catTailWiggle);
+        ctx.strokeStyle = '#ea580c'; ctx.lineWidth = 6; ctx.stroke();
+
+        ctx.beginPath(); ctx.ellipse(0, 0, state.cat.radius, state.cat.radius * 0.75, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#f97316'; ctx.fill(); ctx.strokeStyle = '#c2410c'; ctx.lineWidth = 2; ctx.stroke();
+
+        ctx.beginPath(); ctx.moveTo(10, -10); ctx.lineTo(0, -25); ctx.lineTo(-10, -10); ctx.fillStyle = '#f97316'; ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(10, 10); ctx.lineTo(0, 25); ctx.lineTo(-10, 10); ctx.fillStyle = '#f97316'; ctx.fill(); ctx.stroke();
+
+        ctx.beginPath(); ctx.moveTo(8, -12); ctx.lineTo(2, -20); ctx.lineTo(-4, -12); ctx.fillStyle = '#fca5a5'; ctx.fill();
+        ctx.beginPath(); ctx.moveTo(8, 12); ctx.lineTo(2, 20); ctx.lineTo(-4, 12); ctx.fillStyle = '#fca5a5'; ctx.fill();
+
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath(); ctx.arc(12, -8, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(12, 8, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.ellipse(13, -8, 1, 3, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(13, 8, 1, 3, 0, 0, Math.PI*2); ctx.fill();
+        
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath(); ctx.arc(state.cat.radius, 0, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+
+      // Mouse
+      if (!state.isDead) {
+        ctx.save();
+        ctx.translate(mouse.x, mouse.y);
+        ctx.rotate(mouse.angle);
+
+        ctx.beginPath(); ctx.moveTo(-mouse.radius, 0);
+        const tailWiggle = Math.sin(Date.now() / 100) * 10 * (Math.hypot(mouse.dx, mouse.dy) > 0.5 ? 1 : 0.2);
+        ctx.quadraticCurveTo(-mouse.radius - 20, tailWiggle, -mouse.radius - 40, tailWiggle/2);
+        ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 4; ctx.stroke();
+
+        ctx.beginPath(); ctx.ellipse(0, 0, mouse.radius, mouse.radius * 0.7, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#94a3b8'; ctx.fill(); ctx.strokeStyle = '#475569'; ctx.lineWidth = 2; ctx.stroke();
+
+        ctx.beginPath(); ctx.arc(5, -12, 8, 0, Math.PI*2); ctx.fillStyle = '#cbd5e1'; ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(5, -12, 4, 0, Math.PI*2); ctx.fillStyle = '#f472b6'; ctx.fill();
+        ctx.beginPath(); ctx.arc(5, 12, 8, 0, Math.PI*2); ctx.fillStyle = '#cbd5e1'; ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(5, 12, 4, 0, Math.PI*2); ctx.fillStyle = '#f472b6'; ctx.fill();
+
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath(); ctx.arc(10, -5, 2, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(10, 5, 2, 0, Math.PI*2); ctx.fill();
+
+        ctx.fillStyle = '#ec4899';
+        ctx.beginPath(); ctx.arc(mouse.radius, 0, 3, 0, Math.PI*2); ctx.fill();
+
+        ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(mouse.radius, 2); ctx.lineTo(mouse.radius + 15, 10); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(mouse.radius, -2); ctx.lineTo(mouse.radius + 15, -10); ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    function gameLoop(time) {
+      const deltaTime = time - state.lastTime;
+      state.lastTime = time;
+      update(deltaTime);
+      draw();
+      state.animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    // --- Input Handling ---
+    window.addEventListener('keydown', e => {
+      // Prevent default browser scrolling for arrow keys and spacebar
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+        e.preventDefault();
+      }
+      
+      switch(e.key) {
+        case 'ArrowUp': case 'w': state.keys.up = true; break;
+        case 'ArrowDown': case 's': state.keys.down = true; break;
+        case 'ArrowLeft': case 'a': state.keys.left = true; break;
+        case 'ArrowRight': case 'd': state.keys.right = true; break;
+      }
+    });
+
+    window.addEventListener('keyup', e => {
+      // Prevent default on keyup too just in case
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+        e.preventDefault();
+      }
+
+      switch(e.key) {
+        case 'ArrowUp': case 'w': state.keys.up = false; break;
+        case 'ArrowDown': case 's': state.keys.down = false; break;
+        case 'ArrowLeft': case 'a': state.keys.left = false; break;
+        case 'ArrowRight': case 'd': state.keys.right = false; break;
+      }
+    });
+
+    document.querySelectorAll('.dpad-btn').forEach(btn => {
+      const dir = btn.getAttribute('data-dir');
+      btn.addEventListener('pointerdown', e => { e.preventDefault(); state.keys[dir] = true; });
+      btn.addEventListener('pointerup', e => { e.preventDefault(); state.keys[dir] = false; });
+      btn.addEventListener('pointercancel', e => { e.preventDefault(); state.keys[dir] = false; });
+    });
+
+    // --- Button Actions ---
+    document.getElementById('btn-start').addEventListener('click', () => {
+      const inputText = document.getElementById('word-input').value;
+      const parsedWords = inputText.split('\n')
+        .map(w => w.trim().toUpperCase())
+        .filter(w => w.length > 0 && /^[A-Z]+$/.test(w));
+      
+      if (parsedWords.length > 0) {
+        words = parsedWords;
+        level = 1;
+        showScreen('game');
+        startGame();
+      } else {
+        alert('Please enter at least one valid word (letters only).');
+      }
+    });
+
+    document.getElementById('btn-level2').addEventListener('click', () => {
+      level = 2;
+      showScreen('game');
+      startGame();
+    });
+
+    document.getElementById('btn-restart').addEventListener('click', () => {
+      level = 1;
+      showScreen('menu');
+    });
+
+    document.getElementById('btn-quit').addEventListener('click', () => {
+      if (state.animationFrameId) cancelAnimationFrame(state.animationFrameId);
+      showScreen('menu');
+    });
+
+  </script>
+</body>
+</html>
+
+
+"
+ },
 ]
 </script>
 
