@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EduDesk 95</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --win-gray: #c0c0c0;
+    --win-dark: #808080;
+    --win-darker: #404040;
+    --win-light: #ffffff;
+    --win-blue: #000080;
+    --win-title-active: #000080;
+    --win-title-inactive: #808080;
+    --win-green: #008000;
+    --win-red: #ff0000;
+    --shadow-out: inset -1px -1px 0 #404040, inset 1px 1px 0 #ffffff, inset -2px -2px 0 #808080, inset 2px 2px 0 #dfdfdf;
+    --shadow-in: inset -1px -1px 0 #ffffff, inset 1px 1px 0 #404040, inset -2px -2px 0 #dfdfdf, inset 2px 2px 0 #808080;
+  }
+
+  body {
+    font-family: 'MS Sans Serif', 'Segoe UI', Arial, sans-serif;
+    font-size: 11px;
+    background: #008080;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+    cursor: default;
+  }
+
+  /* DESKTOP */
+  #desktop {
+    width: 100%;
+    height: calc(100vh - 32px);
+    position: relative;
+    padding: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 4px;
+  }
+
+  /* DESKTOP ICONS */
+  .desktop-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 80px;
+    padding: 6px 4px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    gap: 4px;
+  }
+  .desktop-icon:hover, .desktop-icon.selected {
+    border: 1px dotted #fff;
+    background: rgba(0,0,128,0.4);
+  }
+  .desktop-icon img, .desktop-icon .icon-emoji {
+    width: 32px;
+    height: 32px;
+    font-size: 28px;
+    line-height: 32px;
+    text-align: center;
+    display: block;
+    image-rendering: pixelated;
+  }
+  .desktop-icon span {
+    color: #fff;
+    font-size: 11px;
+    text-align: center;
+    text-shadow: 1px 1px 1px #000;
+    word-break: break-word;
+    line-height: 1.2;
+  }
+
+  /* TASKBAR */
+  #taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 32px;
+    background: var(--win-gray);
+    box-shadow: var(--shadow-out);
+    display: flex;
+    align-items: center;
+    padding: 2px 4px;
+    gap: 4px;
+    z-index: 9999;
+  }
+
+  #start-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--win-gray);
+    box-shadow: var(--shadow-out);
+    border: none;
+    padding: 2px 8px;
+    font-weight: bold;
+    font-size: 12px;
+    cursor: pointer;
+    height: 24px;
+    font-family: inherit;
+  }
+  #start-btn:active { box-shadow: var(--shadow-in); }
+  #start-btn .start-logo { font-size: 16px; }
+
+  #taskbar-apps {
+    display: flex;
+    gap: 2px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .taskbar-btn {
+    background: var(--win-gray);
+    box-shadow: var(--shadow-out);
+    border: none;
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    height: 24px;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .taskbar-btn.active { box-shadow: var(--shadow-in); background: #b0b0b0; }
+
+  #clock {
+    background: var(--win-gray);
+    box-shadow: var(--shadow-in);
+    padding: 2px 8px;
+    font-size: 11px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    min-width: 60px;
+    justify-content: center;
+  }
+
+  /* START MENU */
+  #start-menu {
+    display: none;
+    position: fixed;
+    bottom: 32px;
+    left: 0;
+    width: 200px;
+    background: var(--win-gray);
+    box-shadow: var(--shadow-out);
+    z-index: 10000;
+  }
+  #start-menu.open { display: block; }
+  .start-menu-header {
+    background: var(--win-blue);
+    color: #fff;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 24px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 13px;
+    letter-spacing: 2px;
+    padding: 8px 0;
+  }
+  .start-menu-items {
+    margin-left: 24px;
+    padding: 4px 0;
+  }
+  .start-menu-item {
+    padding: 6px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .start-menu-item:hover { background: var(--win-blue); color: #fff; }
+  .start-menu-divider { border-top: 1px solid var(--win-dark); margin: 4px 0; }
+
+  /* WINDOWS */
+  .win-window {
+    position: fixed;
+    background: var(--win-gray);
+    box-shadow: var(--shadow-out);
+    min-width: 300px;
+    min-height: 200px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    resize: both;
+    overflow: hidden;
+  }
+  .win-window.focused { z-index: 1001; }
+
+  .win-titlebar {
+    background: var(--win-title-active);
+    color: #fff;
+    padding: 3px 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: move;
+    height: 22px;
+    flex-shrink: 0;
+  }
+  .win-window:not(.focused) .win-titlebar { background: var(--win-title-inactive); }
+
+  .win-title-icon { font-size: 14px; }
+  .win-title-text { flex: 1; font-weight: bold; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .win-btns { display: flex; gap: 2px; }
+  .win-btn {
+    width: 16px;
+    height: 14px;
+    background: var(--win-gray);
+    box-shadow: var(--shadow-out);
+    border: none;
+    font-size: 9px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Marlett', 'Webdings', monospace;
+    line-height: 1;
+    color: #000;
+  }
+  .win-btn:active { box-shadow: var(--shadow-in); }
+  .win-btn.close { font-size: 11px; }
+
+  .win-menubar {
+    background: var(--win-gray);
+    padding: 2px 4px;
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--win-dark);
+  }
+  .win-menu-item {
+    padding: 2px 6px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .win-menu-item:hover { background: var(--win-blue); color: #fff; }
+
+  .win-content {
+    flex: 1;
+    overflow: hidden;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+  }
+  .win-content iframe {
+    width: 100%;
+    flex: 1;
+    border: none;
+    box-shadow: var(--shadow-in);
+    background: #fff;
+    min-height: 0;
+  }
+
+  .win-statusbar {
+    background: var(--win-gray);
+    padding: 2px 6px;
+    font-size: 10px;
+    border-top: 1px solid var(--win-dark);
+    box-shadow: var(--shadow-in);
+    flex-shrink: 0;
+    height: 20px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* ADMIN PANEL */
+  .admin-form { padding: 8px; overflow-y: auto; flex: 1; }
+  .admin-form h3 { font-size: 12px; margin-bottom: 8px; border-bottom: 2px solid var(--win-blue); padding-bottom: 4px; }
+  .form-row { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+  .form-row label { font-size: 11px; font-weight: bold; }
+  .form-row input, .form-row textarea, .form-row select {
+    background: #fff;
+    border: none;
+    box-shadow: var(--shadow-in);
+    padding: 3px 5px;
+    font-size: 11px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  .form-row textarea { min-height: 80px; font-family: 'Courier New', monospace; font-size: 10px; }
+  .win95-btn {
+    background: var(--win-gray);
+    box-shadow: var(--shadow-out);
+    border: none;
+    padding: 4px 14px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    min-width: 75px;
+  }
+  .win95-btn:active { box-shadow: var(--shadow-in); }
+  .win95-btn.primary { font-weight: bold; }
+  .btn-row { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; }
+
+  .app-list { overflow-y: auto; flex: 1; }
+  .app-list-item {
+    display: flex;
+    align-items: center;
+    padding: 4px 6px;
+    gap: 8px;
+    border-bottom: 1px solid #b0b0b0;
+    font-size: 11px;
+  }
+  .app-list-item:hover { background: #d0d0d0; }
+  .app-list-item .item-icon { font-size: 18px; }
+  .app-list-item .item-name { flex: 1; font-weight: bold; }
+  .app-list-item .item-actions { display: flex; gap: 4px; }
+  .item-del-btn {
+    background: var(--win-gray);
+    box-shadow: var(--shadow-out);
+    border: none;
+    padding: 1px 6px;
+    font-size: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    color: #800000;
+  }
+  .item-del-btn:active { box-shadow: var(--shadow-in); }
+
+  /* TABS */
+  .win-tabs { display: flex; gap: 0; padding: 4px 4px 0; flex-shrink: 0; }
+  .win-tab {
+    padding: 3px 12px;
+    font-size: 11px;
+    cursor: pointer;
+    background: var(--win-gray);
+    border-top: 1px solid var(--win-dark);
+    border-left: 1px solid var(--win-dark);
+    border-right: 1px solid var(--win-dark);
+    margin-right: 2px;
+    position: relative;
+    bottom: -1px;
+  }
+  .win-tab.active {
+    background: var(--win-gray);
+    border-bottom: 1px solid var(--win-gray);
+    z-index: 1;
+    font-weight: bold;
+  }
+  .win-tab-content { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+  .win-tab-content.active { display: flex; }
+  .tab-border { border-top: 1px solid var(--win-dark); flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* PASSWORD DIALOG */
+  .dialog-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: transparent;
+    z-index: 20000;
+    align-items: center;
+    justify-content: center;
+  }
+  .dialog-overlay.open { display: flex; }
+  .dialog-box {
+    background: var(--win-gray);
+    box-shadow: var(--shadow-out);
+    min-width: 280px;
+  }
+  .dialog-content { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .dialog-icon-row { display: flex; align-items: center; gap: 12px; }
+  .dialog-icon { font-size: 32px; }
+  .dialog-msg { font-size: 12px; line-height: 1.5; }
+  .dialog-input { box-shadow: var(--shadow-in); border: none; padding: 4px 6px; font-size: 12px; width: 100%; font-family: inherit; }
+
+  /* BSOD */
+  #bsod {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #000080;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    padding: 40px;
+    z-index: 99999;
+    white-space: pre-wrap;
+  }
+
+  /* SCROLLBAR STYLING */
+  ::-webkit-scrollbar { width: 16px; }
+  ::-webkit-scrollbar-track { background: var(--win-gray); box-shadow: var(--shadow-in); }
+  ::-webkit-scrollbar-thumb { background: var(--win-gray); box-shadow: var(--shadow-out); }
+
+  /* Drag ghost */
+  .drag-ghost { opacity: 0.5; }
+
+  /* Welcome balloon */
+  .balloon {
+    position: fixed;
+    bottom: 40px;
+    right: 8px;
+    background: #ffffcc;
+    border: 1px solid #000;
+    padding: 8px 12px;
+    font-size: 11px;
+    max-width: 200px;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+    z-index: 5000;
+    line-height: 1.4;
+  }
+  .balloon::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    right: 20px;
+    width: 0; height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid #000;
+  }
+  .balloon-close {
+    position: absolute;
+    top: 2px; right: 4px;
+    cursor: pointer; font-size: 10px;
+    background: none; border: none; font-family: inherit;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- DESKTOP -->
+<div id="desktop"></div>
+
+<!-- TASKBAR -->
+<div id="taskbar">
+  <button id="start-btn" onclick="toggleStartMenu()">
+    <span class="start-logo">🪟</span>
+    <b>Start</b>
+  </button>
+  <div id="taskbar-apps"></div>
+  <div id="clock"></div>
+</div>
+
+<!-- START MENU -->
+<div id="start-menu">
+  <div class="start-menu-header">EduDesk 95</div>
+  <div class="start-menu-items">
+    <div class="start-menu-item" onclick="openAdminPanel(); closeStartMenu()">🔐 Admin Panel</div>
+    <div class="start-menu-divider"></div>
+    <div class="start-menu-item" onclick="showBSOD()">⚡ Blue Screen of Fun</div>
+    <div class="start-menu-divider"></div>
+    <div class="start-menu-item" onclick="closeStartMenu()">🚪 Close Menu</div>
+  </div>
+</div>
+
+<!-- PASSWORD DIALOG -->
+<div class="dialog-overlay" id="pw-dialog">
+  <div class="dialog-box">
+    <div class="win-titlebar">
+      <span class="win-title-icon">🔐</span>
+      <span class="win-title-text">Admin Login</span>
+      <div class="win-btns">
+        <button class="win-btn close" onclick="closePwDialog()">✕</button>
+      </div>
+    </div>
+    <div class="dialog-content">
+      <div class="dialog-icon-row">
+        <span class="dialog-icon">🔑</span>
+        <span class="dialog-msg">Enter the administrator password to access the Admin Panel.</span>
+      </div>
+      <input class="dialog-input" type="password" id="pw-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkPassword()">
+      <div id="pw-error" style="color:#800000;font-size:11px;display:none;">❌ Incorrect password. Try again.</div>
+      <div class="btn-row">
+        <button class="win95-btn primary" onclick="checkPassword()">OK</button>
+        <button class="win95-btn" onclick="closePwDialog()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BSOD -->
+<div id="bsod" onclick="document.getElementById('bsod').style.display='none'">
+A problem has been detected and EduDesk has been shut down to prevent
+damage to your students' brains.
+
+BAD_TEACHER_EXCEPTION
+
+If this is the first time you've seen this Stop error screen,
+restart your classroom. If this screen appears again, follow
+these steps:
+
+Check to make sure any new educational apps are properly installed.
+If this is a new installation, ask your IT administrator for any
+updates you might need.
+
+If problems continue, disable or remove any newly installed apps.
+Disable BIOS memory options such as caching or shadowing.
+If you need to use Safe Mode to remove or disable components, restart
+your computer, press F8 to select Advanced Startup Options, and then
+select Safe Mode.
+
+Technical information:
+
+*** STOP: 0x0000EDDU (0xC000006D, 0x0000034, 0xC0000034, 0x00000000)
+
+Beginning dump of physical memory...
+Physical memory dump complete.
+
+Contact your system administrator or technical support group for further
+assistance.
+
+[Click anywhere to dismiss]
+</div>
+
+<!-- Welcome balloon -->
+<div class="balloon" id="balloon">
+  <button class="balloon-close" onclick="document.getElementById('balloon').remove()">✕</button>
+  <b>Welcome to EduDesk 95!</b><br>
+  Double-click any icon to open an app. Click <b>Start</b> for more options.
+</div>
+
+<script>
+// ============================================================
+// DATA STORE
+// ============================================================
+const DEFAULT_APPS = [
+  {
+    id: 'app_sample1',
+    name: 'Times Tables',
+    icon: '🔢',
+    html: `<!DOCTYPE html><html><head><style>
+      body{font-family:Arial,sans-serif;background:#f0f8ff;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;}
+      h1{color:#000080;font-size:24px;margin-bottom:20px;}
+      .quiz{background:#fff;padding:24px;border:2px solid #000080;border-radius:4px;text-align:center;min-width:280px;}
+      .question{font-size:32px;font-weight:bold;color:#000080;margin:12px 0;}
+      input{font-size:24px;width:80px;text-align:center;border:2px solid #808080;padding:6px;}
+      button{margin-top:12px;padding:8px 20px;background:#000080;color:#fff;border:none;font-size:16px;cursor:pointer;}
+      button:hover{background:#0000cc;}
+      .result{font-size:18px;margin-top:12px;min-height:28px;}
+      .score{color:#008000;font-weight:bold;}
+    </style></head><body>
+    <h1>🔢 Times Tables Quiz</h1>
+    <div class="quiz">
+      <div class="question" id="q"></div>
+      <input type="number" id="ans" onkeydown="if(event.key==='Enter')check()">
+      <br><button onclick="check()">Check!</button>
+      <div class="result" id="res"></div>
+      <div class="score">Score: <span id="score">0</span> / <span id="total">0</span></div>
+    </div>
+    <script>
+      let a,b,score=0,total=0;
+      function newQ(){a=Math.ceil(Math.random()*12);b=Math.ceil(Math.random()*12);document.getElementById('q').textContent=a+' × '+b+' = ?';document.getElementById('ans').value='';document.getElementById('res').textContent='';document.getElementById('ans').focus();}
+      function check(){let v=parseInt(document.getElementById('ans').value);total++;document.getElementById('total').textContent=total;if(v===a*b){score++;document.getElementById('score').textContent=score;document.getElementById('res').innerHTML='<span style="color:green">✅ Correct!</span>';setTimeout(newQ,800);}else{document.getElementById('res').innerHTML='<span style="color:red">❌ Try again!</span>';document.getElementById('ans').value='';}}
+      newQ();
+    <\/script></body></html>`
+  },
+  {
+    id: 'app_sample2',
+    name: 'Word Scramble',
+    icon: '📝',
+    html: `<!DOCTYPE html><html><head><style>
+      body{font-family:Arial,sans-serif;background:#fff8e1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;}
+      h1{color:#8b4513;font-size:22px;}
+      .box{background:#fff;padding:24px;border:2px solid #8b4513;text-align:center;min-width:300px;}
+      .scrambled{font-size:36px;font-weight:bold;letter-spacing:6px;color:#8b4513;margin:16px 0;}
+      .hint{font-size:13px;color:#666;margin-bottom:12px;}
+      input{font-size:20px;width:180px;text-align:center;border:2px solid #999;padding:6px;text-transform:uppercase;}
+      button{margin-top:10px;padding:8px 20px;background:#8b4513;color:#fff;border:none;font-size:15px;cursor:pointer;}
+      .result{font-size:18px;margin-top:10px;min-height:28px;}
+      .score{font-weight:bold;color:#333;margin-top:8px;}
+    </style></head><body>
+    <h1>📝 Word Scramble</h1>
+    <div class="box">
+      <div class="scrambled" id="scr"></div>
+      <div class="hint" id="hint"></div>
+      <input type="text" id="ans" onkeydown="if(event.key==='Enter')check()" placeholder="Your answer">
+      <br><button onclick="check()">Submit</button>
+      <div class="result" id="res"></div>
+      <div class="score">Score: <span id="score">0</span></div>
+    </div>
+    <script>
+      const words=[{w:'PLANET',h:'It orbits a star'},{w:'OCEAN',h:'Large body of salt water'},{w:'VOLCANO',h:'Mountain that erupts'},{w:'LIBRARY',h:'Where books live'},{w:'GRAVITY',h:'Keeps you on Earth'},{w:'SCIENCE',h:'Study of the natural world'},{w:'HISTORY',h:'Study of the past'},{w:'TRIANGLE',h:'Shape with 3 sides'}];
+      let current,score=0;
+      function scramble(w){return w.split('').sort(()=>Math.random()-0.5).join('');}
+      function newWord(){current=words[Math.floor(Math.random()*words.length)];let s=scramble(current.w);while(s===current.w)s=scramble(current.w);document.getElementById('scr').textContent=s;document.getElementById('hint').textContent='Hint: '+current.h;document.getElementById('ans').value='';document.getElementById('res').textContent='';document.getElementById('ans').focus();}
+      function check(){let v=document.getElementById('ans').value.toUpperCase().trim();if(v===current.w){score++;document.getElementById('score').textContent=score;document.getElementById('res').innerHTML='<span style="color:green">✅ Correct! It was '+current.w+'</span>';setTimeout(newWord,1200);}else{document.getElementById('res').innerHTML='<span style="color:red">❌ Not quite! Try again.</span>';}}
+      newWord();
+    <\/script></body></html>`
+  },
+  {
+    id: 'app_sample3',
+    name: 'Typing Speed',
+    icon: '⌨️',
+    html: `<!DOCTYPE html><html><head><style>
+      body{font-family:'Courier New',monospace;background:#1a1a2e;color:#e0e0e0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;}
+      h1{color:#00d4ff;letter-spacing:3px;}
+      .container{background:#16213e;padding:24px;border:1px solid #00d4ff;min-width:400px;max-width:520px;}
+      .target{font-size:18px;line-height:1.6;margin-bottom:16px;padding:12px;background:#0f3460;border-radius:4px;letter-spacing:1px;}
+      .char.correct{color:#00ff7f;}.char.wrong{color:#ff4444;background:#330000;}.char.current{background:#00d4ff;color:#000;}
+      textarea{width:100%;font-size:16px;font-family:'Courier New',monospace;padding:10px;background:#0a0a1a;color:#e0e0e0;border:1px solid #444;resize:none;height:80px;}
+      .stats{display:flex;gap:20px;margin-top:12px;font-size:14px;}
+      .stat{text-align:center;}.stat-val{font-size:24px;color:#00d4ff;font-weight:bold;}
+      button{margin-top:12px;padding:8px 20px;background:#00d4ff;color:#000;border:none;font-size:14px;cursor:pointer;font-family:'Courier New',monospace;font-weight:bold;}
+    </style></head><body>
+    <h1>⌨ TYPING TEST</h1>
+    <div class="container">
+      <div class="target" id="target"></div>
+      <textarea id="input" placeholder="Start typing here..." oninput="checkTyping()" onkeydown="handleKey(event)"></textarea>
+      <div class="stats">
+        <div class="stat"><div class="stat-val" id="wpm">0</div><div>WPM</div></div>
+        <div class="stat"><div class="stat-val" id="acc">100</div><div>% ACC</div></div>
+        <div class="stat"><div class="stat-val" id="timer">60</div><div>SEC</div></div>
+      </div>
+      <button onclick="restart()">▶ New Test</button>
+    </div>
+    <script>
+      const sentences=["The quick brown fox jumps over the lazy dog","Science is the key to our future and it is also the key to our past","Reading is to the mind what exercise is to the body","The more that you read the more things you will know","Education is the most powerful weapon you can use to change the world"];
+      let current='',typed='',started=false,interval=null,timeLeft=60,errors=0;
+      function render(){let h='';for(let i=0;i<current.length;i++){let c=current[i]==' '?'&nbsp;':current[i];if(i<typed.length){h+=`<span class="char ${typed[i]===current[i]?'correct':'wrong'}">${c}</span>`;}else if(i===typed.length){h+=`<span class="char current">${c}</span>`;}else{h+=`<span class="char">${c}</span>`;}}document.getElementById('target').innerHTML=h;}
+      function checkTyping(){if(!started){started=true;interval=setInterval(tick,1000);}typed=document.getElementById('input').value;let errs=0;for(let i=0;i<typed.length;i++)if(typed[i]!==current[i])errs++;errors=errs;let words=typed.trim().split(/\s+/).filter(w=>w).length;let acc=typed.length?Math.round(((typed.length-errors)/typed.length)*100):100;document.getElementById('wpm').textContent=words;document.getElementById('acc').textContent=acc;render();if(typed===current){document.getElementById('input').value='';typed='';current=sentences[Math.floor(Math.random()*sentences.length)];render();}}
+      function handleKey(e){if(e.key==='Tab'){e.preventDefault();}}
+      function tick(){timeLeft--;document.getElementById('timer').textContent=timeLeft;if(timeLeft<=0){clearInterval(interval);document.getElementById('input').disabled=true;}}
+      function restart(){clearInterval(interval);timeLeft=60;started=false;typed='';errors=0;document.getElementById('input').value='';document.getElementById('input').disabled=false;document.getElementById('wpm').textContent=0;document.getElementById('acc').textContent=100;document.getElementById('timer').textContent=60;current=sentences[Math.floor(Math.random()*sentences.length)];render();}
+      restart();
+    <\/script></body></html>`
+  }
+];
+
+function loadApps() {
+  try {
+    const stored = localStorage.getItem('edudesk95_apps');
+    return stored ? JSON.parse(stored) : DEFAULT_APPS;
+  } catch(e) { return DEFAULT_APPS; }
+}
+
+function saveApps(apps) {
+  localStorage.setItem('edudesk95_apps', JSON.stringify(apps));
+}
+
+let apps = loadApps();
+const ADMIN_PASSWORD = 'teacher123';
+
+// ============================================================
+// DESKTOP RENDERING
+// ============================================================
+function renderDesktop() {
+  const desktop = document.getElementById('desktop');
+  desktop.innerHTML = '';
+
+  apps.forEach(app => {
+    const icon = document.createElement('div');
+    icon.className = 'desktop-icon';
+    icon.setAttribute('data-id', app.id);
+    icon.innerHTML = `
+      <span class="icon-emoji">${app.icon}</span>
+      <span>${app.name}</span>
+    `;
+    icon.addEventListener('dblclick', () => openApp(app.id));
+    icon.addEventListener('click', (e) => {
+      document.querySelectorAll('.desktop-icon').forEach(i => i.classList.remove('selected'));
+      icon.classList.add('selected');
+      e.stopPropagation();
+    });
+    desktop.appendChild(icon);
+  });
+
+  // Admin icon always last
+  const adminIcon = document.createElement('div');
+  adminIcon.className = 'desktop-icon';
+  adminIcon.innerHTML = `<span class="icon-emoji">🔐</span><span>Admin</span>`;
+  adminIcon.addEventListener('dblclick', openAdminPanel);
+  adminIcon.addEventListener('click', (e) => {
+    document.querySelectorAll('.desktop-icon').forEach(i => i.classList.remove('selected'));
+    adminIcon.classList.add('selected');
+    e.stopPropagation();
+  });
+  desktop.appendChild(adminIcon);
+}
+
+document.getElementById('desktop').addEventListener('click', () => {
+  document.querySelectorAll('.desktop-icon').forEach(i => i.classList.remove('selected'));
+});
+
+// ============================================================
+// WINDOW MANAGER
+// ============================================================
+let windowZ = 1002;
+let openWindows = {};
+
+function openApp(appId) {
+  const app = apps.find(a => a.id === appId);
+  if (!app) return;
+  if (openWindows[appId]) {
+    focusWindow(appId);
+    return;
+  }
+  createWindow(appId, app.name, app.icon, app.html);
+}
+
+function createWindow(id, title, icon, htmlContent, isAdmin = false) {
+  if (openWindows[id]) { focusWindow(id); return; }
+
+  const win = document.createElement('div');
+  win.className = 'win-window focused';
+  win.id = 'win_' + id;
+  win.style.cssText = `left:${60 + Object.keys(openWindows).length * 20}px;top:${40 + Object.keys(openWindows).length * 20}px;width:700px;height:500px;`;
+
+  if (isAdmin) {
+    win.innerHTML = buildAdminContent();
+  } else {
+    const blob = new Blob([htmlContent], {type: 'text/html'});
+    const url = URL.createObjectURL(blob);
+    win.innerHTML = `
+      <div class="win-titlebar" id="titlebar_${id}">
+        <span class="win-title-icon">${icon}</span>
+        <span class="win-title-text">${title}</span>
+        <div class="win-btns">
+          <button class="win-btn" onclick="minimizeWindow('${id}')" title="Minimize">─</button>
+          <button class="win-btn" onclick="maximizeWindow('${id}')" title="Maximize">□</button>
+          <button class="win-btn close" onclick="closeWindow('${id}')" title="Close">✕</button>
+        </div>
+      </div>
+      <div class="win-menubar">
+        <span class="win-menu-item">File</span>
+        <span class="win-menu-item">View</span>
+        <span class="win-menu-item">Help</span>
+      </div>
+      <div class="win-content">
+        <iframe src="${url}" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+      </div>
+      <div class="win-statusbar">${title} — Ready</div>
+    `;
+  }
+
+  document.body.appendChild(win);
+  openWindows[id] = { title, icon, minimized: false, isAdmin };
+  addTaskbarBtn(id, title, icon);
+  makeDraggable(win, 'titlebar_' + id);
+  focusWindow(id);
+}
+
+function buildAdminContent() {
+  return `
+    <div class="win-titlebar" id="titlebar_admin">
+      <span class="win-title-icon">🔐</span>
+      <span class="win-title-text">Admin Panel — EduDesk 95</span>
+      <div class="win-btns">
+        <button class="win-btn" onclick="minimizeWindow('admin')" title="Minimize">─</button>
+        <button class="win-btn" onclick="maximizeWindow('admin')" title="Maximize">□</button>
+        <button class="win-btn close" onclick="closeWindow('admin')" title="Close">✕</button>
+      </div>
+    </div>
+    <div class="win-tabs" id="admin-tabs">
+      <div class="win-tab active" onclick="switchTab('add')">➕ Add App</div>
+      <div class="win-tab" onclick="switchTab('manage')">📋 Manage Apps</div>
+      <div class="win-tab" onclick="switchTab('settings')">⚙️ Settings</div>
+    </div>
+    <div class="tab-border">
+      <div class="win-tab-content active" id="tab-add">
+        <div class="admin-form">
+          <h3>➕ Add New App / Game</h3>
+          <div class="form-row">
+            <label>App Name</label>
+            <input type="text" id="new-name" placeholder="e.g. Fraction Quiz">
+          </div>
+          <div class="form-row">
+            <label>Icon (emoji)</label>
+            <input type="text" id="new-icon" placeholder="e.g. 🧮" maxlength="4" style="width:60px">
+          </div>
+          <div class="form-row">
+            <label>HTML Content (paste full HTML app code here)</label>
+            <textarea id="new-html" placeholder="<!DOCTYPE html><html>...</html>"></textarea>
+          </div>
+          <div class="btn-row">
+            <button class="win95-btn" onclick="clearAddForm()">Clear</button>
+            <button class="win95-btn primary" onclick="addApp()">💾 Save App</button>
+          </div>
+          <div id="add-status" style="margin-top:8px;font-size:11px;"></div>
+        </div>
+      </div>
+      <div class="win-tab-content" id="tab-manage">
+        <div class="admin-form" style="padding:0">
+          <div style="padding:8px;background:#000080;color:#fff;font-weight:bold;font-size:12px;">📋 Installed Apps (${0})</div>
+          <div class="app-list" id="app-list-container"></div>
+        </div>
+      </div>
+      <div class="win-tab-content" id="tab-settings">
+        <div class="admin-form">
+          <h3>⚙️ Settings</h3>
+          <div class="form-row">
+            <label>Change Admin Password</label>
+            <input type="password" id="new-pw" placeholder="New password">
+            <input type="password" id="confirm-pw" placeholder="Confirm password" style="margin-top:4px">
+          </div>
+          <div class="btn-row">
+            <button class="win95-btn primary" onclick="changePassword()">🔑 Update Password</button>
+          </div>
+          <div id="pw-status" style="margin-top:8px;font-size:11px;"></div>
+          <div style="margin-top:20px;border-top:1px solid #999;padding-top:12px;">
+            <h3 style="margin-bottom:8px;">🗑️ Danger Zone</h3>
+            <button class="win95-btn" onclick="resetApps()" style="color:#800000;border:1px solid #800000;">Reset to Default Apps</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.win-tab').forEach((t, i) => {
+    t.classList.remove('active');
+    if (['add','manage','settings'][i] === name) t.classList.add('active');
+  });
+  document.querySelectorAll('.win-tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'manage') refreshAppList();
+}
+
+function refreshAppList() {
+  const container = document.getElementById('app-list-container');
+  if (!container) return;
+  container.innerHTML = '';
+  apps.forEach(app => {
+    const item = document.createElement('div');
+    item.className = 'app-list-item';
+    item.innerHTML = `
+      <span class="item-icon">${app.icon}</span>
+      <span class="item-name">${app.name}</span>
+      <div class="item-actions">
+        <button class="item-del-btn" onclick="deleteApp('${app.id}')">🗑 Delete</button>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+  if (apps.length === 0) {
+    container.innerHTML = '<div style="padding:12px;color:#666;font-size:11px;">No apps installed. Add some from the Add App tab!</div>';
+  }
+}
+
+function addApp() {
+  const name = document.getElementById('new-name').value.trim();
+  const icon = document.getElementById('new-icon').value.trim() || '📄';
+  const html = document.getElementById('new-html').value.trim();
+  const status = document.getElementById('add-status');
+
+  if (!name) { status.innerHTML = '<span style="color:#800000">❌ Please enter an app name.</span>'; return; }
+  if (!html) { status.innerHTML = '<span style="color:#800000">❌ Please paste HTML content.</span>'; return; }
+
+  const newApp = {
+    id: 'app_' + Date.now(),
+    name, icon, html
+  };
+  apps.push(newApp);
+  saveApps(apps);
+  renderDesktop();
+  status.innerHTML = '<span style="color:green">✅ App "' + name + '" added successfully!</span>';
+  clearAddForm();
+}
+
+function clearAddForm() {
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-icon').value = '';
+  document.getElementById('new-html').value = '';
+}
+
+function deleteApp(appId) {
+  const app = apps.find(a => a.id === appId);
+  if (!app) return;
+  if (!confirm('Delete "' + app.name + '"?')) return;
+  apps = apps.filter(a => a.id !== appId);
+  saveApps(apps);
+  renderDesktop();
+  if (openWindows[appId]) closeWindow(appId);
+  refreshAppList();
+}
+
+function resetApps() {
+  if (!confirm('Reset to default apps? This will delete all custom apps.')) return;
+  apps = [...DEFAULT_APPS];
+  saveApps(apps);
+  renderDesktop();
+  refreshAppList();
+}
+
+function changePassword() {
+  const np = document.getElementById('new-pw').value;
+  const cp = document.getElementById('confirm-pw').value;
+  const s = document.getElementById('pw-status');
+  if (!np) { s.innerHTML = '<span style="color:#800000">❌ Password cannot be empty.</span>'; return; }
+  if (np !== cp) { s.innerHTML = '<span style="color:#800000">❌ Passwords do not match.</span>'; return; }
+  localStorage.setItem('edudesk95_password', np);
+  s.innerHTML = '<span style="color:green">✅ Password updated!</span>';
+}
+
+// ============================================================
+// WINDOW CONTROLS
+// ============================================================
+function focusWindow(id) {
+  document.querySelectorAll('.win-window').forEach(w => w.classList.remove('focused'));
+  const win = document.getElementById('win_' + id);
+  if (win) { win.classList.add('focused'); win.style.zIndex = ++windowZ; }
+  document.querySelectorAll('.taskbar-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.id === id);
+  });
+}
+
+function closeWindow(id) {
+  const win = document.getElementById('win_' + id);
+  if (win) win.remove();
+  const btn = document.querySelector(`.taskbar-btn[data-id="${id}"]`);
+  if (btn) btn.remove();
+  delete openWindows[id];
+}
+
+function minimizeWindow(id) {
+  const win = document.getElementById('win_' + id);
+  if (win) { win.style.display = 'none'; openWindows[id].minimized = true; }
+  const btn = document.querySelector(`.taskbar-btn[data-id="${id}"]`);
+  if (btn) btn.classList.remove('active');
+}
+
+let maximizedState = {};
+function maximizeWindow(id) {
+  const win = document.getElementById('win_' + id);
+  if (!win) return;
+  if (maximizedState[id]) {
+    const s = maximizedState[id];
+    win.style.cssText = s;
+    delete maximizedState[id];
+  } else {
+    maximizedState[id] = win.style.cssText;
+    win.style.cssText = `left:0;top:0;width:100vw;height:calc(100vh - 32px);z-index:${++windowZ};`;
+  }
+}
+
+function addTaskbarBtn(id, title, icon) {
+  const bar = document.getElementById('taskbar-apps');
+  const btn = document.createElement('button');
+  btn.className = 'taskbar-btn active';
+  btn.dataset.id = id;
+  btn.textContent = icon + ' ' + title;
+  btn.onclick = () => {
+    const win = document.getElementById('win_' + id);
+    if (!win) return;
+    if (openWindows[id]?.minimized) {
+      win.style.display = 'flex';
+      openWindows[id].minimized = false;
+      focusWindow(id);
+    } else if (win.classList.contains('focused')) {
+      minimizeWindow(id);
+    } else {
+      focusWindow(id);
+    }
+  };
+  bar.appendChild(btn);
+}
+
+// ============================================================
+// DRAGGABLE WINDOWS
+// ============================================================
+function makeDraggable(win, handleId) {
+  const handle = document.getElementById(handleId);
+  if (!handle) return;
+  let ox=0,oy=0,mx=0,my=0;
+  handle.onmousedown = (e) => {
+    if (e.target.classList.contains('win-btn')) return;
+    focusWindow(win.id.replace('win_',''));
+    e.preventDefault();
+    ox = win.offsetLeft; oy = win.offsetTop;
+    mx = e.clientX; my = e.clientY;
+    document.onmousemove = (e) => {
+      win.style.left = (ox + e.clientX - mx) + 'px';
+      win.style.top = Math.max(0, oy + e.clientY - my) + 'px';
+    };
+    document.onmouseup = () => { document.onmousemove = null; document.onmouseup = null; };
+  };
+  win.onmousedown = () => focusWindow(win.id.replace('win_',''));
+}
+
+// ============================================================
+// ADMIN PANEL
+// ============================================================
+function openAdminPanel() {
+  if (openWindows['admin']) { focusWindow('admin'); return; }
+  const storedPw = localStorage.getItem('edudesk95_password') || ADMIN_PASSWORD;
+  document.getElementById('pw-dialog').classList.add('open');
+  setTimeout(() => document.getElementById('pw-input').focus(), 100);
+}
+
+function checkPassword() {
+  const pw = document.getElementById('pw-input').value;
+  const stored = localStorage.getItem('edudesk95_password') || ADMIN_PASSWORD;
+  if (pw === stored) {
+    closePwDialog();
+    createWindow('admin', 'Admin Panel', '🔐', '', true);
+    setTimeout(() => makeDraggable(document.getElementById('win_admin'), 'titlebar_admin'), 50);
+  } else {
+    document.getElementById('pw-error').style.display = 'block';
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+function closePwDialog() {
+  document.getElementById('pw-dialog').classList.remove('open');
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-error').style.display = 'none';
+}
+
+// ============================================================
+// START MENU
+// ============================================================
+function toggleStartMenu() {
+  document.getElementById('start-menu').classList.toggle('open');
+}
+function closeStartMenu() {
+  document.getElementById('start-menu').classList.remove('open');
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#start-menu') && !e.target.closest('#start-btn')) {
+    closeStartMenu();
+  }
+});
+
+// ============================================================
+// CLOCK
+// ============================================================
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours().toString().padStart(2,'0');
+  const m = now.getMinutes().toString().padStart(2,'0');
+  document.getElementById('clock').textContent = h + ':' + m;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ============================================================
+// BSOD
+// ============================================================
+function showBSOD() {
+  closeStartMenu();
+  document.getElementById('bsod').style.display = 'block';
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderDesktop();
+
+// Remove balloon after 6s
+setTimeout(() => {
+  const b = document.getElementById('balloon');
+  if (b) b.remove();
+}, 6000);
+</script>
+</body>
+</html>
