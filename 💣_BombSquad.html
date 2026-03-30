@@ -1,928 +1,987 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
- <title>Bomb Squad</title>
- <script src="https://cdn.tailwindcss.com"></script>
- <script>
-   tailwind.config = {
-     theme: {
-       extend: {
-         keyframes: {
-           shake: {
-             '0%, 100%': { transform: 'translate(0, 0) rotate(0)' },
-             '10%, 30%, 50%, 70%, 90%': { transform: 'translate(-4px, 2px) rotate(-1deg)' },
-             '20%, 40%, 60%, 80%': { transform: 'translate(4px, -2px) rotate(1deg)' }
-           },
-           'shake-intense': {
-             '0%, 100%': { transform: 'translate(0, 0) rotate(0)' },
-             '25%': { transform: 'translate(-3px, 3px) rotate(-1deg)' },
-             '50%': { transform: 'translate(3px, -3px) rotate(1deg)' },
-             '75%': { transform: 'translate(-3px, -3px) rotate(0deg)' }
-           },
-           'emergency-flash': {
-             '0%, 100%': { opacity: '0' },
-             '50%': { opacity: '0.35' }
-           }
-         },
-         animation: {
-           shake: 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
-           'shake-intense': 'shake-intense 0.35s ease-in-out infinite',
-           'emergency-flash': 'emergency-flash 0.8s ease-in-out infinite',
-           pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-           bounce: 'bounce 1s infinite'
-         }
-       }
-     }
-   }
- </script>
- <style>
-   body {
-     background-color: #09090b; /* zinc-950 */
-     color: white;
-     font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-     user-select: none; /* Prevent text selection while playing */
-     -webkit-user-select: none;
-     touch-action: manipulation; /* iPad optimization */
-   }
-   .bg-stripes {
-     background-image: repeating-linear-gradient(45deg, rgba(24, 24, 27, 0.8) 25px, rgba(9, 9, 11, 0.8) 25px, rgba(9, 9, 11, 0.8) 50px, rgba(24, 24, 27, 0.8) 50px, rgba(24, 24, 27, 0.8) 75px, rgba(9, 9, 11, 0.8) 75px, rgba(9, 9, 11, 0.8) 100px);
-   }
-   .bg-metal {
-     background: linear-gradient(180deg, #3f3f46 0%, #18181b 100%);
-   }
-  
-   /* Custom scrollbar for word list and game area */
-   .custom-scrollbar::-webkit-scrollbar {
-     width: 6px;
-   }
-   .custom-scrollbar::-webkit-scrollbar-track {
-     background: rgba(24, 24, 27, 0.5);
-     border-radius: 4px;
-   }
-   .custom-scrollbar::-webkit-scrollbar-thumb {
-     background: rgba(113, 113, 122, 0.8);
-     border-radius: 4px;
-   }
-   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-     background: rgba(161, 161, 170, 1);
-   }
-  
-   .interactive-node {
-     transition: all 0.2s ease;
-     touch-action: manipulation; /* Crucial for immediate tap on iPad */
-     cursor: pointer;
-   }
-   .interactive-node:active {
-     transform: scale(0.9);
-   }
- </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Bomb Squad</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          keyframes: {
+            shake: {
+              '0%, 100%': { transform: 'translate(0, 0) rotate(0)' },
+              '10%, 30%, 50%, 70%, 90%': { transform: 'translate(-4px, 2px) rotate(-1deg)' },
+              '20%, 40%, 60%, 80%': { transform: 'translate(4px, -2px) rotate(1deg)' }
+            },
+            'shake-intense': {
+              '0%, 100%': { transform: 'translate(0, 0) rotate(0)' },
+              '25%': { transform: 'translate(-3px, 3px) rotate(-1deg)' },
+              '50%': { transform: 'translate(3px, -3px) rotate(1deg)' },
+              '75%': { transform: 'translate(-3px, -3px) rotate(0deg)' }
+            },
+            'emergency-flash': {
+              '0%, 100%': { opacity: '0' },
+              '50%': { opacity: '0.35' }
+            }
+          },
+          animation: {
+            shake: 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+            'shake-intense': 'shake-intense 0.35s ease-in-out infinite',
+            'emergency-flash': 'emergency-flash 0.8s ease-in-out infinite',
+            pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            bounce: 'bounce 1s infinite'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #09090b; /* zinc-950 */
+      color: white;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      user-select: none; /* Prevent text selection while playing */
+      -webkit-user-select: none;
+      touch-action: manipulation; /* iPad optimization */
+    }
+    .bg-stripes {
+      background-image: repeating-linear-gradient(45deg, rgba(24, 24, 27, 0.8) 25px, rgba(9, 9, 11, 0.8) 25px, rgba(9, 9, 11, 0.8) 50px, rgba(24, 24, 27, 0.8) 50px, rgba(24, 24, 27, 0.8) 75px, rgba(9, 9, 11, 0.8) 75px, rgba(9, 9, 11, 0.8) 100px);
+    }
+    .bg-metal {
+      background: linear-gradient(180deg, #3f3f46 0%, #18181b 100%);
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(24, 24, 27, 0.5); 
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(113, 113, 122, 0.8); 
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(161, 161, 170, 1); 
+    }
+    
+    .interactive-node {
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+      cursor: pointer;
+    }
+    .interactive-node:active {
+      transform: scale(0.9);
+    }
+
+    .glitch-text {
+      color: #ef4444 !important;
+      text-shadow: 2px 0 #00ffea, -2px 0 #ff003c;
+    }
+  </style>
 </head>
 <body class="h-screen w-full flex flex-col items-center p-2 sm:p-4 overflow-hidden selection:bg-yellow-500/30">
 
+  <!-- SVG Icons Library -->
+  <svg width="0" height="0" class="hidden">
+    <defs>
+      <symbol id="icon-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path>
+      </symbol>
+      <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path>
+      </symbol>
+      <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+      </symbol>
+      <symbol id="icon-volume" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+      </symbol>
+      <symbol id="icon-scissors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+      </symbol>
+      <symbol id="icon-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22v-5"></path><path d="M9 8V2"></path><path d="M15 8V2"></path><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"></path>
+      </symbol>
+      <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </symbol>
+      <symbol id="icon-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
+      </symbol>
+      <symbol id="icon-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline>
+      </symbol>
+    </defs>
+  </svg>
 
- <!-- SVG Icons Library -->
- <svg width="0" height="0" class="hidden">
-   <defs>
-     <symbol id="icon-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-       <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path>
-     </symbol>
-     <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-       <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path>
-     </symbol>
-     <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-       <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
-     </symbol>
-     <symbol id="icon-volume" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-     </symbol>
-     <symbol id="icon-scissors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-       <circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line>
-     </symbol>
-     <symbol id="icon-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-       <path d="M12 22v-5"></path><path d="M9 8V2"></path><path d="M15 8V2"></path><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"></path>
-     </symbol>
-     <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
-     </symbol>
-     <symbol id="icon-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-       <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
-     </symbol>
-     <symbol id="icon-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-       <line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline>
-     </symbol>
-   </defs>
- </svg>
-
-
- <div class="w-full max-w-5xl flex-grow flex flex-col h-full relative">
-  
-   <!-- Red Alert Full Screen Overlay (Hidden by default) -->
-   <div id="emergency-overlay" class="hidden fixed inset-0 bg-red-600 mix-blend-overlay z-[100] animate-emergency-flash pointer-events-none"></div>
-
-
-   <!-- Header -->
-   <header class="flex flex-col sm:flex-row justify-between items-center py-2 sm:py-4 mb-2 gap-2 sm:gap-4 shrink-0">
-     <div class="flex items-center gap-3">
-       <div class="bg-red-600 p-2 rounded-lg shadow-[0_0_15px_rgba(220,38,38,0.5)]">
-         <svg class="w-6 h-6 sm:w-8 sm:h-8 text-white"><use href="#icon-alert"></use></svg>
-       </div>
-       <h1 class="text-3xl sm:text-4xl font-black tracking-tighter italic text-zinc-100">BOMB <span class="text-yellow-500">SQUAD</span></h1>
-     </div>
+  <div class="w-full max-w-5xl flex-grow flex flex-col h-full relative">
     
-     <!-- Stats (Hidden in Menu) -->
-     <div id="stats-container" class="hidden flex items-center gap-4 sm:gap-6 bg-zinc-900 p-2 sm:px-6 sm:py-2 rounded-2xl border border-zinc-800 shadow-xl">
-       <div class="text-center">
-         <p class="text-[0.6rem] text-zinc-500 font-bold uppercase tracking-wider">Level</p>
-         <p id="stat-level" class="text-lg font-black text-blue-400">Yr -</p>
-       </div>
-       <div class="h-8 w-px bg-zinc-700"></div>
-       <div class="text-center">
-         <p class="text-[0.6rem] text-zinc-500 font-bold uppercase tracking-wider">Defused</p>
-         <p id="stat-score" class="text-2xl font-black text-green-500 font-mono">0</p>
-       </div>
-       <button onclick="goToMenu()" class="ml-2 p-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors shadow-md touch-manipulation" title="Main Menu">
-         <svg class="w-5 h-5 text-zinc-400 hover:text-white"><use href="#icon-refresh"></use></svg>
-       </button>
-     </div>
-   </header>
+    <!-- Red Alert Full Screen Overlay (Hidden by default) -->
+    <div id="emergency-overlay" class="hidden fixed inset-0 bg-red-600 mix-blend-overlay z-[100] animate-emergency-flash pointer-events-none"></div>
 
-
-   <!-- Main Area -->
-   <main class="flex-grow flex flex-col relative w-full h-full min-h-0">
-    
-     <!-- MENU VIEW -->
-     <div id="view-menu" class="bg-zinc-900 rounded-3xl border border-zinc-800 p-6 sm:p-12 text-center shadow-2xl relative flex flex-col max-h-[95vh] w-full max-w-4xl mx-auto overflow-y-auto custom-scrollbar mt-4 sm:mt-10">
-       <div class="absolute top-0 left-0 w-full h-2 bg-yellow-500 shrink-0"></div>
+    <!-- Header -->
+    <header class="flex flex-col sm:flex-row justify-between items-center py-2 sm:py-4 mb-2 gap-2 sm:gap-4 shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="bg-red-600 p-2 rounded-lg shadow-[0_0_15px_rgba(220,38,38,0.5)]">
+          <svg class="w-6 h-6 sm:w-8 sm:h-8 text-white"><use href="#icon-alert"></use></svg>
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-black tracking-tighter italic text-zinc-100">BOMB <span class="text-yellow-500">SQUAD</span></h1>
+      </div>
       
-       <div id="menu-intro" class="shrink-0">
-         <div class="w-16 h-16 sm:w-24 sm:h-24 bg-red-600/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-inner">
-           <svg class="w-8 h-8 sm:w-12 sm:h-12"><use href="#icon-alert"></use></svg>
-         </div>
-         <h2 class="text-2xl sm:text-4xl font-black mb-2 sm:mb-4 tracking-wide text-zinc-100">DEFUSE THE SCRAMBLED BOMBS</h2>
-         <p class="text-zinc-400 mb-6 sm:mb-8 max-w-xl mx-auto text-sm sm:text-lg leading-relaxed hidden sm:block">
-           Connect the correct letter terminals to the bottom sockets to spell the target word. Use <strong class="text-white">Scissors</strong> to cut wrong wires, and the <strong class="text-white">Plug</strong> to wire the correct ones. Defuse it before time runs out!
-         </p>
-       </div>
+      <!-- Stats (Hidden in Menu) -->
+      <div id="stats-container" class="hidden flex items-center gap-4 sm:gap-6 bg-zinc-900 p-2 sm:px-6 sm:py-2 rounded-2xl border border-zinc-800 shadow-xl">
+        <div class="text-center">
+          <p class="text-[0.6rem] text-zinc-500 font-bold uppercase tracking-wider">Level</p>
+          <p id="stat-level" class="text-lg font-black text-blue-400">Yr -</p>
+        </div>
+        <div class="h-8 w-px bg-zinc-700"></div>
+        <div class="text-center">
+          <p class="text-[0.6rem] text-zinc-500 font-bold uppercase tracking-wider">Defused</p>
+          <p id="stat-score" class="text-2xl font-black text-green-500 font-mono">0</p>
+        </div>
+        <button onclick="goToMenu()" class="ml-2 p-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors shadow-md touch-manipulation" title="Main Menu">
+          <svg class="w-5 h-5 text-zinc-400 hover:text-white"><use href="#icon-refresh"></use></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Area -->
+    <main class="flex-grow flex flex-col relative w-full h-full min-h-0">
       
-       <!-- STEP 1: Year Selection -->
-       <div id="step-1-years" class="flex flex-col shrink-0 w-full transition-all">
-         <h3 class="text-sm sm:text-lg font-bold mb-4 text-zinc-500 uppercase tracking-widest">Select Your Clearance Level</h3>
-         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-2xl mx-auto w-full" id="level-buttons">
-           <!-- Generated via JS -->
-         </div>
-       </div>
-
-
-       <!-- STEP 2: Word List Dossier (Hidden until level selected) -->
-       <div id="step-2-dossier" class="hidden flex-col items-center flex-grow min-h-0 w-full">
-         <div class="w-full bg-zinc-950 border border-zinc-700 rounded-xl p-4 flex flex-col shadow-inner max-h-64 sm:max-h-80 lg:max-h-96 shrink-0">
-           <div class="flex justify-between items-center mb-3 pb-2 border-b border-zinc-800 shrink-0">
-             <span class="text-yellow-500 font-bold uppercase tracking-wider text-sm">Mission Dossier - <span id="dossier-year-title" class="text-white"></span></span>
-             <span class="text-zinc-500 text-xs font-mono">CONFIDENTIAL</span>
-           </div>
-           <p class="text-zinc-400 text-xs sm:text-sm mb-4 text-left shrink-0">Review the target word list below. The bombs will use scrambled configurations of these words.</p>
-          
-           <div id="word-list-content" class="flex flex-wrap gap-2 overflow-y-auto pb-2 content-start custom-scrollbar">
-             <!-- Words injected here -->
-           </div>
-         </div>
-
-
-         <!-- Menu Action Buttons -->
-         <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-6 w-full max-w-3xl mx-auto shrink-0">
-           <button onclick="showYearSelection()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-6 py-4 rounded-xl font-bold text-lg tracking-widest shadow-[0_4px_0_rgb(63,63,70)] hover:translate-y-1 hover:shadow-none transition-all flex justify-center items-center gap-2 touch-manipulation">
-             <svg class="w-5 h-5"><use href="#icon-back"></use></svg> BACK
-           </button>
-           <button onclick="startGame()" class="flex-[2] bg-red-600 hover:bg-red-500 text-white px-6 py-4 rounded-xl font-black text-xl sm:text-2xl tracking-widest shadow-[0_6px_0_rgb(153,27,27)] hover:translate-y-1 hover:shadow-[0_2px_0_rgb(153,27,27)] transition-all touch-manipulation">
-             START MISSION
-           </button>
-         </div>
-       </div>
-     </div>
-
-
-     <!-- GAME VIEW (Scrollable container to prevent squishing) -->
-     <div id="view-game" class="hidden flex-col h-full w-full max-w-5xl mx-auto relative z-0 pb-8 overflow-y-auto custom-scrollbar px-1 sm:px-2">
-      
-       <!-- Tool Bar & Audio (Shrink-0 prevents it from squishing) -->
-       <div class="flex justify-between items-center mb-4 gap-2 shrink-0">
-         <button onclick="speakCurrentWord()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 sm:px-5 py-2 sm:py-3 rounded-xl font-bold shadow-[0_4px_0_rgb(30,58,138)] hover:translate-y-1 hover:shadow-none transition-all touch-manipulation">
-           <svg class="w-5 h-5"><use href="#icon-volume"></use></svg> <span class="hidden sm:inline">Listen</span>
-         </button>
-
-
-         <div class="flex bg-zinc-900 p-1 sm:p-1.5 rounded-xl border border-zinc-800 shadow-inner">
-           <button id="btn-tool-scissors" onclick="setTool('scissors')" class="flex items-center gap-1 sm:gap-2 px-4 sm:px-6 py-2 rounded-lg font-bold transition-all text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 touch-manipulation">
-             <svg class="w-5 h-5 text-red-400"><use href="#icon-scissors"></use></svg> <span class="hidden xs:inline">Cut</span>
-           </button>
-           <button id="btn-tool-connect" onclick="setTool('connect')" class="flex items-center gap-1 sm:gap-2 px-4 sm:px-6 py-2 rounded-lg font-bold transition-all bg-zinc-700 text-white shadow-md border-b-2 border-zinc-600 touch-manipulation">
-             <svg class="w-5 h-5 text-yellow-400"><use href="#icon-plug"></use></svg> <span class="hidden xs:inline">Connect</span>
-           </button>
-         </div>
-       </div>
-
-
-       <!-- The Bomb Container (Now has a minimum height to prevent overlapping elements) -->
-       <div id="bomb-container" class="relative bg-metal rounded-3xl border-4 sm:border-8 border-zinc-900 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex-grow flex flex-col shrink-0 min-h-[600px] bg-stripes overflow-hidden transition-all duration-300" onclick="handleBombClick(event)">
+      <!-- MENU VIEW -->
+      <div id="view-menu" class="bg-zinc-900 rounded-3xl border border-zinc-800 p-6 sm:p-12 text-center shadow-2xl relative flex flex-col max-h-[95vh] w-full max-w-4xl mx-auto overflow-y-auto custom-scrollbar mt-4 sm:mt-10">
+        <div class="absolute top-0 left-0 w-full h-2 bg-yellow-500 shrink-0"></div>
         
-         <!-- Screws -->
-         <div class="absolute top-2 sm:top-4 left-2 sm:left-4 w-4 h-4 sm:w-5 sm:h-5 bg-zinc-400 rounded-full border-2 border-zinc-600 shadow-inner flex items-center justify-center"><div class="w-full h-0.5 bg-zinc-600 rotate-45"></div></div>
-         <div class="absolute top-2 sm:top-4 right-2 sm:right-4 w-4 h-4 sm:w-5 sm:h-5 bg-zinc-400 rounded-full border-2 border-zinc-600 shadow-inner flex items-center justify-center"><div class="w-full h-0.5 bg-zinc-600 -rotate-12"></div></div>
-         <div class="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 w-4 h-4 sm:w-5 sm:h-5 bg-zinc-400 rounded-full border-2 border-zinc-600 shadow-inner flex items-center justify-center"><div class="w-full h-0.5 bg-zinc-600 rotate-90"></div></div>
-         <div class="absolute bottom-2 sm:bottom-4 right-2 sm:right-4 w-4 h-4 sm:w-5 sm:h-5 bg-zinc-400 rounded-full border-2 border-zinc-600 shadow-inner flex items-center justify-center"><div class="w-full h-0.5 bg-zinc-600 rotate-180"></div></div>
+        <div id="menu-intro" class="shrink-0">
+          <div class="w-16 h-16 sm:w-24 sm:h-24 bg-red-600/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-inner">
+            <svg class="w-8 h-8 sm:w-12 sm:h-12"><use href="#icon-alert"></use></svg>
+          </div>
+          <h2 class="text-2xl sm:text-4xl font-black mb-2 sm:mb-4 tracking-wide text-zinc-100">DEFUSE THE SCRAMBLED BOMBS</h2>
+          <p class="text-zinc-400 mb-6 sm:mb-8 max-w-xl mx-auto text-sm sm:text-lg leading-relaxed hidden sm:block">
+            Connect the correct letter terminals to the bottom sockets to spell the target word. As you defuse more bombs, the <strong class="text-red-400">timer gets shorter</strong> and <strong class="text-yellow-400">system glitches</strong> will try to distract you. Defuse it before time runs out!
+          </p>
+        </div>
+        
+        <!-- STEP 1: Year Selection -->
+        <div id="step-1-years" class="flex flex-col shrink-0 w-full transition-all">
+          <h3 class="text-sm sm:text-lg font-bold mb-4 text-zinc-500 uppercase tracking-widest">Select Your Clearance Level</h3>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-2xl mx-auto w-full" id="level-buttons">
+            <!-- Generated via JS -->
+          </div>
+        </div>
 
+        <!-- STEP 2: Word List Dossier (Hidden until level selected) -->
+        <div id="step-2-dossier" class="hidden flex-col items-center flex-grow min-h-0 w-full">
+          <div class="w-full bg-zinc-950 border border-zinc-700 rounded-xl p-4 flex flex-col shadow-inner max-h-64 sm:max-h-80 lg:max-h-96 shrink-0">
+            <div class="flex justify-between items-center mb-3 pb-2 border-b border-zinc-800 shrink-0">
+              <span class="text-yellow-500 font-bold uppercase tracking-wider text-sm">Mission Dossier - <span id="dossier-year-title" class="text-white"></span></span>
+              <span class="text-zinc-500 text-xs font-mono">CONFIDENTIAL</span>
+            </div>
+            <p class="text-zinc-400 text-xs sm:text-sm mb-4 text-left shrink-0">Review the target word list below. The bombs will use scrambled configurations of these words.</p>
+            
+            <div id="word-list-content" class="flex flex-wrap gap-2 overflow-y-auto pb-2 content-start custom-scrollbar">
+              <!-- Words injected here -->
+            </div>
+          </div>
 
-         <!-- Digital Display / Timer -->
-         <div class="flex justify-between items-center bg-black border-[4px] sm:border-[6px] border-zinc-900 rounded-2xl px-4 sm:px-6 py-2 sm:py-3 shadow-[inset_0_0_20px_rgba(0,0,0,1)] w-11/12 max-w-md mx-auto mt-6 sm:mt-8 z-20 bg-opacity-90 backdrop-blur shrink-0">
-           <div class="flex flex-col">
-             <span class="text-[0.55rem] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-1"><svg class="w-3 h-3 inline mr-1"><use href="#icon-clock"></use></svg>Time</span>
-             <span id="timer-display" class="font-mono text-4xl sm:text-5xl font-black tracking-wider text-red-600 transition-colors">
-               00:00
-             </span>
-           </div>
-           <div class="flex flex-col items-end">
-             <span class="text-[0.55rem] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-1">Status</span>
-             <span id="status-display" class="font-mono text-xl sm:text-2xl font-bold tracking-widest text-yellow-500">
-               ARMED
-             </span>
-           </div>
-         </div>
+          <!-- Menu Action Buttons -->
+          <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-6 w-full max-w-3xl mx-auto shrink-0">
+            <button onclick="showYearSelection()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-6 py-4 rounded-xl font-bold text-lg tracking-widest shadow-[0_4px_0_rgb(63,63,70)] hover:translate-y-1 hover:shadow-none transition-all flex justify-center items-center gap-2 touch-manipulation">
+              <svg class="w-5 h-5"><use href="#icon-back"></use></svg> BACK
+            </button>
+            <button onclick="startGame()" class="flex-[2] bg-red-600 hover:bg-red-500 text-white px-6 py-4 rounded-xl font-black text-xl sm:text-2xl tracking-widest shadow-[0_6px_0_rgb(153,27,27)] hover:translate-y-1 hover:shadow-[0_2px_0_rgb(153,27,27)] transition-all touch-manipulation">
+              START MISSION
+            </button>
+          </div>
+        </div>
+      </div>
 
+      <!-- GAME VIEW (Scrollable container to prevent squishing) -->
+      <div id="view-game" class="hidden flex-col h-full w-full max-w-5xl mx-auto relative z-0 pb-8 overflow-y-auto custom-scrollbar px-1 sm:px-2">
+        
+        <!-- Tool Bar & Audio -->
+        <div class="flex justify-between items-center mb-4 gap-2 shrink-0">
+          <button onclick="speakCurrentWord()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 sm:px-5 py-2 sm:py-3 rounded-xl font-bold shadow-[0_4px_0_rgb(30,58,138)] hover:translate-y-1 hover:shadow-none transition-all touch-manipulation">
+            <svg class="w-5 h-5"><use href="#icon-volume"></use></svg> <span class="hidden sm:inline">Listen</span>
+          </button>
 
-         <!-- Main Play Area (Wires, Terminals, Sockets) - Removed overflow-hidden to prevent clipping -->
-         <div id="play-area" class="relative flex-grow flex flex-col justify-between py-6 px-2 sm:px-8 mt-2 min-h-[350px]">
+          <div class="flex bg-zinc-900 p-1 sm:p-1.5 rounded-xl border border-zinc-800 shadow-inner">
+            <button id="btn-tool-scissors" onclick="setTool('scissors')" class="flex items-center gap-1 sm:gap-2 px-4 sm:px-6 py-2 rounded-lg font-bold transition-all text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 touch-manipulation">
+              <svg class="w-5 h-5 text-red-400"><use href="#icon-scissors"></use></svg> <span class="hidden xs:inline">Cut</span>
+            </button>
+            <button id="btn-tool-connect" onclick="setTool('connect')" class="flex items-center gap-1 sm:gap-2 px-4 sm:px-6 py-2 rounded-lg font-bold transition-all bg-zinc-700 text-white shadow-md border-b-2 border-zinc-600 touch-manipulation">
+              <svg class="w-5 h-5 text-yellow-400"><use href="#icon-plug"></use></svg> <span class="hidden xs:inline">Connect</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- The Bomb Container -->
+        <div id="bomb-container" class="relative bg-metal rounded-3xl border-4 sm:border-8 border-zinc-900 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex-grow flex flex-col shrink-0 min-h-[600px] bg-stripes overflow-hidden transition-all duration-300" onclick="handleBombClick(event)">
           
-           <!-- Top Terminals -->
-           <div id="terminals-container" class="flex flex-wrap justify-center gap-3 sm:gap-6 z-20 pb-10">
-             <!-- Rendered via JS -->
-           </div>
+          <!-- Screws -->
+          <div class="absolute top-2 sm:top-4 left-2 sm:left-4 w-4 h-4 sm:w-5 sm:h-5 bg-zinc-400 rounded-full border-2 border-zinc-600 shadow-inner flex items-center justify-center"><div class="w-full h-0.5 bg-zinc-600 rotate-45"></div></div>
+          <div class="absolute top-2 sm:top-4 right-2 sm:right-4 w-4 h-4 sm:w-5 sm:h-5 bg-zinc-400 rounded-full border-2 border-zinc-600 shadow-inner flex items-center justify-center"><div class="w-full h-0.5 bg-zinc-600 -rotate-12"></div></div>
+          <div class="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 w-4 h-4 sm:w-5 sm:h-5 bg-zinc-400 rounded-full border-2 border-zinc-600 shadow-inner flex items-center justify-center"><div class="w-full h-0.5 bg-zinc-600 rotate-90"></div></div>
+          <div class="absolute bottom-2 sm:bottom-4 right-2 sm:right-4 w-4 h-4 sm:w-5 sm:h-5 bg-zinc-400 rounded-full border-2 border-zinc-600 shadow-inner flex items-center justify-center"><div class="w-full h-0.5 bg-zinc-600 rotate-180"></div></div>
 
+          <!-- Digital Display / Timer -->
+          <div class="flex justify-between items-center bg-black border-[4px] sm:border-[6px] border-zinc-900 rounded-2xl px-4 sm:px-6 py-2 sm:py-3 shadow-[inset_0_0_20px_rgba(0,0,0,1)] w-11/12 max-w-md mx-auto mt-6 sm:mt-8 z-20 bg-opacity-90 backdrop-blur shrink-0 relative">
+            
+            <div class="flex flex-col">
+              <span class="text-[0.55rem] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-1"><svg class="w-3 h-3 inline mr-1"><use href="#icon-clock"></use></svg>Time</span>
+              <span id="timer-display" class="font-mono text-4xl sm:text-5xl font-black tracking-wider text-red-600 transition-colors">
+                00:00
+              </span>
+            </div>
+            
+            <!-- Difficulty Tier Indicator -->
+            <div id="tier-indicator" class="absolute top-1 left-1/2 -translate-x-1/2 flex gap-1 hidden">
+              <div class="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></div>
+            </div>
 
-           <!-- SVG Wires Layer -->
-           <svg id="wires-svg" class="absolute inset-0 w-full h-full z-10 pointer-events-none drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
-             <!-- Paths rendered via JS -->
-           </svg>
+            <div class="flex flex-col items-end">
+              <span class="text-[0.55rem] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-1">Status</span>
+              <span id="status-display" class="font-mono text-xl sm:text-2xl font-bold tracking-widest text-yellow-500">
+                ARMED
+              </span>
+            </div>
+          </div>
 
+          <!-- Main Play Area -->
+          <div id="play-area" class="relative flex-grow flex flex-col justify-between py-6 px-2 sm:px-8 mt-2 min-h-[350px] transition-all duration-300">
+            
+            <!-- Distraction: Power Failure Overlay -->
+            <div id="distraction-overlay" class="absolute inset-0 z-30 opacity-0 pointer-events-none bg-black/95 rounded-xl transition-opacity duration-100 flex items-center justify-center backdrop-blur-sm">
+              <span id="distraction-text" class="text-red-600 font-mono font-black text-2xl sm:text-4xl tracking-widest animate-pulse hidden border-y-2 border-red-600 py-2 w-full text-center bg-red-950/50">POWER FAILURE</span>
+            </div>
 
-           <!-- Bottom Sockets -->
-           <div id="sockets-container" class="flex flex-wrap justify-center gap-2 sm:gap-4 z-20 pt-10">
-             <!-- Rendered via JS -->
-           </div>
-         </div>
+            <!-- Top Terminals -->
+            <div id="terminals-container" class="flex flex-wrap justify-center gap-3 sm:gap-6 z-20 pb-10">
+              <!-- Rendered via JS -->
+            </div>
 
+            <!-- SVG Wires Layer -->
+            <svg id="wires-svg" class="absolute inset-0 w-full h-full z-10 pointer-events-none drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
+              <!-- Paths rendered via JS -->
+            </svg>
 
-         <!-- Test Action Row - Shrink-0 keeps it exactly this size at the bottom -->
-         <div class="p-3 sm:p-6 bg-zinc-950/80 border-t-4 border-zinc-900 flex justify-center backdrop-blur z-20 shrink-0">
-           <button id="btn-test" onclick="handleTest()" class="relative w-full max-w-xs sm:w-64 h-16 sm:h-20 rounded-2xl font-black text-3xl sm:text-4xl tracking-widest transition-all overflow-hidden flex items-center justify-center bg-red-600 text-white border-b-8 border-red-900 hover:bg-red-500 active:border-b-0 active:translate-y-2 touch-manipulation">
-             <div class="absolute top-0 left-0 right-0 h-1/2 bg-white/10 rounded-t-xl pointer-events-none"></div>
-             TEST
-           </button>
-         </div>
+            <!-- Bottom Sockets -->
+            <div id="sockets-container" class="flex flex-wrap justify-center gap-2 sm:gap-4 z-20 pt-10">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
 
+          <!-- Test Action Row -->
+          <div class="p-3 sm:p-6 bg-zinc-950/80 border-t-4 border-zinc-900 flex justify-center backdrop-blur z-20 shrink-0">
+            <button id="btn-test" onclick="handleTest()" class="relative w-full max-w-xs sm:w-64 h-16 sm:h-20 rounded-2xl font-black text-3xl sm:text-4xl tracking-widest transition-all overflow-hidden flex items-center justify-center bg-red-600 text-white border-b-8 border-red-900 hover:bg-red-500 active:border-b-0 active:translate-y-2 touch-manipulation">
+              <div class="absolute top-0 left-0 right-0 h-1/2 bg-white/10 rounded-t-xl pointer-events-none"></div>
+              TEST
+            </button>
+          </div>
 
-         <!-- Result Overlays -->
-         <div id="overlay-kaboom" class="hidden absolute inset-0 bg-red-950/95 backdrop-blur-md z-50 flex-col items-center justify-center p-4 sm:p-8 text-center transition-opacity duration-300">
-           <h2 class="text-6xl sm:text-7xl font-black text-white italic transform -rotate-6 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] mb-6 tracking-tighter">KABOOM!</h2>
-           <div class="bg-zinc-950 p-4 sm:p-6 rounded-2xl border-2 border-red-500 mb-8 max-w-md w-full shadow-[0_0_30px_rgba(239,68,68,0.3)]">
-             <p class="text-red-400 font-bold uppercase tracking-widest mb-2 text-xs sm:text-sm">Target Word Was</p>
-             <p id="kaboom-word" class="text-3xl sm:text-5xl font-mono font-bold text-white tracking-widest break-all">WORD</p>
-           </div>
-           <button onclick="startNextWord()" class="bg-zinc-100 text-red-700 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-black text-lg sm:text-xl flex items-center gap-3 hover:bg-white hover:scale-105 transition-all shadow-xl touch-manipulation">
-             Try Another Bomb <svg class="w-6 h-6"><use href="#icon-refresh"></use></svg>
-           </button>
-         </div>
+          <!-- Result Overlays -->
+          <div id="overlay-kaboom" class="hidden absolute inset-0 bg-red-950/95 backdrop-blur-md z-50 flex-col items-center justify-center p-4 sm:p-8 text-center transition-opacity duration-300">
+            <h2 class="text-6xl sm:text-7xl font-black text-white italic transform -rotate-6 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] mb-6 tracking-tighter">KABOOM!</h2>
+            <div class="bg-zinc-950 p-4 sm:p-6 rounded-2xl border-2 border-red-500 mb-8 max-w-md w-full shadow-[0_0_30px_rgba(239,68,68,0.3)]">
+              <p class="text-red-400 font-bold uppercase tracking-widest mb-2 text-xs sm:text-sm">Target Word Was</p>
+              <p id="kaboom-word" class="text-3xl sm:text-5xl font-mono font-bold text-white tracking-widest break-all">WORD</p>
+            </div>
+            <button onclick="startNextWord()" class="bg-zinc-100 text-red-700 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-black text-lg sm:text-xl flex items-center gap-3 hover:bg-white hover:scale-105 transition-all shadow-xl touch-manipulation">
+              Try Another Bomb <svg class="w-6 h-6"><use href="#icon-refresh"></use></svg>
+            </button>
+          </div>
 
+          <div id="overlay-defused" class="hidden absolute inset-0 bg-green-900/95 backdrop-blur-md z-50 flex-col items-center justify-center p-4 sm:p-8 text-center transition-opacity duration-300">
+            <svg class="w-20 h-20 sm:w-24 sm:h-24 text-green-400 drop-shadow-[0_0_15px_rgba(74,222,128,0.5)] mb-4"><use href="#icon-check"></use></svg>
+            <h2 class="text-5xl sm:text-7xl font-black text-white italic drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)] mb-4 tracking-tighter">DEFUSED!</h2>
+            <div class="bg-green-950/50 p-4 px-6 sm:px-8 rounded-2xl border border-green-500/50 mb-8">
+              <p id="defused-word" class="text-green-300 font-bold text-xl sm:text-2xl tracking-widest font-mono break-all">WORD</p>
+            </div>
+            <button onclick="startNextWord()" class="bg-zinc-100 text-green-700 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-black text-lg sm:text-xl flex items-center gap-3 hover:bg-white hover:scale-105 transition-all shadow-xl animate-bounce touch-manipulation">
+              Next Bomb <svg class="w-6 h-6"><use href="#icon-arrow"></use></svg>
+            </button>
+          </div>
 
-         <div id="overlay-defused" class="hidden absolute inset-0 bg-green-900/95 backdrop-blur-md z-50 flex-col items-center justify-center p-4 sm:p-8 text-center transition-opacity duration-300">
-           <svg class="w-20 h-20 sm:w-24 sm:h-24 text-green-400 drop-shadow-[0_0_15px_rgba(74,222,128,0.5)] mb-4"><use href="#icon-check"></use></svg>
-           <h2 class="text-5xl sm:text-7xl font-black text-white italic drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)] mb-4 tracking-tighter">DEFUSED!</h2>
-           <div class="bg-green-950/50 p-4 px-6 sm:px-8 rounded-2xl border border-green-500/50 mb-8">
-             <p id="defused-word" class="text-green-300 font-bold text-xl sm:text-2xl tracking-widest font-mono break-all">WORD</p>
-           </div>
-           <button onclick="startNextWord()" class="bg-zinc-100 text-green-700 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-black text-lg sm:text-xl flex items-center gap-3 hover:bg-white hover:scale-105 transition-all shadow-xl animate-bounce touch-manipulation">
-             Next Bomb <svg class="w-6 h-6"><use href="#icon-arrow"></use></svg>
-           </button>
-         </div>
+        </div>
+      </div>
+    </main>
+  </div>
 
+  <script>
+    // Data Dictionary
+    const WORD_LISTS = {
+      4: ["cat", "bed", "pig", "dog", "sun", "hop", "sit", "run", "big", "red", "stop", "plan", "frog", "clap", "drum", "jump", "milk", "hand", "fast", "best", "ship", "shop", "chat", "much", "thin", "this", "when", "what", "sing", "long", "rain", "play", "tree", "see", "boat", "road", "bike", "cake", "home", "use", "make", "take", "time", "ride", "hope", "note", "cute", "jumping", "running", "played", "cats", "dogs", "redo", "untie", "car", "park", "bird", "girl", "for", "short", "turn", "hurt", "to", "too", "two", "here", "hear", "one", "won", "because", "said", "were", "there", "their", "people", "could", "would", "should", "come", "some", "once", "again", "any", "many", "water", "where", "which", "who", "why", "school"],
+      5: ["rain", "play", "cake", "eight", "tree", "beach", "happy", "key", "boat", "snow", "toe", "grow", "though", "through", "rough", "caught", "thought", "brought", "shoulder", "group", "catch", "match", "fetch", "bridge", "edge", "badge", "knife", "write", "lamb", "climb", "unhappy", "unfair", "return", "rewrite", "disagree", "mistake", "preview", "submarine", "running", "swimming", "hopping", "stopped", "planned", "dropped", "making", "hoping", "baked", "smiled", "station", "action", "motion", "mission", "decision", "vision", "musician", "possible", "terrible", "visible", "horrible", "quickly", "slowly", "happily", "carefully", "sign", "signal", "act", "active", "actor", "react", "direct", "direction", "there", "their", "they're", "your", "you're", "to", "too", "two", "here", "hear", "because", "different", "enough", "people", "important", "before", "around", "again", "something"],
+      6: ["neighbour", "weigh", "receive", "believe", "deceive", "ceiling", "though", "although", "through", "thought", "cough", "rough", "tough", "drought", "brought", "shoulder", "could", "would", "should", "young", "knowledge", "knight", "write", "wrong", "doubt", "subtle", "island", "honest", "answer", "climb", "disagree", "disappear", "incorrect", "incomplete", "impossible", "impatient", "preview", "predict", "submarine", "transport", "information", "education", "discussion", "decision", "confusion", "expression", "musician", "politician", "happiness", "careful", "running", "swimming", "beginning", "stopped", "planned", "carried", "hurried", "making", "hoping", "writing", "act", "action", "active", "activity", "react", "sign", "signal", "signature", "design", "assign", "there", "their", "they're", "your", "you're", "to", "too", "two", "affect", "effect", "quiet", "quite", "than", "then", "were", "where", "of", "off", "important", "different", "because", "enough", "before", "around", "something", "everyone", "always", "often", "usually"],
+      7: ["acquaintance", "rhythm", "queue", "foreign", "leisure", "yacht", "guarantee", "immediately", "variety", "environment", "biology", "geology", "astronomy", "microscope", "telephone", "photograph", "autobiography", "transport", "import", "export", "antisocial", "automatic", "bicycle", "triangle", "submarine", "international", "irregular", "illegal", "impossible", "irresponsible", "education", "information", "communication", "explanation", "decision", "permission", "musician", "electrician", "happiness", "darkness", "beginning", "preferred", "occurred", "stopped", "travelling", "cancelled", "writing", "hoping", "usable", "changeable", "act", "action", "active", "activity", "interact", "react", "sign", "signal", "design", "assignment", "there", "their", "they're", "your", "you're", "to", "too", "two", "affect", "effect", "definitely", "separate", "principal", "principle", "complement", "compliment", "practice", "practise", "licence", "license", "knowledge", "subtle", "doubt", "island", "honest", "answer", "sword", "psychology", "important", "different", "because", "enough", "although", "however", "therefore", "throughout", "specific", "significant", "relevant", "consistent"]
+    };
 
-       </div>
-     </div>
-   </main>
- </div>
+    const WIRE_COLORS = [
+      '#ef4444', '#3b82f6', '#22c55e', '#eab308', 
+      '#a855f7', '#f97316', '#ec4899', '#06b6d4', 
+      '#84cc16', '#6366f1'
+    ];
 
-
- <script>
-   // Data Dictionary
-   const WORD_LISTS = {
-     4: ["cat", "bed", "pig", "dog", "sun", "hop", "sit", "run", "big", "red", "stop", "plan", "frog", "clap", "drum", "jump", "milk", "hand", "fast", "best", "ship", "shop", "chat", "much", "thin", "this", "when", "what", "sing", "long", "rain", "play", "tree", "see", "boat", "road", "bike", "cake", "home", "use", "make", "take", "time", "ride", "hope", "note", "cute", "jumping", "running", "played", "cats", "dogs", "redo", "untie", "car", "park", "bird", "girl", "for", "short", "turn", "hurt", "to", "too", "two", "here", "hear", "one", "won", "because", "said", "were", "there", "their", "people", "could", "would", "should", "come", "some", "once", "again", "any", "many", "water", "where", "which", "who", "why", "school"],
-     5: ["rain", "play", "cake", "eight", "tree", "beach", "happy", "key", "boat", "snow", "toe", "grow", "though", "through", "rough", "caught", "thought", "brought", "shoulder", "group", "catch", "match", "fetch", "bridge", "edge", "badge", "knife", "write", "lamb", "climb", "unhappy", "unfair", "return", "rewrite", "disagree", "mistake", "preview", "submarine", "running", "swimming", "hopping", "stopped", "planned", "dropped", "making", "hoping", "baked", "smiled", "station", "action", "motion", "mission", "decision", "vision", "musician", "possible", "terrible", "visible", "horrible", "quickly", "slowly", "happily", "carefully", "sign", "signal", "act", "active", "actor", "react", "direct", "direction", "there", "their", "they're", "your", "you're", "to", "too", "two", "here", "hear", "because", "different", "enough", "people", "important", "before", "around", "again", "something"],
-     6: ["neighbour", "weigh", "receive", "believe", "deceive", "ceiling", "though", "although", "through", "thought", "cough", "rough", "tough", "drought", "brought", "shoulder", "could", "would", "should", "young", "knowledge", "knight", "write", "wrong", "doubt", "subtle", "island", "honest", "answer", "climb", "disagree", "disappear", "incorrect", "incomplete", "impossible", "impatient", "preview", "predict", "submarine", "transport", "information", "education", "discussion", "decision", "confusion", "expression", "musician", "politician", "happiness", "careful", "running", "swimming", "beginning", "stopped", "planned", "carried", "hurried", "making", "hoping", "writing", "act", "action", "active", "activity", "react", "sign", "signal", "signature", "design", "assign", "there", "their", "they're", "your", "you're", "to", "too", "two", "affect", "effect", "quiet", "quite", "than", "then", "were", "where", "of", "off", "important", "different", "because", "enough", "before", "around", "something", "everyone", "always", "often", "usually"],
-     7: ["acquaintance", "rhythm", "queue", "foreign", "leisure", "yacht", "guarantee", "immediately", "variety", "environment", "biology", "geology", "astronomy", "microscope", "telephone", "photograph", "autobiography", "transport", "import", "export", "antisocial", "automatic", "bicycle", "triangle", "submarine", "international", "irregular", "illegal", "impossible", "irresponsible", "education", "information", "communication", "explanation", "decision", "permission", "musician", "electrician", "happiness", "darkness", "beginning", "preferred", "occurred", "stopped", "travelling", "cancelled", "writing", "hoping", "usable", "changeable", "act", "action", "active", "activity", "interact", "react", "sign", "signal", "design", "assignment", "there", "their", "they're", "your", "you're", "to", "too", "two", "affect", "effect", "definitely", "separate", "principal", "principle", "complement", "compliment", "practice", "practise", "licence", "license", "knowledge", "subtle", "doubt", "island", "honest", "answer", "sword", "psychology", "important", "different", "because", "enough", "although", "however", "therefore", "throughout", "specific", "significant", "relevant", "consistent"]
-   };
-
-
-   const WIRE_COLORS = [
-     '#ef4444', '#3b82f6', '#22c55e', '#eab308',
-     '#a855f7', '#f97316', '#ec4899', '#06b6d4',
-     '#84cc16', '#6366f1'
-   ];
-
-
-   // State Variables
-   let gameState = 'menu'; // menu, playing, kaboom, defused
-   let selectedYear = null;
-   let currentWord = '';
-   let score = 0;
-   let activeTool = 'connect'; // scissors, connect
-   let terminals = [];
-   let sockets = [];
-   let connections = []; // { topId, bottomId, color }
-   let timeLeft = 0;
-   let timerId = null;
-   let selectedNode = null;
-
-
-   // DOM Elements Cache
-   const elMenu = document.getElementById('view-menu');
-   const elGame = document.getElementById('view-game');
-   const elStats = document.getElementById('stats-container');
-   const elStatLevel = document.getElementById('stat-level');
-   const elStatScore = document.getElementById('stat-score');
-   const elTimer = document.getElementById('timer-display');
-   const elStatus = document.getElementById('status-display');
-   const elBomb = document.getElementById('bomb-container');
-   const elTerminals = document.getElementById('terminals-container');
-   const elSockets = document.getElementById('sockets-container');
-   const elSvg = document.getElementById('wires-svg');
-   const elBtnTest = document.getElementById('btn-test');
-   const elEmergencyOverlay = document.getElementById('emergency-overlay');
-  
-   // Overlays
-   const elOverlayKaboom = document.getElementById('overlay-kaboom');
-   const elOverlayDefused = document.getElementById('overlay-defused');
-
-
-   // Init Menu Buttons
-   function initMenu() {
-     const container = document.getElementById('level-buttons');
-     container.innerHTML = '';
-     [4, 5, 6, 7].forEach(year => {
-       const btn = document.createElement('button');
-       btn.className = "group relative bg-zinc-950 border-2 border-zinc-800 hover:border-yellow-500 rounded-xl p-4 sm:p-6 transition-all shadow-lg overflow-hidden touch-manipulation";
-       btn.onclick = () => selectYear(year);
-       btn.innerHTML = `
-         <div class="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-         <span class="block text-xs sm:text-sm text-zinc-500 font-bold mb-1 pointer-events-none">YEAR</span>
-         <span class="block text-3xl sm:text-4xl font-black text-white pointer-events-none">${year}</span>
-       `;
-       container.appendChild(btn);
-     });
-   }
-
-
-   // Step 1 -> Step 2
-   function selectYear(year) {
-     selectedYear = year;
+    // State Variables
+    let gameState = 'menu'; // menu, playing, kaboom, defused
+    let selectedYear = null;
+    let currentWord = '';
+    let score = 0;
+    let activeTool = 'connect'; // scissors, connect
+    let terminals = [];
+    let sockets = [];
+    let connections = []; // { topId, bottomId, color }
+    let timeLeft = 0;
+    let timerId = null;
+    let selectedNode = null; 
     
-     // Hide Step 1
-     document.getElementById('step-1-years').classList.add('hidden');
-     document.getElementById('step-1-years').classList.remove('flex');
+    // Distraction State
+    let isGlitching = false;
+    let distractionOverlayActive = false;
+
+    // DOM Elements Cache
+    const elMenu = document.getElementById('view-menu');
+    const elGame = document.getElementById('view-game');
+    const elStats = document.getElementById('stats-container');
+    const elStatLevel = document.getElementById('stat-level');
+    const elStatScore = document.getElementById('stat-score');
+    const elTimer = document.getElementById('timer-display');
+    const elStatus = document.getElementById('status-display');
+    const elBomb = document.getElementById('bomb-container');
+    const elPlayArea = document.getElementById('play-area');
+    const elTerminals = document.getElementById('terminals-container');
+    const elSockets = document.getElementById('sockets-container');
+    const elSvg = document.getElementById('wires-svg');
+    const elBtnTest = document.getElementById('btn-test');
+    const elEmergencyOverlay = document.getElementById('emergency-overlay');
+    const elTierIndicator = document.getElementById('tier-indicator');
     
-     // Setup and Show Step 2
-     document.getElementById('dossier-year-title').textContent = `Year ${year}`;
-     const listContent = document.getElementById('word-list-content');
-     listContent.innerHTML = '';
-    
-     WORD_LISTS[year].sort().forEach(word => {
-       const span = document.createElement('span');
-       span.className = "bg-zinc-800/80 border border-zinc-700 text-zinc-300 px-2 py-1 rounded text-sm font-mono";
-       span.textContent = word;
-       listContent.appendChild(span);
-     });
-    
-     document.getElementById('step-2-dossier').classList.remove('hidden');
-     document.getElementById('step-2-dossier').classList.add('flex');
-    
-     // Scroll to top of dossier if needed
-     elMenu.scrollTop = 0;
-   }
+    // Overlays
+    const elOverlayKaboom = document.getElementById('overlay-kaboom');
+    const elOverlayDefused = document.getElementById('overlay-defused');
 
+    // Init Menu Buttons
+    function initMenu() {
+      const container = document.getElementById('level-buttons');
+      container.innerHTML = '';
+      [4, 5, 6, 7].forEach(year => {
+        const btn = document.createElement('button');
+        btn.className = "group relative bg-zinc-950 border-2 border-zinc-800 hover:border-yellow-500 rounded-xl p-4 sm:p-6 transition-all shadow-lg overflow-hidden touch-manipulation";
+        btn.onclick = () => selectYear(year);
+        btn.innerHTML = `
+          <div class="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+          <span class="block text-xs sm:text-sm text-zinc-500 font-bold mb-1 pointer-events-none">YEAR</span>
+          <span class="block text-3xl sm:text-4xl font-black text-white pointer-events-none">${year}</span>
+        `;
+        container.appendChild(btn);
+      });
+    }
 
-   // Step 2 -> Step 1 (Back Button)
-   function showYearSelection() {
-     selectedYear = null;
-     document.getElementById('step-2-dossier').classList.add('hidden');
-     document.getElementById('step-2-dossier').classList.remove('flex');
-    
-     document.getElementById('step-1-years').classList.remove('hidden');
-     document.getElementById('step-1-years').classList.add('flex');
-   }
-
-
-   // Full Menu Return
-   function goToMenu() {
-     stopTimer();
-     resetEmergencyEffects();
-     gameState = 'menu';
-    
-     elGame.classList.add('hidden');
-     elGame.classList.remove('flex');
-     elStats.classList.add('hidden');
-    
-     elMenu.classList.remove('hidden');
-     elMenu.classList.add('flex');
-    
-     showYearSelection(); // Reset to step 1
-   }
-
-
-   // Core Game Start
-   function startGame() {
-     if (!selectedYear) return;
-     score = 0;
-     elStatScore.textContent = score;
-     elStatLevel.textContent = `Yr ${selectedYear}`;
-    
-     elMenu.classList.add('hidden');
-     elMenu.classList.remove('flex');
-     elStats.classList.remove('hidden');
-    
-     elGame.classList.remove('hidden');
-     elGame.classList.add('flex');
-
-
-     startNextWord();
-   }
-
-
-   function startNextWord() {
-     resetEmergencyEffects();
-     elOverlayKaboom.classList.add('hidden');
-     elOverlayKaboom.classList.remove('flex');
-     elOverlayDefused.classList.add('hidden');
-     elOverlayDefused.classList.remove('flex');
-     elBomb.classList.remove('animate-shake', 'ring-8', 'ring-red-600', 'ring-green-500');
-
-
-     const list = WORD_LISTS[selectedYear];
-     currentWord = list[Math.floor(Math.random() * list.length)];
-    
-     const puzzle = generatePuzzle(currentWord, selectedYear, score);
-     terminals = puzzle.terminals;
-     sockets = puzzle.sockets;
-     connections = puzzle.connections;
-     timeLeft = puzzle.timeLimit;
-    
-     setGameState('playing');
-     setTool('connect');
-     selectedNode = null;
-    
-     renderBoard();
-     speakCurrentWord();
-     startTimer();
-    
-     // Scroll to top of game view to ensure controls are visible at start
-     elGame.scrollTop = 0;
-   }
-
-
-   function setGameState(state) {
-     gameState = state;
-     elStatus.textContent = state === 'kaboom' ? 'FAIL' : state === 'defused' ? 'SAFE' : 'ARMED';
-    
-     elStatus.className = `font-mono text-xl sm:text-2xl font-bold tracking-widest ${
-       state === 'kaboom' ? 'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]' :
-       state === 'defused' ? 'text-green-500 drop-shadow-[0_0_8px_rgba(34,197,94,0.8)]' : 'text-yellow-500'
-     }`;
-
-
-     if (state !== 'playing') {
-       elBtnTest.className = "relative w-full max-w-xs sm:w-64 h-16 sm:h-20 rounded-2xl font-black text-3xl sm:text-4xl tracking-widest transition-all overflow-hidden flex items-center justify-center bg-zinc-800 text-zinc-600 border-b-8 border-zinc-900 cursor-not-allowed";
-       stopTimer();
-       resetEmergencyEffects(); // stop the 10s panic mode if game ends
+    // Step 1 -> Step 2
+    function selectYear(year) {
+      selectedYear = year;
+      document.getElementById('step-1-years').classList.add('hidden');
+      document.getElementById('step-1-years').classList.remove('flex');
       
-       if (state === 'kaboom') {
-         // One final boom shake
-         elBomb.classList.add('animate-shake', 'ring-8', 'ring-red-600');
-         document.getElementById('kaboom-word').textContent = currentWord;
-         setTimeout(() => {
-           elOverlayKaboom.classList.remove('hidden');
-           elOverlayKaboom.classList.add('flex');
-         }, 600);
-       } else if (state === 'defused') {
-         elBomb.classList.add('ring-8', 'ring-green-500');
-         document.getElementById('defused-word').textContent = currentWord;
-         score++;
-         elStatScore.textContent = score;
-         setTimeout(() => {
-           elOverlayDefused.classList.remove('hidden');
-           elOverlayDefused.classList.add('flex');
-         }, 300);
-       }
-     } else {
-       elBtnTest.className = "relative w-full max-w-xs sm:w-64 h-16 sm:h-20 rounded-2xl font-black text-3xl sm:text-4xl tracking-widest transition-all overflow-hidden flex items-center justify-center bg-red-600 text-white border-b-8 border-red-900 hover:bg-red-500 active:border-b-0 active:translate-y-2 touch-manipulation cursor-pointer";
-     }
-   }
-
-
-   function generatePuzzle(word, year, currentScore) {
-     const difficultyLevel = (year - 3) + Math.floor(currentScore / 2);
-     const numDistractors = Math.min(10, 2 + Math.floor(difficultyLevel / 1.5));
-     const preConnectedCorrect = Math.max(0, word.length - Math.floor(difficultyLevel / 1.5) - 2);
-     const preConnectedIncorrect = Math.min(word.length - preConnectedCorrect, Math.floor(difficultyLevel / 2));
-
-
-     const newSockets = word.split('').map((char, i) => ({
-       id: `s-${i}`, index: i, targetChar: char
-     }));
-
-
-     let terminalPool = [];
-     word.split('').forEach((char, i) => {
-       terminalPool.push({ id: `t-corr-${i}`, char: char, isTarget: true, targetIndex: i });
-     });
-
-
-     const alphabet = "abcdefghijklmnopqrstuvwxyz";
-     for (let i = 0; i < numDistractors; i++) {
-       const char = alphabet[Math.floor(Math.random() * alphabet.length)];
-       terminalPool.push({ id: `t-dist-${i}`, char: char, isTarget: false });
-     }
-
-
-     terminalPool = terminalPool.sort(() => Math.random() - 0.5).map((t, i) => ({
-       ...t, color: WIRE_COLORS[i % WIRE_COLORS.length]
-     }));
-
-
-     let conns = [];
-     let availableSockets = [...newSockets];
-     let availableTerminals = [...terminalPool];
-
-
-     for (let i = 0; i < preConnectedCorrect; i++) {
-       if (availableSockets.length === 0) break;
-       const sIdx = Math.floor(Math.random() * availableSockets.length);
-       const socket = availableSockets.splice(sIdx, 1)[0];
-       const tIdx = availableTerminals.findIndex(t => t.isTarget && t.targetIndex === socket.index);
-       if (tIdx > -1) {
-         const term = availableTerminals.splice(tIdx, 1)[0];
-         conns.push({ topId: term.id, bottomId: socket.id, color: term.color });
-       }
-     }
-
-
-     for (let i = 0; i < preConnectedIncorrect; i++) {
-       if (availableSockets.length === 0 || availableTerminals.length === 0) break;
-       const sIdx = Math.floor(Math.random() * availableSockets.length);
-       const socket = availableSockets.splice(sIdx, 1)[0];
-       const possibleTerms = availableTerminals.filter(t => !(t.isTarget && t.targetIndex === socket.index));
-       if (possibleTerms.length > 0) {
-         const tIdx = Math.floor(Math.random() * possibleTerms.length);
-         const term = possibleTerms[tIdx];
-         availableTerminals = availableTerminals.filter(t => t.id !== term.id);
-         conns.push({ topId: term.id, bottomId: socket.id, color: term.color });
-       }
-     }
-
-
-     const timeLimit = Math.max(15, 60 - (difficultyLevel * 2) + (word.length * 2));
-     return { terminals: terminalPool, sockets: newSockets, connections: conns, timeLimit };
-   }
-
-
-   // Rendering Logic
-   function renderBoard() {
-     elTerminals.innerHTML = '';
-     terminals.forEach(term => {
-       const isConnected = connections.some(c => c.topId === term.id);
-       const isSelected = selectedNode?.id === term.id;
+      document.getElementById('dossier-year-title').textContent = `Year ${year}`;
+      const listContent = document.getElementById('word-list-content');
+      listContent.innerHTML = '';
       
-       const wrapper = document.createElement('div');
-       wrapper.className = "relative group interactive-node";
+      WORD_LISTS[year].sort().forEach(word => {
+        const span = document.createElement('span');
+        span.className = "bg-zinc-800/80 border border-zinc-700 text-zinc-300 px-2 py-1 rounded text-sm font-mono";
+        span.textContent = word;
+        listContent.appendChild(span);
+      });
       
-       const div = document.createElement('div');
-       div.dataset.id = term.id;
-       div.dataset.type = 'terminal';
-       div.onclick = () => handleTerminalClick(term.id);
+      document.getElementById('step-2-dossier').classList.remove('hidden');
+      document.getElementById('step-2-dossier').classList.add('flex');
+      elMenu.scrollTop = 0;
+    }
+
+    // Step 2 -> Step 1 (Back Button)
+    function showYearSelection() {
+      selectedYear = null;
+      document.getElementById('step-2-dossier').classList.add('hidden');
+      document.getElementById('step-2-dossier').classList.remove('flex');
+      document.getElementById('step-1-years').classList.remove('hidden');
+      document.getElementById('step-1-years').classList.add('flex');
+    }
+
+    function goToMenu() {
+      stopTimer();
+      resetEmergencyEffects();
+      resetDistractions();
+      gameState = 'menu';
+      elGame.classList.add('hidden');
+      elGame.classList.remove('flex');
+      elStats.classList.add('hidden');
+      elMenu.classList.remove('hidden');
+      elMenu.classList.add('flex');
+      showYearSelection();
+    }
+
+    function startGame() {
+      if (!selectedYear) return;
+      score = 0;
+      elStatScore.textContent = score;
+      elStatLevel.textContent = `Yr ${selectedYear}`;
+      elMenu.classList.add('hidden');
+      elMenu.classList.remove('flex');
+      elStats.classList.remove('hidden');
+      elGame.classList.remove('hidden');
+      elGame.classList.add('flex');
+      startNextWord();
+    }
+
+    function startNextWord() {
+      resetEmergencyEffects();
+      resetDistractions();
+      elOverlayKaboom.classList.add('hidden');
+      elOverlayKaboom.classList.remove('flex');
+      elOverlayDefused.classList.add('hidden');
+      elOverlayDefused.classList.remove('flex');
+      elBomb.classList.remove('animate-shake', 'ring-8', 'ring-red-600', 'ring-green-500');
+
+      const list = WORD_LISTS[selectedYear];
+      currentWord = list[Math.floor(Math.random() * list.length)];
       
-       let classes = "relative w-10 h-10 sm:w-14 sm:h-14 rounded-full border-[3px] flex items-center justify-center font-bold text-xl sm:text-2xl cursor-pointer shadow-lg transition-all duration-200 select-none ";
-       if (isConnected) classes += "bg-zinc-800 text-zinc-600 border-zinc-700 scale-95";
-       else classes += "bg-zinc-200 text-zinc-900 border-zinc-400 hover:scale-110 hover:border-white hover:bg-white";
-       if (isSelected) classes = classes.replace("bg-zinc-200", "").replace("border-zinc-400", "") + " ring-4 ring-yellow-400 bg-yellow-100 border-yellow-500 text-yellow-900 scale-110";
+      const puzzle = generatePuzzle(currentWord, selectedYear, score);
+      terminals = puzzle.terminals;
+      sockets = puzzle.sockets;
+      connections = puzzle.connections;
+      timeLeft = puzzle.timeLimit;
       
-       div.className = classes;
-       div.innerHTML = `
-         ${term.char}
-         <div class="absolute -bottom-1.5 sm:-bottom-2 w-2.5 h-2.5 sm:w-4 sm:h-4 rounded-full border-2 border-zinc-900" style="background-color: ${term.color}"></div>
-       `;
-
-
-       wrapper.appendChild(div);
-       elTerminals.appendChild(wrapper);
-     });
-
-
-     elSockets.innerHTML = '';
-     sockets.forEach(sock => {
-       const conn = connections.find(c => c.bottomId === sock.id);
-       const isConnected = !!conn;
-       const connectedTerm = conn ? terminals.find(t => t.id === conn.topId) : null;
-       const displayChar = connectedTerm ? connectedTerm.char : '';
-       const wireColor = connectedTerm ? connectedTerm.color : '#52525b';
-       const isSelected = selectedNode?.id === sock.id;
-
-
-       const wrapper = document.createElement('div');
-       wrapper.className = "relative group interactive-node";
-
-
-       const div = document.createElement('div');
-       div.dataset.id = sock.id;
-       div.dataset.type = 'socket';
-       div.onclick = () => handleSocketClick(sock.id);
-
-
-       let classes = "relative w-10 h-14 sm:w-16 sm:h-20 rounded-lg border-4 flex items-center justify-center font-black text-2xl sm:text-3xl cursor-pointer transition-all duration-200 select-none ";
-       if (isConnected) classes += "bg-zinc-100 text-zinc-900 shadow-[inset_0_4px_10px_rgba(0,0,0,0.3)] border-x-zinc-300 border-t-zinc-300";
-       else classes += "bg-zinc-900 text-zinc-700 border-zinc-700 hover:border-zinc-500 shadow-inner";
-       if (isSelected) classes += " ring-4 ring-yellow-400 border-yellow-500 bg-yellow-900/30 scale-105";
-
-
-       div.className = classes;
-       div.style.borderBottomWidth = '6px';
-       if(isConnected) div.style.borderBottomColor = wireColor;
-
-
-       div.innerHTML = `
-         <div class="absolute -top-2.5 sm:-top-3 left-1/2 -translate-x-1/2 w-2.5 h-2.5 sm:w-4 sm:h-4 rounded-full border-2 border-zinc-900" style="background-color: ${wireColor}"></div>
-         ${displayChar}
-         ${(!isConnected && activeTool === 'connect' && selectedNode?.type === 'terminal') ? '<div class="absolute inset-0 bg-yellow-400/10 animate-pulse rounded-md"></div>' : ''}
-       `;
-
-
-       wrapper.appendChild(div);
-       elSockets.appendChild(wrapper);
-     });
-
-
-     requestAnimationFrame(drawWires);
-   }
-
-
-   function drawWires() {
-     if (gameState !== 'playing') return;
-     elSvg.innerHTML = '';
-     const playAreaRect = document.getElementById('play-area').getBoundingClientRect();
-
-
-     connections.forEach(conn => {
-       const tDiv = document.querySelector(`[data-id="${conn.topId}"]`);
-       const sDiv = document.querySelector(`[data-id="${conn.bottomId}"]`);
-       if (!tDiv || !sDiv) return;
-
-
-       const tRect = tDiv.getBoundingClientRect();
-       const sRect = sDiv.getBoundingClientRect();
-
-
-       const x1 = tRect.left + tRect.width / 2 - playAreaRect.left;
-       const y1 = tRect.bottom - playAreaRect.top + 6;
-       const x2 = sRect.left + sRect.width / 2 - playAreaRect.left;
-       const y2 = sRect.top - playAreaRect.top - 6;
-
-
-       const sag = 20 + (Math.abs(x1 - x2) * 0.15) + (Math.abs(y1 - y2) * 0.1);
-       const lowestY = Math.max(y1, y2) + sag;
-       const d = `M ${x1} ${y1} C ${x1} ${lowestY}, ${x2} ${lowestY}, ${x2} ${y2}`;
-
-
-       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-       g.style.pointerEvents = activeTool === 'scissors' ? 'auto' : 'none';
-       g.style.cursor = activeTool === 'scissors' ? 'pointer' : 'default';
-       g.style.touchAction = 'manipulation';
+      updateTierUI();
       
-       // Invisible thick hit area for touch devices
-       const pathHit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-       pathHit.setAttribute('d', d);
-       pathHit.setAttribute('stroke', 'transparent');
-       pathHit.setAttribute('stroke-width', '32');
-       pathHit.setAttribute('fill', 'none');
-       if (activeTool === 'scissors') {
-         pathHit.onclick = () => cutWire(conn);
-       }
-
-
-       const pathBg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-       pathBg.setAttribute('d', d);
-       pathBg.setAttribute('stroke', '#09090b');
-       pathBg.setAttribute('stroke-width', '8');
-       pathBg.setAttribute('fill', 'none');
-       pathBg.setAttribute('stroke-linecap', 'round');
-
-
-       const pathColor = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-       pathColor.setAttribute('d', d);
-       pathColor.setAttribute('stroke', conn.color);
-       pathColor.setAttribute('stroke-width', '4');
-       pathColor.setAttribute('fill', 'none');
-       pathColor.setAttribute('stroke-linecap', 'round');
-       pathColor.style.transition = 'opacity 0.2s';
+      setGameState('playing');
+      setTool('connect');
+      selectedNode = null;
       
-       if (activeTool === 'scissors') {
-          g.onmouseenter = () => pathColor.style.opacity = '0.5';
-          g.onmouseleave = () => pathColor.style.opacity = '1';
-       }
-
-
-       g.appendChild(pathHit);
-       g.appendChild(pathBg);
-       g.appendChild(pathColor);
-       elSvg.appendChild(g);
-     });
-   }
-
-
-   // Interaction Handlers
-   function setTool(tool) {
-     activeTool = tool;
-     selectedNode = null;
-    
-     const btnCut = document.getElementById('btn-tool-scissors');
-     const btnConn = document.getElementById('btn-tool-connect');
-    
-     if (tool === 'scissors') {
-       btnCut.className = "flex items-center gap-1 sm:gap-2 px-4 sm:px-6 py-2 rounded-lg font-bold transition-all bg-zinc-700 text-white shadow-md border-b-2 border-zinc-600 touch-manipulation";
-       btnConn.className = "flex items-center gap-1 sm:gap-2 px-4 sm:px-6 py-2 rounded-lg font-bold transition-all text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 touch-manipulation";
-     } else {
-       btnConn.className = "flex items-center gap-1 sm:gap-2 px-4 sm:px-6 py-2 rounded-lg font-bold transition-all bg-zinc-700 text-white shadow-md border-b-2 border-zinc-600 touch-manipulation";
-       btnCut.className = "flex items-center gap-1 sm:gap-2 px-4 sm:px-6 py-2 rounded-lg font-bold transition-all text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 touch-manipulation";
-     }
-    
-     renderBoard();
-   }
-
-
-   function handleTerminalClick(id) {
-     if (gameState !== 'playing') return;
-     const term = terminals.find(t => t.id === id);
-     const isConnected = connections.some(c => c.topId === id);
-
-
-     if (activeTool === 'scissors') {
-       if (isConnected) cutWire(connections.find(c => c.topId === id));
-     } else if (activeTool === 'connect') {
-       if (isConnected) return;
-       if (selectedNode?.id === id) {
-         selectedNode = null;
-       } else if (selectedNode?.type === 'socket') {
-         connections.push({ topId: id, bottomId: selectedNode.id, color: term.color });
-         selectedNode = null;
-       } else {
-         selectedNode = { id: id, type: 'terminal', color: term.color };
-       }
-       renderBoard();
-     }
-   }
-
-
-   function handleSocketClick(id) {
-     if (gameState !== 'playing') return;
-     const isConnected = connections.some(c => c.bottomId === id);
-
-
-     if (activeTool === 'scissors') {
-       if (isConnected) cutWire(connections.find(c => c.bottomId === id));
-     } else if (activeTool === 'connect') {
-       if (isConnected) return;
-       if (selectedNode?.id === id) {
-         selectedNode = null;
-       } else if (selectedNode?.type === 'terminal') {
-         connections.push({ topId: selectedNode.id, bottomId: id, color: selectedNode.color });
-         selectedNode = null;
-       } else {
-         selectedNode = { id: id, type: 'socket' };
-       }
-       renderBoard();
-     }
-   }
-
-
-   function handleBombClick(e) {
-     if (e.target === elBomb || e.target === document.getElementById('play-area')) {
-       if (selectedNode) {
-         selectedNode = null;
-         renderBoard();
-       }
-     }
-   }
-
-
-   function cutWire(connToRemove) {
-     connections = connections.filter(c => c !== connToRemove);
-     renderBoard();
-   }
-
-
-   function handleTest() {
-     if (gameState !== 'playing') return;
-     if (connections.length < sockets.length) {
-       setGameState('kaboom');
-       return;
-     }
-     let isCorrect = true;
-     for (const socket of sockets) {
-       const conn = connections.find(c => c.bottomId === socket.id);
-       if (!conn) { isCorrect = false; break; }
-       const term = terminals.find(t => t.id === conn.topId);
-       if (!term || term.char.toLowerCase() !== socket.targetChar.toLowerCase()) {
-         isCorrect = false;
-         break;
-       }
-     }
-     setGameState(isCorrect ? 'defused' : 'kaboom');
-   }
-
-
-   // Timer & Effects
-   function formatTime(seconds) {
-     const m = Math.floor(seconds / 60);
-     const s = seconds % 60;
-     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-   }
-
-
-   function updateTimerUI() {
-     elTimer.textContent = formatTime(timeLeft);
-    
-     const isCritical = timeLeft <= 10 && timeLeft > 0;
-
-
-     if (isCritical) {
-       // Red pulse on timer
-       elTimer.classList.remove('text-red-600');
-       elTimer.classList.add('text-red-500', 'animate-pulse', 'drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]');
+      renderBoard();
+      speakCurrentWord();
+      startTimer();
       
-       // 10-second Screen Shake & Flashing overlay
-       elBomb.classList.add('animate-shake-intense');
-       elEmergencyOverlay.classList.remove('hidden');
-     } else {
-       // Reset effects if above 10 seconds or timer hit 0
-       elTimer.classList.add('text-red-600');
-       elTimer.classList.remove('text-red-500', 'animate-pulse', 'drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]');
-       if (timeLeft > 0) resetEmergencyEffects();
-     }
-   }
+      elGame.scrollTop = 0;
+    }
 
+    function updateTierUI() {
+      const tier = Math.floor(score / 2);
+      if (tier > 0) {
+        elTierIndicator.classList.remove('hidden');
+        elTierIndicator.innerHTML = '';
+        // Show dots for tier level (max 4)
+        for(let i=0; i < Math.min(tier, 4); i++) {
+          elTierIndicator.innerHTML += `<div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_5px_rgba(239,68,68,1)]"></div>`;
+        }
+      } else {
+        elTierIndicator.classList.add('hidden');
+      }
+    }
 
-   function resetEmergencyEffects() {
-     elBomb.classList.remove('animate-shake-intense');
-     elEmergencyOverlay.classList.add('hidden');
-   }
+    function setGameState(state) {
+      gameState = state;
+      elStatus.textContent = state === 'kaboom' ? 'FAIL' : state === 'defused' ? 'SAFE' : 'ARMED';
+      
+      elStatus.className = `font-mono text-xl sm:text-2xl font-bold tracking-widest ${
+        state === 'kaboom' ? 'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]' : 
+        state === 'defused' ? 'text-green-500 drop-shadow-[0_0_8px_rgba(34,197,94,0.8)]' : 'text-yellow-500'
+      }`;
 
+      if (state !== 'playing') {
+        elBtnTest.className = "relative w-full max-w-xs sm:w-64 h-16 sm:h-20 rounded-2xl font-black text-3xl sm:text-4xl tracking-widest transition-all overflow-hidden flex items-center justify-center bg-zinc-800 text-zinc-600 border-b-8 border-zinc-900 cursor-not-allowed";
+        stopTimer();
+        resetEmergencyEffects(); 
+        resetDistractions();
+        
+        if (state === 'kaboom') {
+          elBomb.classList.add('animate-shake', 'ring-8', 'ring-red-600');
+          document.getElementById('kaboom-word').textContent = currentWord;
+          setTimeout(() => {
+            elOverlayKaboom.classList.remove('hidden');
+            elOverlayKaboom.classList.add('flex');
+          }, 600);
+        } else if (state === 'defused') {
+          elBomb.classList.add('ring-8', 'ring-green-500');
+          document.getElementById('defused-word').textContent = currentWord;
+          score++;
+          elStatScore.textContent = score;
+          setTimeout(() => {
+            elOverlayDefused.classList.remove('hidden');
+            elOverlayDefused.classList.add('flex');
+          }, 300);
+        }
+      } else {
+        elBtnTest.className = "relative w-full max-w-xs sm:w-64 h-16 sm:h-20 rounded-2xl font-black text-3xl sm:text-4xl tracking-widest transition-all overflow-hidden flex items-center justify-center bg-red-600 text-white border-b-8 border-red-900 hover:bg-red-500 active:border-b-0 active:translate-y-2 touch-manipulation cursor-pointer";
+      }
+    }
 
-   function startTimer() {
-     stopTimer();
-     updateTimerUI();
-     timerId = setInterval(() => {
-       if (timeLeft > 0) {
-         timeLeft--;
-         updateTimerUI();
-       } else {
-         setGameState('kaboom');
-       }
-     }, 1000);
-   }
+    function generatePuzzle(word, year, currentScore) {
+      const difficultyLevel = (year - 3) + Math.floor(currentScore / 2);
+      const numDistractors = Math.min(10, 2 + Math.floor(difficultyLevel / 1.5));
+      const preConnectedCorrect = Math.max(0, word.length - Math.floor(difficultyLevel / 1.5) - 2);
+      const preConnectedIncorrect = Math.min(word.length - preConnectedCorrect, Math.floor(difficultyLevel / 2));
 
+      const newSockets = word.split('').map((char, i) => ({
+        id: `s-${i}`, index: i, targetChar: char
+      }));
 
-   function stopTimer() {
-     if (timerId) {
-       clearInterval(timerId);
-       timerId = null;
-     }
-   }
+      let terminalPool = [];
+      word.split('').forEach((char, i) => {
+        terminalPool.push({ id: `t-corr-${i}`, char: char, isTarget: true, targetIndex: i });
+      });
 
+      const alphabet = "abcdefghijklmnopqrstuvwxyz";
+      for (let i = 0; i < numDistractors; i++) {
+        const char = alphabet[Math.floor(Math.random() * alphabet.length)];
+        terminalPool.push({ id: `t-dist-${i}`, char: char, isTarget: false });
+      }
 
-   function speakCurrentWord() {
-     if ('speechSynthesis' in window && currentWord) {
-       window.speechSynthesis.cancel();
-       const utterance = new SpeechSynthesisUtterance(currentWord);
-       utterance.rate = 0.85;
-       window.speechSynthesis.speak(utterance);
-     }
-   }
+      terminalPool = terminalPool.sort(() => Math.random() - 0.5).map((t, i) => ({
+        ...t, color: WIRE_COLORS[i % WIRE_COLORS.length]
+      }));
 
+      let conns = [];
+      let availableSockets = [...newSockets];
+      let availableTerminals = [...terminalPool];
 
-   // Responsive
-   window.addEventListener('resize', () => {
-     if (gameState === 'playing') requestAnimationFrame(drawWires);
-   });
+      for (let i = 0; i < preConnectedCorrect; i++) {
+        if (availableSockets.length === 0) break;
+        const sIdx = Math.floor(Math.random() * availableSockets.length);
+        const socket = availableSockets.splice(sIdx, 1)[0];
+        const tIdx = availableTerminals.findIndex(t => t.isTarget && t.targetIndex === socket.index);
+        if (tIdx > -1) {
+          const term = availableTerminals.splice(tIdx, 1)[0];
+          conns.push({ topId: term.id, bottomId: socket.id, color: term.color });
+        }
+      }
 
+      for (let i = 0; i < preConnectedIncorrect; i++) {
+        if (availableSockets.length === 0 || availableTerminals.length === 0) break;
+        const sIdx = Math.floor(Math.random() * availableSockets.length);
+        const socket = availableSockets.splice(sIdx, 1)[0];
+        const possibleTerms = availableTerminals.filter(t => !(t.isTarget && t.targetIndex === socket.index));
+        if (possibleTerms.length > 0) {
+          const tIdx = Math.floor(Math.random() * possibleTerms.length);
+          const term = possibleTerms[tIdx];
+          availableTerminals = availableTerminals.filter(t => t.id !== term.id);
+          conns.push({ topId: term.id, bottomId: socket.id, color: term.color });
+        }
+      }
 
-   initMenu();
- </script>
+      // Time Calculation (Reduces by ~5s every 2 levels)
+      const baseTime = 60;
+      const wordBonus = word.length * 2;
+      const tierPenalty = Math.floor(currentScore / 2) * 5.5; 
+      const timeLimit = Math.max(12, Math.floor(baseTime - (difficultyLevel * 1.5) + wordBonus - tierPenalty));
+      
+      return { terminals: terminalPool, sockets: newSockets, connections: conns, timeLimit };
+    }
+
+    // Rendering Logic
+    function renderBoard() {
+      elTerminals.innerHTML = '';
+      terminals.forEach(term => {
+        const isConnected = connections.some(c => c.topId === term.id);
+        const isSelected = selectedNode?.id === term.id;
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = "relative group interactive-node";
+        
+        const div = document.createElement('div');
+        div.dataset.id = term.id;
+        div.dataset.type = 'terminal';
+        div.onclick = () => handleTerminalClick(term.id);
+        
+        let classes = "relative w-10 h-10 sm:w-14 sm:h-14 rounded-full border-[3px] flex items-center justify-center font-bold text-xl sm:text-2xl cursor-pointer shadow-lg transition-all duration-200 select-none ";
+        if (isConnected) classes += "bg-zinc-800 text-zinc-600 border-zinc-700 scale-95";
+        else classes += "bg-zinc-200 text-zinc-900 border-zinc-400 hover:scale-110 hover:border-white hover:bg-white";
+        if (isSelected) classes = classes.replace("bg-zinc-200", "").replace("border-zinc-400", "") + " ring-4 ring-yellow-400 bg-yellow-100 border-yellow-500 text-yellow-900 scale-110";
+        
+        const displayChar = term.glitchChar ? term.glitchChar : term.char;
+        const textClass = term.glitchChar ? 'glitch-text font-mono' : '';
+
+        div.className = classes;
+        div.innerHTML = `
+          <span class="pointer-events-none ${textClass}">${displayChar}</span>
+          <div class="absolute -bottom-1.5 sm:-bottom-2 w-2.5 h-2.5 sm:w-4 sm:h-4 rounded-full border-2 border-zinc-900" style="background-color: ${term.color}"></div>
+        `;
+
+        wrapper.appendChild(div);
+        elTerminals.appendChild(wrapper);
+      });
+
+      elSockets.innerHTML = '';
+      sockets.forEach(sock => {
+        const conn = connections.find(c => c.bottomId === sock.id);
+        const isConnected = !!conn;
+        const connectedTerm = conn ? terminals.find(t => t.id === conn.topId) : null;
+        
+        // Sockets show glitch character if connected to a glitching terminal
+        let displayChar = '';
+        let textClass = '';
+        if (connectedTerm) {
+          displayChar = connectedTerm.glitchChar ? connectedTerm.glitchChar : connectedTerm.char;
+          textClass = connectedTerm.glitchChar ? 'glitch-text font-mono' : '';
+        }
+        
+        const wireColor = connectedTerm ? connectedTerm.color : '#52525b';
+        const isSelected = selectedNode?.id === sock.id;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = "relative group interactive-node";
+
+        const div = document.createElement('div');
+        div.dataset.id = sock.id;
+        div.dataset.type = 'socket';
+        div.onclick = () => handleSocketClick(sock.id);
+
+        let classes = "relative w-10 h-14 sm:w-16 sm:h-20 rounded-lg border-4 flex items-center justify-center font-black text-2xl sm:text-3xl cursor-pointer transition-all duration-200 select-none ";
+        if (isConnected) classes += "bg-zinc-100 text-zinc-900 shadow-[inset_0_4px_10px_rgba(0,0,0,0.3)] border-x-zinc-300 border-t-zinc-300";
+        else classes += "bg-zinc-900 text-zinc-700 border-zinc-700 hover:border-zinc-500 shadow-inner";
+        if (isSelected) classes += " ring-4 ring-yellow-400 border-yellow-500 bg-yellow-900/30 scale-105";
+
+        div.className = classes;
+        div.style.borderBottomWidth = '6px';
+        if(isConnected) div.style.borderBottomColor = wireColor;
+
+        div.innerHTML = `
+          <div class="absolute -top-2.5 sm:-top-3 left-1/2 -translate-x-1/2 w-2.5 h-2.5 sm:w-4 sm:h-4 rounded-full border-2 border-zinc-900" style="background-color: ${wireColor}"></div>
+          <span class="pointer-events-none ${textClass}">${displayChar}</span>
+          ${(!isConnected && activeTool === 'connect' && selectedNode?.type === 'terminal') ? '<div class="absolute inset-0 bg-yellow-400/10 animate-pulse rounded-md"></div>' : ''}
+        `;
+
+        wrapper.appendChild(div);
+        elSockets.appendChild(wrapper);
+      });
+
+      requestAnimationFrame(drawWires);
+    }
+
+    function drawWires() {
+      if (gameState !== 'playing') return;
+      elSvg.innerHTML = '';
+      const playAreaRect = document.getElementById('play-area').getBoundingClientRect();
+
+      connections.forEach(conn => {
+        const tDiv = document.querySelector(`[data-id="${conn.topId}"]`);
+        const sDiv = document.querySelector(`[data-id="${conn.bottomId}"]`);
+        if (!tDiv || !sDiv) return;
+
+        const tRect = tDiv.getBoundingClientRect();
+        const sRect = sDiv.getBoundingClientRect();
+
+        const x1 = tRect.left + tRect.width / 2 - playAreaRect.left;
+        const y1 = tRect.bottom - playAreaRect.top + 6; 
+        const x2 = sRect.left + sRect.width / 2 - playAreaRect.left;
+        const y2 = sRect.top - playAreaRect.top - 6;
+
+        const sag = 20 + (Math.abs(x1 - x2) * 0.15) + (Math.abs(y1 - y2) * 0.1);
+        const lowestY = Math.max(y1, y2) + sag;
+        const d = `M ${x1} ${y1} C ${x1} ${lowestY}, ${x2} ${lowestY}, ${x2} ${y2}`;
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.style.pointerEvents = activeTool === 'scissors' ? 'auto' : 'none';
+        g.style.cursor = activeTool === 'scissors' ? 'pointer' : 'default';
+        g.style.touchAction = 'manipulation';
+        
+        const pathHit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathHit.setAttribute('d', d);
+        pathHit.setAttribute('stroke', 'transparent');
+        pathHit.setAttribute('stroke-width', '32');
+        pathHit.setAttribute('fill', 'none');
+        if (activeTool === 'scissors') {
+          pathHit.onclick = () => cutWire(conn);
+        }
+
+        const pathBg = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathBg.setAttribute('d', d);
+        pathBg.setAttribute('stroke', '#09090b');
+        pathBg.setAttribute('stroke-width', '8');
+        pathBg.setAttribute('fill', 'none');
+        pathBg.setAttribute('stroke-linecap', 'round');
+
+        const pathColor = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathColor.setAttribute('d', d);
+        pathColor.setAttribute('stroke', conn.color);
+        pathColor.setAttribute('stroke-width', '4');
+        pathColor.setAttribute('fill', 'none');
+        pathColor.setAttribute('stroke-linecap', 'round');
+        pathColor.style.transition = 'opacity 0.2s';
+        
+        // Hide wire color slightly during power failure to increase difficulty
+        if (distractionOverlayActive) {
+           pathColor.style.opacity = '0.3';
+        }
+
+        if (activeTool === 'scissors' && !distractionOverlayActive) {
+           g.onmouseenter = () => pathColor.style.opacity = '0.5';
+           g.onmouseleave = () => pathColor.style.opacity = '1';
+        }
+
+        g.appendChild(pathHit);
+        g.appendChild(pathBg);
+        g.appendChild(pathColor);
+        elSvg.appendChild(g);
+      });
+    }
+
+    // Interaction Handlers
+    function setTool(tool) {
+      activeTool = tool;
+      selectedNode = null;
+      
+      const btnCut = document.getElementById('btn-tool-scissors');
+      const btnConn = document.getElementById('btn-tool-connect');
+      
+      if (tool === 'scissors') {
+        btnCut.className = "flex items-center gap-1 sm:gap-2 px-4 sm:px-6 py-2 rounded-lg font-bold transition-all bg-zinc-700 text-white shadow-md border-b-2 border-zinc-600 touch-manipulation";
+        btnConn.className = "flex items-center gap-1 sm:gap-2 px-4 sm:px-6 py-2 rounded-lg font-bold transition-all text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 touch-manipulation";
+      } else {
+        btnConn.className = "flex items-center gap-1 sm:gap-2 px-4 sm:px-6 py-2 rounded-lg font-bold transition-all bg-zinc-700 text-white shadow-md border-b-2 border-zinc-600 touch-manipulation";
+        btnCut.className = "flex items-center gap-1 sm:gap-2 px-4 sm:px-6 py-2 rounded-lg font-bold transition-all text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 touch-manipulation";
+      }
+      
+      renderBoard();
+    }
+
+    function handleTerminalClick(id) {
+      if (gameState !== 'playing' || distractionOverlayActive) return;
+      const term = terminals.find(t => t.id === id);
+      const isConnected = connections.some(c => c.topId === id);
+
+      if (activeTool === 'scissors') {
+        if (isConnected) cutWire(connections.find(c => c.topId === id));
+      } else if (activeTool === 'connect') {
+        if (isConnected) return;
+        if (selectedNode?.id === id) {
+          selectedNode = null;
+        } else if (selectedNode?.type === 'socket') {
+          connections.push({ topId: id, bottomId: selectedNode.id, color: term.color });
+          selectedNode = null;
+        } else {
+          selectedNode = { id: id, type: 'terminal', color: term.color };
+        }
+        renderBoard();
+      }
+    }
+
+    function handleSocketClick(id) {
+      if (gameState !== 'playing' || distractionOverlayActive) return;
+      const isConnected = connections.some(c => c.bottomId === id);
+
+      if (activeTool === 'scissors') {
+        if (isConnected) cutWire(connections.find(c => c.bottomId === id));
+      } else if (activeTool === 'connect') {
+        if (isConnected) return;
+        if (selectedNode?.id === id) {
+          selectedNode = null;
+        } else if (selectedNode?.type === 'terminal') {
+          connections.push({ topId: selectedNode.id, bottomId: id, color: selectedNode.color });
+          selectedNode = null;
+        } else {
+          selectedNode = { id: id, type: 'socket' };
+        }
+        renderBoard();
+      }
+    }
+
+    function handleBombClick(e) {
+      if (e.target === elBomb || e.target === document.getElementById('play-area')) {
+        if (selectedNode) {
+          selectedNode = null;
+          renderBoard();
+        }
+      }
+    }
+
+    function cutWire(connToRemove) {
+      connections = connections.filter(c => c !== connToRemove);
+      renderBoard();
+    }
+
+    function handleTest() {
+      if (gameState !== 'playing') return;
+      if (connections.length < sockets.length) {
+        setGameState('kaboom');
+        return;
+      }
+      let isCorrect = true;
+      for (const socket of sockets) {
+        const conn = connections.find(c => c.bottomId === socket.id);
+        if (!conn) { isCorrect = false; break; }
+        const term = terminals.find(t => t.id === conn.topId);
+        if (!term || term.char.toLowerCase() !== socket.targetChar.toLowerCase()) {
+          isCorrect = false;
+          break;
+        }
+      }
+      setGameState(isCorrect ? 'defused' : 'kaboom');
+    }
+
+    // Timer & Distractions Engine
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function updateTimerUI() {
+      elTimer.textContent = formatTime(timeLeft);
+      const isCritical = timeLeft <= 10 && timeLeft > 0;
+
+      if (isCritical) {
+        elTimer.classList.remove('text-red-600');
+        elTimer.classList.add('text-red-500', 'animate-pulse', 'drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]');
+        elBomb.classList.add('animate-shake-intense');
+        elEmergencyOverlay.classList.remove('hidden');
+      } else {
+        elTimer.classList.add('text-red-600');
+        elTimer.classList.remove('text-red-500', 'animate-pulse', 'drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]');
+        if (timeLeft > 0) resetEmergencyEffects();
+      }
+    }
+
+    function resetEmergencyEffects() {
+      elBomb.classList.remove('animate-shake-intense');
+      elEmergencyOverlay.classList.add('hidden');
+    }
+
+    function startTimer() {
+      stopTimer();
+      updateTimerUI();
+      timerId = setInterval(() => {
+        if (timeLeft > 0) {
+          timeLeft--;
+          updateTimerUI();
+          evaluateDistractions(); // Check for events every second
+        } else {
+          setGameState('kaboom');
+        }
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerId) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+    }
+
+    // --- DISTRACTION LOGIC ---
+    function evaluateDistractions() {
+      if (gameState !== 'playing') return;
+      const tier = Math.floor(score / 2);
+      if (tier === 0) return; // No distractions on tier 0
+
+      // Don't layer heavy distractions
+      if (distractionOverlayActive || isGlitching) return;
+      
+      const rand = Math.random();
+
+      // Define independent probabilities per second to avoid logic overlaps
+      const probEMP = tier >= 3 ? 0.05 : 0;      // 5% chance
+      const probGlitch = tier >= 2 ? 0.10 : 0;   // 10% chance
+      const probPower = tier >= 1 ? 0.125 : 0;   // 12.5% chance (halved from 25%)
+
+      // Trigger the event based on random value falling into a probability band
+      if (rand < probEMP) {
+        triggerEMP();
+      } else if (rand < probEMP + probGlitch) {
+        triggerGlitch();
+      } else if (rand < probEMP + probGlitch + probPower) {
+        triggerPowerFailure();
+      }
+    }
+
+    function triggerPowerFailure() {
+      const overlay = document.getElementById('distraction-overlay');
+      const text = document.getElementById('distraction-text');
+      
+      distractionOverlayActive = true;
+      overlay.classList.replace('opacity-0', 'opacity-100');
+      overlay.classList.replace('pointer-events-none', 'pointer-events-auto');
+      text.classList.remove('hidden');
+      
+      // Stop ongoing connection drag by resetting selected node
+      selectedNode = null; 
+      renderBoard(); // Dims wires
+
+      setTimeout(() => {
+        if (gameState !== 'playing') return;
+        overlay.classList.replace('opacity-100', 'opacity-0');
+        overlay.classList.replace('pointer-events-auto', 'pointer-events-none');
+        text.classList.add('hidden');
+        distractionOverlayActive = false;
+        renderBoard(); // Restores wires
+      }, 1500 + Math.random() * 1000); // 1.5s - 2.5s duration
+    }
+
+    function triggerGlitch() {
+      isGlitching = true;
+      const symbols = '!@#$%&*?><+';
+      
+      terminals.forEach(t => {
+        // Only glitch ~70% of the terminals to make it confusing but not impossible
+        if(Math.random() < 0.7) {
+          t.glitchChar = symbols[Math.floor(Math.random() * symbols.length)];
+        }
+      });
+      renderBoard();
+
+      setTimeout(() => {
+        if (gameState !== 'playing') return;
+        terminals.forEach(t => { delete t.glitchChar; });
+        isGlitching = false;
+        renderBoard();
+      }, 1200 + Math.random() * 800);
+    }
+
+    function triggerEMP() {
+      elPlayArea.classList.add('blur-sm', 'grayscale');
+      elBomb.classList.add('animate-shake');
+      
+      setTimeout(() => {
+        if (gameState !== 'playing') return;
+        elPlayArea.classList.remove('blur-sm', 'grayscale');
+        // Let the 10-second timer panic animation override this if needed
+        if (timeLeft > 10) elBomb.classList.remove('animate-shake');
+      }, 2000);
+    }
+
+    function resetDistractions() {
+      distractionOverlayActive = false;
+      isGlitching = false;
+      
+      const overlay = document.getElementById('distraction-overlay');
+      const text = document.getElementById('distraction-text');
+      overlay.classList.replace('opacity-100', 'opacity-0');
+      overlay.classList.replace('pointer-events-auto', 'pointer-events-none');
+      text.classList.add('hidden');
+      
+      elPlayArea.classList.remove('blur-sm', 'grayscale');
+      if (terminals) terminals.forEach(t => { delete t.glitchChar; });
+    }
+
+    function speakCurrentWord() {
+      if ('speechSynthesis' in window && currentWord) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(currentWord);
+        utterance.rate = 0.85; 
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    // Responsive
+    window.addEventListener('resize', () => {
+      if (gameState === 'playing') requestAnimationFrame(drawWires);
+    });
+
+    initMenu();
+  </script>
 </body>
 </html>
-
