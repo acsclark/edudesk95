@@ -128,6 +128,7 @@
 </script>
 
 <div id="desktop"></div>
+<div id="desktop-status" style="display:none;position:fixed;top:8px;left:50%;transform:translateX(-50%);background:#000080;color:#fff;font-size:11px;padding:4px 14px;z-index:8000;box-shadow:2px 2px 0 #000;border:1px solid #fff;white-space:nowrap;"></div>
 
 <div id="taskbar">
   <button id="start-btn"><span style="font-size:16px">🪟</span>&nbsp;<b>Start</b></button>
@@ -198,8 +199,9 @@ Physical memory dump complete.
 
 <script>
 // ── DATA ────────────────────────────────────────────────────
-var DEFAULT_APPS = JSON.parse(document.getElementById('app-data').textContent);
+var DEFAULT_APPS = JSON.parse(document.getElementById('app-data').textContent.replace(/\\u003C\/script>/gi, '<\/script>'));
 var ADMIN_PASSWORD = 'teacher123';
+var GITHUB_REPO = ''; // Set this to 'owner/reponame' e.g. 'myname/edudesk95'
 
 function loadApps() {
   try {
@@ -210,13 +212,116 @@ function loadApps() {
 function saveApps(a) { localStorage.setItem('edudesk95_apps', JSON.stringify(a)); }
 var apps = loadApps();
 
+// GitHub repo setting persisted in localStorage
+function loadRepoSetting() {
+  return localStorage.getItem('edudesk95_repo') || GITHUB_REPO;
+}
+function saveRepoSetting(r) { localStorage.setItem('edudesk95_repo', r); }
+
+// ── GITHUB AUTO-DISCOVERY ────────────────────────────────────
+// Emoji detection: true if the string starts with an emoji character
+function startsWithEmoji(str) {
+  // Match any emoji at the very start using a broad Unicode range regex
+  return /^[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE00}-\u{FEFF}\u{1F300}-\u{1F9FF}\u{2702}-\u{27B0}]/u.test(str);
+}
+
+// Extract emoji prefix and name from filename like '🐸_FlappyFrog.html'
+function parseEmojiFilename(filename) {
+  // Strip .html extension
+  var base = filename.replace(/\.html$/i, '');
+  // The emoji is everything up to the first underscore
+  var underscoreIdx = base.indexOf('_');
+  if (underscoreIdx === -1) return null;
+  var icon = base.slice(0, underscoreIdx);
+  var name = base.slice(underscoreIdx + 1).replace(/_/g, ' ');
+  if (!icon || !name) return null;
+  if (!startsWithEmoji(icon)) return null;
+  return { icon: icon, name: name };
+}
+
+var githubApps = []; // Apps loaded from GitHub files (not stored in localStorage)
+
+function loadGithubApps() {
+  var repo = loadRepoSetting();
+  if (!repo || repo.indexOf('/') === -1) return; // No repo configured
+
+  var apiUrl = 'https://api.github.com/repos/' + repo + '/contents/';
+  showDesktopStatus('🔍 Scanning GitHub repo for apps...');
+
+  fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github.v3+json' } })
+    .then(function(r) {
+      if (!r.ok) throw new Error('GitHub API error: ' + r.status);
+      return r.json();
+    })
+    .then(function(files) {
+      var htmlFiles = files.filter(function(f) {
+        return f.type === 'file'
+          && f.name.toLowerCase().endsWith('.html')
+          && f.name !== 'index.html'
+          && parseEmojiFilename(f.name);
+      });
+
+      if (htmlFiles.length === 0) {
+        showDesktopStatus('');
+        return;
+      }
+
+      showDesktopStatus('📥 Loading ' + htmlFiles.length + ' app(s) from repo...');
+
+      // Fetch all files in parallel
+      var fetches = htmlFiles.map(function(f) {
+        return fetch(f.download_url)
+          .then(function(r) { return r.text(); })
+          .then(function(html) {
+            var parsed = parseEmojiFilename(f.name);
+            return {
+              id: 'gh_' + f.sha.slice(0, 12),
+              name: parsed.name,
+              icon: parsed.icon,
+              html: html,
+              fromGithub: true,
+              filename: f.name
+            };
+          })
+          .catch(function() { return null; });
+      });
+
+      return Promise.all(fetches);
+    })
+    .then(function(results) {
+      if (!results) return;
+      githubApps = results.filter(function(a) { return a !== null; });
+      showDesktopStatus('');
+      renderDesktop();
+    })
+    .catch(function(err) {
+      console.warn('GitHub repo scan failed:', err);
+      showDesktopStatus('');
+    });
+}
+
+function showDesktopStatus(msg) {
+  var el = document.getElementById('desktop-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
 // ── DESKTOP ──────────────────────────────────────────────────
 function renderDesktop() {
   var desktop = document.getElementById('desktop');
   desktop.innerHTML = '';
+
+  // Local apps (from localStorage / baked-in defaults)
   apps.forEach(function(app) {
     desktop.appendChild(makeIcon(app.icon, app.name, function(id){ return function(){ openApp(id); }; }(app.id)));
   });
+
+  // GitHub file-based apps (auto-discovered)
+  githubApps.forEach(function(app) {
+    desktop.appendChild(makeIcon(app.icon, app.name, function(a){ return function(){ openGithubApp(a); }; }(app)));
+  });
+
   desktop.appendChild(makeIcon('🔐', 'Admin', openAdminPanel));
 }
 
@@ -257,6 +362,20 @@ function openApp(id) {
     + '<div class="win-content"><iframe src="' + url + '" sandbox="allow-scripts allow-same-origin allow-forms"></iframe></div>'
     + '<div class="win-statusbar">' + app.name + ' — Ready</div>';
   createWin(id, app.name, app.icon, body, false);
+}
+
+function openGithubApp(app) {
+  if (openWindows[app.id]) { focusWin(app.id); return; }
+  var blob = new Blob([app.html], {type:'text/html'});
+  var url = URL.createObjectURL(blob);
+  var body = '<div class="win-menubar">'
+    + '<span class="win-menu-item">File</span>'
+    + '<span class="win-menu-item">View</span>'
+    + '<span class="win-menu-item">Help</span>'
+    + '</div>'
+    + '<div class="win-content"><iframe src="' + url + '" sandbox="allow-scripts allow-same-origin allow-forms"></iframe></div>'
+    + '<div class="win-statusbar">' + app.name + ' — from repo (' + app.filename + ')</div>';
+  createWin(app.id, app.name, app.icon, body, false);
 }
 
 function createWin(id, title, icon, bodyHTML, isAdmin) {
@@ -431,11 +550,19 @@ function launchAdmin() {
     // SETTINGS TAB
     + '<div class="win-tab-content" id="tab-settings"><div class="admin-form">'
     + '<h3>Settings</h3>'
-    + '<div class="form-row"><label>Change Admin Password</label>'
+    + '<div class="form-row"><label>GitHub Repository</label>'
+    + '<input type="text" id="gh-repo" placeholder="username/reponame  e.g. myname/edudesk95" value="' + (loadRepoSetting()||'') + '">'
+    + '<span style="font-size:10px;color:#666;margin-top:2px;">Auto-loads any emoji-named .html files from your repo. Must be a <b>public</b> repo.</span></div>'
+    + '<div class="btn-row" style="justify-content:flex-start;margin-top:0;margin-bottom:12px;"><button class="win95-btn primary" id="btn-saverepo">Save &amp; Scan</button></div>'
+    + '<div id="repo-st" style="font-size:11px;margin-bottom:12px;"></div>'
+    + '<div style="border-top:1px solid #999;padding-top:12px;">'
+    + '<h3>Change Admin Password</h3>'
+    + '<div class="form-row" style="margin-top:8px;"><label>New Password</label>'
     + '<input type="password" id="npw" placeholder="New password">'
     + '<input type="password" id="cpw" placeholder="Confirm password" style="margin-top:4px"></div>'
     + '<div class="btn-row"><button class="win95-btn primary" id="btn-pw">Update Password</button></div>'
     + '<div id="pw-st" style="margin-top:8px;font-size:11px;"></div>'
+    + '</div>'
     + '<div style="margin-top:20px;border-top:1px solid #999;padding-top:12px;">'
     + '<h3 style="margin-bottom:8px;">Danger Zone</h3>'
     + '<button class="win95-btn" id="btn-rst" style="color:#800000;">Reset to Default Apps</button>'
@@ -478,6 +605,7 @@ function launchAdmin() {
   document.getElementById('btn-pw').addEventListener('click', changePw);
   document.getElementById('btn-rst').addEventListener('click', resetApps);
   document.getElementById('btn-exp').addEventListener('click', exportSite);
+  document.getElementById('btn-saverepo').addEventListener('click', saveRepo);
 }
 
 function refreshList() {
@@ -538,6 +666,27 @@ function resetApps() {
   refreshList();
 }
 
+function saveRepo() {
+  var input = document.getElementById('gh-repo');
+  var st = document.getElementById('repo-st');
+  if (!input || !st) return;
+  var val = input.value.trim();
+  saveRepoSetting(val);
+  if (val) {
+    st.innerHTML = '<span style="color:green">✅ Saved! Scanning repo...</span>';
+    githubApps = [];
+    renderDesktop();
+    loadGithubApps();
+    setTimeout(function() {
+      if (st) st.innerHTML = '<span style="color:green">✅ Repo saved: ' + val + '</span>';
+    }, 2000);
+  } else {
+    githubApps = [];
+    renderDesktop();
+    st.innerHTML = '<span style="color:#808080">Repo cleared. No auto-discovery.</span>';
+  }
+}
+
 function changePw() {
   var np = document.getElementById('npw').value;
   var cp = document.getElementById('cpw').value;
@@ -558,13 +707,19 @@ function exportSite() {
     .then(function(r){ return r.text(); })
     .then(function(src) {
       var appsJson = JSON.stringify(apps, null, 2);
-      src = src.replace(
-        /(<script id="app-data" type="application\/json">)[\s\S]*?(<\/script>)/,
-        '$1\n' + appsJson + '\n$2'
-      );
+      // Escape <\/script> inside the JSON so the HTML parser does not close the data block early
+      appsJson = appsJson.replace(/<\/script>/gi, '\\u003C\\/script>');
+      var openTag  = '<scr' + 'ipt id="app-data" type="application/json">';
+      var closeTag = '</' + 'script>';
+      var dataBlockRe = new RegExp('(' + openTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')[\\s\\S]*?(' + closeTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')');
+      src = src.replace(dataBlockRe, '$1\n' + appsJson + '\n$2');
       src = src.replace(
         /var ADMIN_PASSWORD = '[^']*';/,
         "var ADMIN_PASSWORD = '" + pw.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + "';"
+      );
+      src = src.replace(
+        /var GITHUB_REPO = '[^']*';/,
+        "var GITHUB_REPO = '" + (loadRepoSetting()||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'") + "';"
       );
       var blob = new Blob([src], {type:'text/html'});
       var url  = URL.createObjectURL(blob);
@@ -598,7 +753,10 @@ updateClock();
 setInterval(updateClock, 1000);
 
 // ── INIT ─────────────────────────────────────────────────────
+// Pick up repo from localStorage if set (overrides baked-in value)
+GITHUB_REPO = loadRepoSetting();
 renderDesktop();
+loadGithubApps(); // Auto-discover emoji-named HTML files from the configured repo
 
 document.getElementById('start-btn').addEventListener('click', toggleStartMenu);
 document.getElementById('sm-admin').addEventListener('click', function(){ openAdminPanel(); closeStartMenu(); });
