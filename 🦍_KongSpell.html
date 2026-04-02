@@ -1,1123 +1,1033 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Spelling Kong</title>
-   <script src="https://cdn.tailwindcss.com"></script>
-   <style>
-       @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap');
-      
-       body {
-           margin: 0;
-           background-color: #050510;
-           color: #fff;
-           font-family: 'Orbitron', sans-serif;
-           overflow: hidden;
-           touch-action: none;
-           display: flex;
-           flex-direction: column;
-           align-items: center;
-           justify-content: center;
-           min-height: 100vh;
-       }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spelling Kong</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap');
+        
+        body {
+            margin: 0;
+            background-color: #050510;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
 
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            box-sizing: border-box;
+        }
 
-       #game-container {
-           position: relative;
-           width: 100%;
-           max-width: 800px;
-           display: flex;
-           flex-direction: column;
-           align-items: center;
-       }
+        canvas {
+            display: block;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #050510 100%);
+            border: 4px solid #00ffff;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            max-width: 100%;
+            /* Leave extra room for the touch controls on mobile/ipad to shrink game area */
+            max-height: calc(100vh - 240px);
+            width: 100%;
+            object-fit: contain;
+        }
 
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 10;
+            border-radius: 12px;
+        }
 
-       canvas {
-           display: block;
-           background: radial-gradient(circle at center, #1a1a2e 0%, #050510 100%);
-           border: 4px solid #00ffff;
-           border-radius: 12px;
-           box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
-           max-width: 100%;
-           /* Leave room for the touch controls on mobile/ipad */
-           max-height: calc(100vh - 140px);
-           width: 100%;
-           object-fit: contain;
-       }
+        input {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            background: rgba(0, 20, 40, 0.8);
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            color: #00ffff;
+            padding: 10px;
+            margin: 5px;
+            width: 80%;
+            max-width: 400px;
+            text-align: center;
+            font-size: 13px;
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+        }
 
+        input:focus {
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+        }
 
-       .ui-overlay {
-           position: absolute;
-           top: 0;
-           left: 0;
-           width: 100%;
-           height: 100%;
-           display: flex;
-           flex-direction: column;
-           align-items: center;
-           justify-content: center;
-           background: rgba(0, 0, 0, 0.7);
-           backdrop-filter: blur(8px);
-           z-index: 10;
-           border-radius: 12px;
-       }
+        button.menu-btn {
+            background: linear-gradient(135deg, #ff0055, #cc0044);
+            color: white;
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            box-shadow: 0 6px 0 #770022;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
 
+        button.menu-btn:active {
+            transform: translateY(6px);
+            box-shadow: none;
+        }
 
-       input {
-           font-family: 'Orbitron', sans-serif;
-           font-weight: 700;
-           background: rgba(0, 20, 40, 0.8);
-           border: 2px solid #00ffff;
-           border-radius: 8px;
-           color: #00ffff;
-           padding: 10px;
-           margin: 5px;
-           width: 80%;
-           max-width: 400px;
-           text-align: center;
-           font-size: 13px;
-           outline: none;
-           box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
-       }
+        /* iPad / Mobile Touch Controls */
+        .touch-controls {
+            display: none; /* Hidden on menu, shown when playing */
+            width: 100%;
+            max-width: 800px;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 15px 10px;
+            box-sizing: border-box;
+            user-select: none;
+        }
 
+        .touch-controls.active {
+            display: flex;
+        }
 
-       input:focus {
-           box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
-       }
+        .d-pad, .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
 
+        .d-pad-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
 
-       button.menu-btn {
-           background: linear-gradient(135deg, #ff0055, #cc0044);
-           color: white;
-           padding: 10px 24px;
-           border: none;
-           border-radius: 8px;
-           cursor: pointer;
-           margin-top: 10px;
-           font-family: 'Orbitron', sans-serif;
-           font-weight: 700;
-           box-shadow: 0 6px 0 #770022;
-           transition: transform 0.1s, box-shadow 0.1s;
-       }
+        .d-pad-row {
+            display: flex;
+            gap: 8px;
+        }
 
+        .touch-btn {
+            background: rgba(0, 255, 255, 0.15);
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            border-radius: 12px;
+            min-width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 0 rgba(0, 150, 150, 0.5);
+            touch-action: manipulation;
+        }
 
-       button.menu-btn:active {
-           transform: translateY(6px);
-           box-shadow: none;
-       }
+        .touch-btn:active {
+            background: rgba(0, 255, 255, 0.4);
+            transform: translateY(4px);
+            box-shadow: none;
+        }
 
+        .touch-btn.wide {
+            min-width: 80px;
+            font-size: 12px;
+        }
 
-       /* iPad / Mobile Touch Controls */
-       .touch-controls {
-           display: none; /* Hidden on menu, shown when playing */
-           width: 100%;
-           max-width: 800px;
-           justify-content: space-between;
-           align-items: flex-end;
-           padding: 15px 10px;
-           box-sizing: border-box;
-           user-select: none;
-       }
+        .controls-hint {
+            margin-top: 10px;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #aaa;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 1px solid #333;
+            z-index: 5;
+        }
 
+        @keyframes neon-flash {
+            0%, 100% {
+                color: #00ffff;
+                text-shadow: 0 0 10px rgba(0,255,255,0.8), 0 0 20px rgba(0,255,255,0.8);
+                transform: scale(1);
+            }
+            33% {
+                color: #ff00ff;
+                text-shadow: 0 0 10px rgba(255,0,255,0.8), 0 0 25px rgba(255,0,255,0.8);
+                transform: scale(1.08);
+            }
+            66% {
+                color: #ffff00;
+                text-shadow: 0 0 10px rgba(255,255,0,0.8), 0 0 25px rgba(255,255,0,0.8);
+                transform: scale(1.04);
+            }
+        }
 
-       .touch-controls.active {
-           display: flex;
-       }
-
-
-       .d-pad, .action-buttons {
-           display: flex;
-           gap: 8px;
-       }
-
-
-       .d-pad-col {
-           display: flex;
-           flex-direction: column;
-           align-items: center;
-           gap: 8px;
-       }
-
-
-       .d-pad-row {
-           display: flex;
-           gap: 8px;
-       }
-
-
-       .touch-btn {
-           background: rgba(0, 255, 255, 0.15);
-           border: 2px solid #00ffff;
-           color: #00ffff;
-           font-family: 'Orbitron', sans-serif;
-           font-weight: 700;
-           border-radius: 12px;
-           min-width: 50px;
-           height: 50px;
-           display: flex;
-           align-items: center;
-           justify-content: center;
-           cursor: pointer;
-           box-shadow: 0 4px 0 rgba(0, 150, 150, 0.5);
-           touch-action: manipulation;
-       }
-
-
-       .touch-btn:active {
-           background: rgba(0, 255, 255, 0.4);
-           transform: translateY(4px);
-           box-shadow: none;
-       }
-
-
-       .touch-btn.wide {
-           min-width: 80px;
-           font-size: 12px;
-       }
-
-
-       .controls-hint {
-           margin-top: 10px;
-           margin-bottom: 5px;
-           font-size: 12px;
-           color: #aaa;
-           text-align: center;
-           background: rgba(0, 0, 0, 0.5);
-           padding: 8px 20px;
-           border-radius: 20px;
-           border: 1px solid #333;
-           z-index: 5;
-       }
-
-
-       @keyframes neon-flash {
-           0%, 100% {
-               color: #00ffff;
-               text-shadow: 0 0 10px rgba(0,255,255,0.8), 0 0 20px rgba(0,255,255,0.8);
-               transform: scale(1);
-           }
-           33% {
-               color: #ff00ff;
-               text-shadow: 0 0 10px rgba(255,0,255,0.8), 0 0 25px rgba(255,0,255,0.8);
-               transform: scale(1.08);
-           }
-           66% {
-               color: #ffff00;
-               text-shadow: 0 0 10px rgba(255,255,0,0.8), 0 0 25px rgba(255,255,0,0.8);
-               transform: scale(1.04);
-           }
-       }
-
-
-       .animated-title {
-           animation: neon-flash 2s infinite ease-in-out;
-           font-size: 2.2rem;
-           letter-spacing: 2px;
-           font-weight: 700;
-       }
-   </style>
+        .animated-title {
+            animation: neon-flash 2s infinite ease-in-out;
+            font-size: 2.2rem;
+            letter-spacing: 2px;
+            font-weight: 700;
+        }
+    </style>
 </head>
 <body>
 
-
-   <div id="game-container">
-       <div id="menu" class="ui-overlay">
-           <h1 class="animated-title mb-2 text-center">SPELLING KONG</h1>
-           <canvas id="menuCanvas" width="250" height="100" class="mb-2"></canvas>
-          
-           <!-- New AI Word Generation Hub -->
-           <div class="w-full max-w-[400px] flex flex-col items-center bg-[rgba(0,20,40,0.5)] p-4 rounded-xl border border-cyan-800 relative">
-              
-               <!-- Loading Indicator Overlay -->
-               <div id="loading-overlay" class="absolute inset-0 bg-black/90 flex flex-col items-center justify-center hidden z-20 rounded-xl">
-                   <div class="mb-4 border-4 border-cyan-400 border-t-transparent rounded-full w-8 h-8 animate-spin"></div>
-                   <p class="text-cyan-400 font-bold tracking-widest text-xs">✨ CONSULTING DATABANKS...</p>
-               </div>
-              
-               <p class="mb-2 text-xs text-cyan-300 px-4 text-center font-bold">1. Auto-Generate a Word List:</p>
-               <div class="flex w-full justify-center items-center gap-2 mb-3">
-                   <input type="text" id="themeInput" placeholder="Theme (e.g. Space, Cats)" style="width: 60%; margin: 0;">
-                   <button id="generateBtn" class="menu-btn" style="margin: 0; padding: 10px 12px; font-size: 11px;" onclick="generateWords()">✨ GENERATE</button>
-               </div>
-              
-               <p class="mb-2 text-xs text-gray-300 px-4 text-center">2. Or enter spelling words manually:</p>
-               <input type="text" id="wordInput" placeholder="apple, banana, cherry" value="STAR, JUMP, GLOW" style="width: 100%; margin: 0;">
-               <div id="ai-error" class="text-red-400 text-[10px] mt-2 h-3 font-bold uppercase tracking-wide"></div>
-           </div>
-
-
-           <button class="menu-btn mt-4 text-lg px-8" onclick="startGame()">START GAME</button>
-           <div class="mt-4 text-xs text-cyan-200 leading-6 text-center">
-               O / P: Move Left / Right <br>
-               Q / A: Jump & Climb <br>
-               SPACE: Pick Up / Place Light
-           </div>
-       </div>
-
-
-       <div id="game-over" class="ui-overlay hidden">
-           <h1 id="endTitle" class="text-3xl mb-6 text-red-500 drop-shadow-[0_0_10px_rgba(255,0,0,0.8)]">SYSTEM FAILURE</h1>
-           <p id="endStats" class="mb-6 text-center text-gray-200 leading-relaxed"></p>
-           <button class="menu-btn" onclick="location.reload()">REBOOT SYSTEM</button>
-       </div>
-
-
-       <canvas id="gameCanvas"></canvas>
-
-
-       <div class="controls-hint hidden" id="desktop-hint">
-           O/P: Move | Q/A: Jump & Climb | SPACE: Pick Up
-       </div>
-
-
-       <!-- Touch Controls for iPad/Mobile -->
-       <div id="touchControls" class="touch-controls">
-           <div class="d-pad-col">
-               <div class="touch-btn" id="btn-up">UP (Q)</div>
-               <div class="d-pad-row">
-                   <div class="touch-btn" id="btn-left">L (O)</div>
-                   <div class="touch-btn" id="btn-down">DN (A)</div>
-                   <div class="touch-btn" id="btn-right">R (P)</div>
-               </div>
-           </div>
-          
-           <div class="action-buttons">
-               <div class="touch-btn wide" id="btn-action">PICK (SPC)</div>
-               <div class="touch-btn wide" id="btn-jump">JUMP (Q)</div>
-           </div>
-       </div>
-   </div>
-
-
-   <script>
-       const canvas = document.getElementById('gameCanvas');
-       const ctx = canvas.getContext('2d');
-       const menu = document.getElementById('menu');
-       const gameOverScreen = document.getElementById('game-over');
-       const touchControlsUI = document.getElementById('touchControls');
-       const desktopHint = document.getElementById('desktop-hint');
-
-
-       const apiKey = ""; // API Key provided by environment
-
-
-       const GRAVITY = 0.4;
-       const JUMP_FORCE = -6.0;
-       const MOVE_SPEED = 4.5;
-       const BARREL_SPEED = 3.5;
-       const BARREL_SPAWN_RATE = 420; // Increased from 260 to spawn barrels less frequently
-
-
-       canvas.width = 800;
-       canvas.height = 600;
-
-
-       let gameState = 'MENU';
-       let words = [];
-       let currentWordIndex = 0;
-       let currentWord = "";
-       let lives = 5;
-       let frameCount = 0;
-
-
-       const player = {
-           x: 50,
-           y: 530,
-           w: 30,
-           h: 40,
-           vx: 0,
-           vy: 0,
-           onGround: false,
-           heldLetter: null,
-           facing: 1,
-           animFrame: 0
-       };
-
-
-       let barrels = [];
-       let platforms = [];
-       let ladders = [];
-       let letterBulbs = [];
-       let sockets = [];
-
-
-       const keys = {};
-       let spacePressed = false;
-       let upPressed = false;
-
-
-       // --- KEYBOARD CONTROLS ---
-       window.onkeydown = (e) => {
-           keys[e.code] = true;
-           if ((e.code === 'KeyQ' || e.code === 'ArrowUp') && !upPressed) {
-               upPressed = true;
-               handleJumpAction();
-           }
-           if (e.code === 'Space' && !spacePressed) {
-               spacePressed = true;
-               handleInteractAction();
-           }
-       };
-       window.onkeyup = (e) => {
-           keys[e.code] = false;
-           if (e.code === 'KeyQ' || e.code === 'ArrowUp') upPressed = false;
-           if (e.code === 'Space') spacePressed = false;
-       };
-
-
-       // --- TOUCH CONTROLS BINDING ---
-       function bindTouchButton(elementId, mappedKeyCodes, actionCallback = null) {
-           const el = document.getElementById(elementId);
-           if (!el) return;
-
-
-           const triggerPress = (e) => {
-               e.preventDefault(); // Prevent double-firing and scrolling
-               mappedKeyCodes.forEach(code => keys[code] = true);
-               if (actionCallback) actionCallback();
-           };
-
-
-           const triggerRelease = (e) => {
-               e.preventDefault();
-               mappedKeyCodes.forEach(code => keys[code] = false);
-               if (mappedKeyCodes.includes('KeyQ') || mappedKeyCodes.includes('ArrowUp')) upPressed = false;
-               if (mappedKeyCodes.includes('Space')) spacePressed = false;
-           };
-
-
-           el.addEventListener('touchstart', triggerPress, {passive: false});
-           el.addEventListener('touchend', triggerRelease, {passive: false});
-           el.addEventListener('mousedown', triggerPress);
-           el.addEventListener('mouseup', triggerRelease);
-           el.addEventListener('mouseleave', triggerRelease);
-       }
-
-
-       // Bind HTML buttons to the internal KeyCodes so logic remains exactly the same
-       bindTouchButton('btn-left', ['KeyO', 'ArrowLeft']);
-       bindTouchButton('btn-right', ['KeyP', 'ArrowRight']);
-       bindTouchButton('btn-up', ['KeyQ', 'ArrowUp'], handleJumpAction);
-       bindTouchButton('btn-down', ['KeyA', 'ArrowDown']);
-       bindTouchButton('btn-jump', ['KeyQ', 'ArrowUp'], handleJumpAction);
-       bindTouchButton('btn-action', ['Space'], handleInteractAction);
-
-
-
-
-       function initLevel(word) {
-           currentWord = word.toUpperCase();
-           barrels = [];
-           platforms = [];
-           ladders = [];
-           letterBulbs = [];
-           sockets = [];
-          
-           player.x = 50;
-           player.y = 530;
-           player.vx = 0;
-           player.vy = 0;
-           player.heldLetter = null;
-
-
-           // Platforms
-           platforms.push({ x: 0, y: 570, w: 800, h: 20, tilt: 0 }); // Ground
-           platforms.push({ x: 0, y: 470, w: 720, h: 15, tilt: 0.03 }); // Tier 1
-           platforms.push({ x: 80, y: 370, w: 720, h: 15, tilt: -0.03 }); // Tier 2
-           platforms.push({ x: 0, y: 270, w: 720, h: 15, tilt: 0.03 }); // Tier 3
-           platforms.push({ x: 80, y: 170, w: 720, h: 15, tilt: -0.03 }); // Tier 4
-           platforms.push({ x: 0, y: 85, w: 720, h: 20, tilt: 0.03 });   // Tier 5
-
-
-           // Ladders (Extended height to ensure they overlap platforms well)
-           ladders.push({ x: 680, y: 460, w: 40, h: 120 }); // T0 to T1
-           ladders.push({ x: 100, y: 360, w: 40, h: 120 }); // T1 to T2
-           ladders.push({ x: 680, y: 260, w: 40, h: 120 }); // T2 to T3
-           ladders.push({ x: 100, y: 160, w: 40, h: 120 }); // T3 to T4
-           ladders.push({ x: 400, y: 75, w: 40, h: 110 });  // T4 to T5
-
-
-           // Round Power Sockets
-           const totalSocketWidth = currentWord.length * 70;
-           const startSocketX = (800 - totalSocketWidth) / 2;
-           for (let i = 0; i < currentWord.length; i++) {
-               sockets.push({
-                   x: startSocketX + (i * 70),
-                   y: 20,
-                   w: 50,
-                   h: 50,
-                   letter: currentWord[i],
-                   filledBulb: null
-               });
-           }
-
-
-           // Lightbulbs
-           const shuffledLetters = currentWord.split('').sort(() => Math.random() - 0.5);
-           shuffledLetters.forEach((char, i) => {
-               const tier = (i % 4) + 1;
-               const p = platforms[tier];
-               letterBulbs.push({
-                   x: p.x + 150 + (Math.random() * (p.w - 300)),
-                   y: p.y - 35,
-                   w: 30,
-                   h: 40,
-                   letter: char,
-                   collected: false
-               });
-           });
-       }
-
-
-       // --- GEMINI API INTEGRATION ---
-      
-       // Helper function to handle network retries (Exponential Backoff)
-       async function fetchWithRetry(url, options, maxRetries = 5) {
-           const delays = [1000, 2000, 4000, 8000, 16000];
-           for (let i = 0; i < maxRetries; i++) {
-               try {
-                   const response = await fetch(url, options);
-                   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                   return await response.json();
-               } catch (error) {
-                   if (i === maxRetries - 1) throw error;
-                   await new Promise(resolve => setTimeout(resolve, delays[i]));
-               }
-           }
-       }
-
-
-       // Generate theme-based words using Gemini 2.5 Flash
-       async function generateWords() {
-           const theme = document.getElementById('themeInput').value.trim() || 'Random cool words';
-           const loadingOverlay = document.getElementById('loading-overlay');
-           const errorDisplay = document.getElementById('ai-error');
-           const wordInput = document.getElementById('wordInput');
-          
-           errorDisplay.innerText = "";
-           loadingOverlay.classList.remove('hidden');
-          
-           // Crafting a strict prompt for optimal game words
-           const prompt = `Generate exactly 4 spelling words suitable for a children's spelling game based on the theme: "${theme}". Words should be between 3 and 7 letters long. They must be single words with no spaces or special characters.`;
-
-
-           const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-          
-           // Requesting Structured JSON Response
-           const payload = {
-               contents: [{ parts: [{ text: prompt }] }],
-               generationConfig: {
-                   responseMimeType: "application/json",
-                   responseSchema: {
-                       type: "OBJECT",
-                       properties: {
-                           words: {
-                               type: "ARRAY",
-                               items: { type: "STRING" }
-                           }
-                       }
-                   }
-               }
-           };
-
-
-           try {
-               const result = await fetchWithRetry(url, {
-                   method: 'POST',
-                   headers: { 'Content-Type': 'application/json' },
-                   body: JSON.stringify(payload)
-               });
-
-
-               const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
-               if (textResponse) {
-                   const data = JSON.parse(textResponse);
-                   if (data.words && data.words.length > 0) {
-                       // Strip out any weird characters and capitalize them to be safe
-                       const cleanWords = data.words.map(w => w.replace(/[^a-zA-Z]/g, '').toUpperCase()).filter(w => w.length > 0);
-                       wordInput.value = cleanWords.join(', ');
-                   } else {
-                        throw new Error("No words returned from AI.");
-                   }
-               } else {
-                   throw new Error("Invalid API response structure.");
-               }
-           } catch (error) {
-               console.error("AI Generation Error:", error);
-               errorDisplay.innerText = "Communication Error: Please enter words manually.";
-           } finally {
-               loadingOverlay.classList.add('hidden');
-           }
-       }
-
-
-       function startGame() {
-           const input = document.getElementById('wordInput').value;
-           words = input.split(',').map(w => w.trim()).filter(w => w.length > 0);
-           if (words.length === 0) return;
-          
-           currentWordIndex = 0;
-           lives = 5;
-           gameState = 'PLAYING';
-          
-           menu.classList.add('hidden');
-           desktopHint.classList.remove('hidden');
-           touchControlsUI.classList.add('active'); // Show touch controls
-          
-           initLevel(words[currentWordIndex]);
-           requestAnimationFrame(gameLoop);
-       }
-
-
-       // Interaction for A key (or Touch Action Button)
-       function handleInteractAction() {
-           if (gameState !== 'PLAYING') return;
-
-
-           let interacted = false;
-           let pCenter = player.x + player.w/2;
-
-
-           // 1. Check Sockets
-           let sTarget = sockets.find(s =>
-               pCenter > s.x - 10 && pCenter < s.x + s.w + 10 &&
-               player.y + player.h > s.y && player.y < s.y + s.h + 20
-           );
-
-
-           if (sTarget) {
-               if (player.heldLetter && !sTarget.filledBulb) {
-                   // Place into empty socket
-                   sTarget.filledBulb = player.heldLetter;
-                   player.heldLetter.x = sTarget.x + (sTarget.w/2 - player.heldLetter.w/2);
-                   player.heldLetter.y = sTarget.y - 5;
-                   player.heldLetter.collected = false;
-                   player.heldLetter = null;
-                   interacted = true;
-                   checkWin();
-               } else if (!player.heldLetter && sTarget.filledBulb) {
-                   // Take out of socket
-                   player.heldLetter = sTarget.filledBulb;
-                   player.heldLetter.collected = true;
-                   sTarget.filledBulb = null;
-                   interacted = true;
-               } else if (player.heldLetter && sTarget.filledBulb) {
-                   // Swap held with socket
-                   let temp = sTarget.filledBulb;
-                   sTarget.filledBulb = player.heldLetter;
-                   player.heldLetter.x = sTarget.x + (sTarget.w/2 - player.heldLetter.w/2);
-                   player.heldLetter.y = sTarget.y - 5;
-                   player.heldLetter.collected = false;
-                  
-                   player.heldLetter = temp;
-                   player.heldLetter.collected = true;
-                   interacted = true;
-                   checkWin();
-               }
-           }
-
-
-           // 2. Check Ground Bulbs
-           if (!interacted) {
-               let bTarget = letterBulbs.find(b =>
-                   !b.collected && !sockets.some(soc => soc.filledBulb === b) &&
-                   pCenter > b.x - 10 && pCenter < b.x + b.w + 10 &&
-                   player.y + player.h > b.y && player.y < b.y + b.h + 20
-               );
-
-
-               if (bTarget) {
-                   if (!player.heldLetter) {
-                       player.heldLetter = bTarget;
-                       bTarget.collected = true;
-                       interacted = true;
-                   } else {
-                       // Swap with ground bulb
-                       let temp = player.heldLetter;
-                       player.heldLetter = bTarget;
-                       bTarget.collected = true;
-                      
-                       temp.collected = false;
-                       temp.x = player.x + (player.w/2 - temp.w/2);
-                       temp.y = player.y + player.h - temp.h;
-                       interacted = true;
-                   }
-               }
-           }
-       }
-
-
-       // Jump action for Q key (or Touch Jump Button)
-       function handleJumpAction() {
-           if (gameState !== 'PLAYING') return;
-
-
-           let onLadder = ladders.some(l => player.x + player.w > l.x && player.x < l.x + l.w && player.y + player.h > l.y - 10 && player.y < l.y + l.h + 10);
-           if (player.onGround && !onLadder) {
-               player.vy = JUMP_FORCE;
-               player.onGround = false;
-           }
-       }
-
-
-       function update() {
-           if (gameState !== 'PLAYING') return;
-           frameCount++;
-
-
-           // Player Horizontal Move (O for Left, P for Right, or Arrow fallbacks)
-           if (keys['KeyO'] || keys['ArrowLeft']) {
-               player.vx = -MOVE_SPEED;
-               player.facing = -1;
-               player.animFrame += 0.2;
-           } else if (keys['KeyP'] || keys['ArrowRight']) {
-               player.vx = MOVE_SPEED;
-               player.facing = 1;
-               player.animFrame += 0.2;
-           } else {
-               player.vx *= 0.8;
-           }
-
-
-           let onLadder = false;
-           ladders.forEach(l => {
-               if (player.x + player.w > l.x && player.x < l.x + l.w &&
-                   player.y + player.h > l.y - 10 && player.y < l.y + l.h + 10) {
-                   onLadder = true;
-               }
-           });
-
-
-           // Player Vertical Move
-           if (onLadder) {
-               if (keys['KeyQ'] || keys['ArrowUp']) player.vy = -3;
-               else if (keys['KeyA'] || keys['ArrowDown']) player.vy = 3;
-               else player.vy = 0;
-               player.onGround = true;
-           } else {
-               player.vy += GRAVITY;
-           }
-
-
-           player.x += player.vx;
-           player.y += player.vy;
-
-
-           player.onGround = false;
-           platforms.forEach(p => {
-               const relX = player.x + player.w / 2 - p.x;
-               const surfaceY = p.y + (relX * p.tilt);
-               if (player.x + player.w > p.x && player.x < p.x + p.w) {
-                   if (player.vy >= 0 && player.y + player.h <= surfaceY + 15 && player.y + player.h >= surfaceY - 15) {
-                       // Bypass platform collision if explicitly climbing down a ladder
-                       if (onLadder && (keys['KeyA'] || keys['ArrowDown'])) {
-                           return;
-                       }
-                       player.y = surfaceY - player.h;
-                       player.vy = 0;
-                       player.onGround = true;
-                   }
-               }
-           });
-
-
-           if (player.x < 0) player.x = 0;
-           if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
-
-
-           // Barrels logic
-           if (frameCount % BARREL_SPAWN_RATE === 0) {
-               barrels.push({ x: 120, y: 50, r: 14, vx: BARREL_SPEED, vy: 0 });
-           }
-
-
-           barrels.forEach((b, index) => {
-               b.vy += GRAVITY * 0.4;
-               b.x += b.vx;
-               b.y += b.vy;
-
-
-               if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); }
-               if (b.x > canvas.width - b.r) { b.x = canvas.width - b.r; b.vx = -Math.abs(b.vx); }
-
-
-               platforms.forEach(p => {
-                   const relX = b.x - p.x;
-                   const surfaceY = p.y + (relX * p.tilt);
-                   if (b.x > p.x && b.x < p.x + p.w) {
-                       if (b.y + b.r > surfaceY - 15 && b.y + b.r < surfaceY + 15) {
-                           b.y = surfaceY - b.r;
-                           b.vy = 0;
-                           if (p.tilt > 0) b.vx = Math.abs(BARREL_SPEED);
-                           else if (p.tilt < 0) b.vx = -Math.abs(BARREL_SPEED);
-                       }
-                   }
-               });
-
-
-               const dist = Math.hypot(b.x - (player.x + player.w/2), b.y - (player.y + player.h/2));
-               if (dist < b.r + 15) loseLife();
-               if (b.y > canvas.height) barrels.splice(index, 1);
-           });
-
-
-           // Update held letter position
-           if (player.heldLetter) {
-               player.heldLetter.x = player.x + (player.w/2 - player.heldLetter.w/2);
-               player.heldLetter.y = player.y - 35;
-           }
-       }
-
-
-       function loseLife() {
-           if (gameState !== 'PLAYING') return;
-           lives--;
-           if (lives <= 0) {
-               gameState = 'GAMEOVER';
-               document.getElementById('endTitle').innerText = "SYSTEM FAILURE";
-               document.getElementById('endTitle').className = "text-3xl mb-6 text-red-500 drop-shadow-[0_0_10px_rgba(255,0,0,0.8)]";
-               document.getElementById('endStats').innerHTML = `Words Completed: <span class="text-cyan-400">${currentWordIndex}</span>`;
-               gameOverScreen.classList.remove('hidden');
-               touchControlsUI.classList.remove('active');
-               desktopHint.classList.add('hidden');
-           } else {
-               player.x = 50;
-               player.y = 530;
-               barrels = []; // Reset barrels to prevent bombardment
-               if (player.heldLetter) {
-                   // Drop letter where they died
-                   player.heldLetter.collected = false;
-                   player.heldLetter = null;
-               }
-           }
-       }
-
-
-       function checkWin() {
-           // Player only wins if all sockets are full AND match the correct letters
-           const isWin = sockets.every(s => s.filledBulb && s.filledBulb.letter === s.letter);
-          
-           if (isWin) {
-               setTimeout(() => {
-                   currentWordIndex++;
-                   if (currentWordIndex >= words.length) {
-                       gameState = 'GAMEOVER';
-                       document.getElementById('endTitle').innerText = "MISSION COMPLETE";
-                       document.getElementById('endTitle').className = "text-3xl mb-6 text-green-400 drop-shadow-[0_0_15px_rgba(0,255,0,0.8)]";
-                       document.getElementById('endStats').innerText = `You mastered all ${words.length} words!`;
-                       gameOverScreen.classList.remove('hidden');
-                       touchControlsUI.classList.remove('active');
-                       desktopHint.classList.add('hidden');
-                   } else {
-                       initLevel(words[currentWordIndex]);
-                   }
-               }, 1000);
-           }
-       }
-
-
-       // --- MODERN DRAWING FUNCTIONS ---
-
-
-       function drawKong(ctx, x, y) {
-           // Cyber Kong
-           let grad = ctx.createLinearGradient(x, y, x, y+50);
-           grad.addColorStop(0, '#556688');
-           grad.addColorStop(1, '#223344');
-           ctx.fillStyle = grad;
-          
-           // Body
-           ctx.beginPath(); ctx.roundRect(x, y+15, 70, 45, 10); ctx.fill();
-           // Cyber Chest plates
-           ctx.fillStyle = '#00ffff';
-           ctx.shadowBlur = 10; ctx.shadowColor = '#00ffff';
-           ctx.beginPath(); ctx.roundRect(x+15, y+25, 15, 20, 4); ctx.fill();
-           ctx.beginPath(); ctx.roundRect(x+40, y+25, 15, 20, 4); ctx.fill();
-           ctx.shadowBlur = 0;
-          
-           // Head
-           ctx.fillStyle = grad;
-           ctx.beginPath(); ctx.roundRect(x+15, y, 40, 30, 8); ctx.fill();
-          
-           // Cyber Eyes
-           ctx.fillStyle = '#ff0055';
-           ctx.shadowBlur = 15; ctx.shadowColor = '#ff0055';
-           ctx.beginPath(); ctx.roundRect(x+22, y+10, 8, 4, 2); ctx.fill();
-           ctx.beginPath(); ctx.roundRect(x+40, y+10, 8, 4, 2); ctx.fill();
-           ctx.shadowBlur = 0;
-          
-           // Arms
-           ctx.fillStyle = grad;
-           ctx.beginPath(); ctx.roundRect(x-20, y+20, 25, 45, 10); ctx.fill(); // Left
-           ctx.beginPath(); ctx.roundRect(x+65, y+20, 25, 45, 10); ctx.fill(); // Right
-       }
-
-
-       function drawPlayer(ctx, x, y, facing, frame) {
-           ctx.save();
-           ctx.translate(x + 15, y + 20);
-           if (facing === -1) ctx.scale(-1, 1);
-          
-           // Backpack
-           ctx.fillStyle = '#334455';
-           ctx.beginPath(); ctx.roundRect(-16, -10, 8, 20, 4); ctx.fill();
-          
-           // Legs (animated)
-           const legOff = Math.sin(frame) * 6;
-           ctx.fillStyle = '#111';
-           ctx.beginPath(); ctx.roundRect(-8, 8, 8, 14 + legOff, 4); ctx.fill();
-           ctx.beginPath(); ctx.roundRect(2, 8, 8, 14 - legOff, 4); ctx.fill();
-
-
-           // Torso Suit
-           let torsoGrad = ctx.createLinearGradient(0, -10, 0, 10);
-           torsoGrad.addColorStop(0, '#00ffff');
-           torsoGrad.addColorStop(1, '#0055aa');
-           ctx.fillStyle = torsoGrad;
-           ctx.beginPath(); ctx.roundRect(-10, -5, 20, 16, 5); ctx.fill();
-
-
-           // Helmet
-           ctx.fillStyle = '#eeeeff';
-           ctx.beginPath(); ctx.arc(0, -14, 11, 0, Math.PI * 2); ctx.fill();
-           // Glowing Visor
-           ctx.fillStyle = '#ff0055';
-           ctx.shadowBlur = 8; ctx.shadowColor = '#ff0055';
-           ctx.beginPath(); ctx.roundRect(0, -18, 13, 8, 4); ctx.fill();
-           ctx.shadowBlur = 0;
-
-
-           ctx.restore();
-       }
-
-
-       function drawBulb(ctx, x, y, letter, isLit, isCorrect) {
-           // Neon Lightbulb
-           const color = isLit ? (isCorrect ? '#00ff00' : '#ff0055') : '#00ffff';
-          
-           ctx.save();
-           if (isLit) {
-               ctx.shadowBlur = 20;
-               ctx.shadowColor = color;
-           }
-          
-           // Glass dome
-           ctx.beginPath();
-           ctx.arc(x + 15, y + 15, 14, 0, Math.PI * 2);
-           ctx.fillStyle = isLit ? color : 'rgba(0, 255, 255, 0.15)';
-           ctx.fill();
-           ctx.strokeStyle = color;
-           ctx.lineWidth = 2;
-           ctx.stroke();
-
-
-           // Metal Base
-           ctx.fillStyle = '#778899';
-           ctx.beginPath(); ctx.roundRect(x + 7, y + 26, 16, 8, 2); ctx.fill();
-           ctx.fillStyle = '#445566';
-           ctx.beginPath(); ctx.roundRect(x + 9, y + 34, 12, 4, 2); ctx.fill();
-
-
-           // Letter
-           ctx.fillStyle = isLit ? '#000' : color;
-           ctx.font = 'bold 16px "Orbitron"';
-           ctx.textAlign = 'center';
-           ctx.fillText(letter, x + 15, y + 20);
-          
-           ctx.restore();
-       }
-
-
-       function drawSocket(ctx, x, y, expectedLetter, filledBulb) {
-           // Modern round power socket
-           ctx.beginPath();
-           ctx.arc(x + 25, y + 25, 24, 0, Math.PI * 2);
-           ctx.fillStyle = '#111118';
-           ctx.fill();
-           ctx.strokeStyle = '#00aaaa';
-           ctx.lineWidth = 3;
-           ctx.stroke();
-
-
-           // Inner outlet details
-           ctx.beginPath();
-           ctx.arc(x + 15, y + 25, 5, 0, Math.PI*2);
-           ctx.arc(x + 35, y + 25, 5, 0, Math.PI*2);
-           ctx.fillStyle = '#000';
-           ctx.fill();
-
-
-           // Background Expected Letter
-           ctx.fillStyle = '#334455';
-           ctx.font = 'bold 12px "Orbitron"';
-           ctx.textAlign = 'center';
-           ctx.fillText(expectedLetter, x + 25, y - 10);
-
-
-           // Draw erratic electricity if the socket is empty
-           if (!filledBulb && Math.random() > 0.2) {
-               ctx.save();
-               ctx.strokeStyle = (Math.random() > 0.5) ? '#00ffff' : '#ffffff';
-               ctx.lineWidth = 2;
-               ctx.shadowBlur = 10;
-               ctx.shadowColor = '#00ffff';
-               ctx.beginPath();
-               ctx.moveTo(x + 15, y + 25); // Start at left contact
-              
-               // Random erratic zigzag point in the middle
-               const midX = x + 25 + (Math.random() * 10 - 5);
-               const midY = y + 25 + (Math.random() * 16 - 8);
-               ctx.lineTo(midX, midY);
-              
-               ctx.lineTo(x + 35, y + 25); // End at right contact
-               ctx.stroke();
-               ctx.restore();
-           }
-       }
-
-
-       function draw() {
-           ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-
-           // Platforms
-           platforms.forEach(p => {
-               ctx.save();
-               ctx.translate(p.x, p.y);
-               ctx.rotate(Math.atan(p.tilt));
-              
-               let platGrad = ctx.createLinearGradient(0, 0, 0, p.h);
-               platGrad.addColorStop(0, '#0088ff');
-               platGrad.addColorStop(1, '#001144');
-               ctx.fillStyle = platGrad;
-              
-               ctx.beginPath();
-               ctx.roundRect(0, 0, p.w, p.h, 6);
-               ctx.fill();
-              
-               // Neon Edge
-               ctx.strokeStyle = '#00ffff';
-               ctx.lineWidth = 2;
-               ctx.stroke();
-              
-               ctx.restore();
-           });
-
-
-           // Ladders
-           ctx.fillStyle = '#00ffff';
-           ladders.forEach(l => {
-               ctx.fillRect(l.x, l.y, 4, l.h);
-               ctx.fillRect(l.x + l.w - 4, l.y, 4, l.h);
-               for (let i = 10; i < l.h; i += 20) {
-                   ctx.fillRect(l.x, l.y + i, l.w, 4);
-               }
-           });
-
-
-           // Kong
-           drawKong(ctx, 40, 25);
-
-
-           // Sockets
-           sockets.forEach(s => drawSocket(ctx, s.x, s.y, s.letter, s.filledBulb));
-
-
-           // Bulbs
-           letterBulbs.forEach(b => {
-               // If it's collected by player, don't draw it here (drawn with player later)
-               if (!b.collected) {
-                   let containingSocket = sockets.find(s => s.filledBulb === b);
-                   let isLit = !!containingSocket;
-                   let isCorrect = containingSocket ? (containingSocket.letter === b.letter) : false;
-                   drawBulb(ctx, b.x, b.y, b.letter, isLit, isCorrect);
-               }
-           });
-
-
-           // Barrels (Energy Cores)
-           barrels.forEach(b => {
-               ctx.fillStyle = '#223344';
-               ctx.beginPath();
-               ctx.roundRect(b.x - b.r, b.y - b.r, b.r*2, b.r*2, 4);
-               ctx.fill();
-              
-               // Toxic glowing center
-               ctx.fillStyle = '#00ff00';
-               ctx.shadowBlur = 10;
-               ctx.shadowColor = '#00ff00';
-               ctx.fillRect(b.x - b.r + 4, b.y - b.r + 4, b.r*2 - 8, b.r*2 - 8);
-               ctx.shadowBlur = 0;
-           });
-
-
-           // Player
-           drawPlayer(ctx, player.x, player.y, player.facing, player.animFrame);
-           if (player.heldLetter) {
-               drawBulb(ctx, player.heldLetter.x, player.heldLetter.y, player.heldLetter.letter, false, false);
-           }
-
-
-           // HUD
-           ctx.fillStyle = '#00ffff';
-           ctx.font = 'bold 16px "Orbitron"';
-           ctx.textAlign = 'left';
-           ctx.fillText(`LIVES: ${"💙".repeat(Math.max(0, lives))}`, 20, 585);
-           ctx.textAlign = 'right';
-           ctx.fillText(`WORD: ${currentWordIndex + 1}/${words.length}`, 780, 585);
-       }
-
-
-       function gameLoop() {
-           update();
-           draw();
-           if (gameState === 'PLAYING') requestAnimationFrame(gameLoop);
-       }
-
-
-       // --- Render Menu Art ---
-       const mCanvas = document.getElementById('menuCanvas');
-       const mCtx = mCanvas.getContext('2d');
-       let menuFrame = 0;
-
-
-       function renderMenuArt() {
-           mCtx.clearRect(0, 0, mCanvas.width, mCanvas.height);
-          
-           // Simple bounce physics using sine waves
-           const kongBounce = Math.sin(menuFrame) * 4;
-           const playerBounce = Math.cos(menuFrame * 1.5) * 3;
-          
-           // Draw Kong scaled up and bouncing
-           mCtx.save();
-           mCtx.translate(0, kongBounce);
-           mCtx.scale(1.2, 1.2);
-           drawKong(mCtx, 30, 10);
-           mCtx.restore();
-
-
-           // Draw Player scaled up, facing left towards Kong, with leg animation
-           mCtx.save();
-           mCtx.translate(0, playerBounce);
-           mCtx.scale(1.4, 1.4);
-           drawPlayer(mCtx, 110, 15, -1, menuFrame * 2);
-           mCtx.restore();
-       }
-      
-       function menuLoop() {
-           if (gameState === 'MENU') {
-               menuFrame += 0.06;
-               renderMenuArt();
-               requestAnimationFrame(menuLoop);
-           }
-       }
-      
-       // Start the menu animation loop
-       menuLoop();
-
-
-   </script>
+    <div id="game-container">
+        <div id="menu" class="ui-overlay">
+            <h1 class="animated-title mb-2 text-center">SPELLING KONG</h1>
+            <canvas id="menuCanvas" width="250" height="100" class="mb-2"></canvas>
+            
+            <!-- New AI Word Generation Hub -->
+            <div class="w-full max-w-[400px] flex flex-col items-center bg-[rgba(0,20,40,0.5)] p-4 rounded-xl border border-cyan-800 relative">
+                
+                <!-- Loading Indicator Overlay -->
+                <div id="loading-overlay" class="absolute inset-0 bg-black/90 flex flex-col items-center justify-center hidden z-20 rounded-xl">
+                    <div class="mb-4 border-4 border-cyan-400 border-t-transparent rounded-full w-8 h-8 animate-spin"></div>
+                    <p class="text-cyan-400 font-bold tracking-widest text-xs">✨ CONSULTING DATABANKS...</p>
+                </div>
+                
+                <p class="mb-2 text-xs text-cyan-300 px-4 text-center font-bold">1. Auto-Generate a Word List:</p>
+                <div class="flex w-full justify-center items-center gap-2 mb-3">
+                    <input type="text" id="themeInput" placeholder="Theme (e.g. Space, Cats)" style="width: 60%; margin: 0;">
+                    <button id="generateBtn" class="menu-btn" style="margin: 0; padding: 10px 12px; font-size: 11px;" onclick="generateWords()">✨ GENERATE</button>
+                </div>
+                
+                <p class="mb-2 text-xs text-gray-300 px-4 text-center">2. Or enter spelling words manually:</p>
+                <input type="text" id="wordInput" placeholder="apple, banana, cherry" value="STAR, JUMP, GLOW" style="width: 100%; margin: 0;">
+                <div id="ai-error" class="text-red-400 text-[10px] mt-2 h-3 font-bold uppercase tracking-wide"></div>
+            </div>
+
+            <button class="menu-btn mt-4 text-lg px-8" onclick="startGame()">START GAME</button>
+            <div class="mt-4 text-xs text-cyan-200 leading-6 text-center">
+                O / P: Move Left / Right <br>
+                Q / A: Jump & Climb <br>
+                SPACE: Pick Up / Place Light
+            </div>
+        </div>
+
+        <div id="game-over" class="ui-overlay hidden">
+            <h1 id="endTitle" class="text-3xl mb-6 text-red-500 drop-shadow-[0_0_10px_rgba(255,0,0,0.8)]">SYSTEM FAILURE</h1>
+            <p id="endStats" class="mb-6 text-center text-gray-200 leading-relaxed"></p>
+            <button class="menu-btn" onclick="location.reload()">REBOOT SYSTEM</button>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="controls-hint hidden" id="desktop-hint">
+            O/P: Move | Q/A: Jump & Climb | SPACE: Pick Up
+        </div>
+
+        <!-- Touch Controls for iPad/Mobile -->
+        <div id="touchControls" class="touch-controls">
+            <div class="d-pad-col">
+                <div class="touch-btn" id="btn-up">UP (Q)</div>
+                <div class="d-pad-row">
+                    <div class="touch-btn" id="btn-left">L (O)</div>
+                    <div class="touch-btn" id="btn-down">DN (A)</div>
+                    <div class="touch-btn" id="btn-right">R (P)</div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <div class="touch-btn wide" id="btn-action">PICK (SPC)</div>
+                <div class="touch-btn wide" id="btn-jump">JUMP (Q)</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const menu = document.getElementById('menu');
+        const gameOverScreen = document.getElementById('game-over');
+        const touchControlsUI = document.getElementById('touchControls');
+        const desktopHint = document.getElementById('desktop-hint');
+
+        const apiKey = ""; // API Key provided by environment
+
+        const GRAVITY = 0.4;
+        const JUMP_FORCE = -6.0; 
+        const MOVE_SPEED = 4.5;
+        const BARREL_SPEED = 3.5;
+        const BARREL_SPAWN_RATE = 420; // Increased from 260 to spawn barrels less frequently
+
+        canvas.width = 800;
+        canvas.height = 600;
+
+        let gameState = 'MENU';
+        let words = [];
+        let currentWordIndex = 0;
+        let currentWord = "";
+        let lives = 5;
+        let frameCount = 0;
+
+        const player = {
+            x: 50,
+            y: 530,
+            w: 30,
+            h: 40,
+            vx: 0,
+            vy: 0,
+            onGround: false,
+            heldLetter: null,
+            facing: 1,
+            animFrame: 0
+        };
+
+        let barrels = [];
+        let platforms = [];
+        let ladders = [];
+        let letterBulbs = [];
+        let sockets = [];
+
+        const keys = {};
+        let spacePressed = false;
+        let upPressed = false;
+
+        // --- KEYBOARD CONTROLS ---
+        window.onkeydown = (e) => {
+            keys[e.code] = true;
+            if ((e.code === 'KeyQ' || e.code === 'ArrowUp') && !upPressed) {
+                upPressed = true;
+                handleJumpAction();
+            }
+            if (e.code === 'Space' && !spacePressed) {
+                spacePressed = true;
+                handleInteractAction();
+            }
+        };
+        window.onkeyup = (e) => {
+            keys[e.code] = false;
+            if (e.code === 'KeyQ' || e.code === 'ArrowUp') upPressed = false;
+            if (e.code === 'Space') spacePressed = false;
+        };
+
+        // --- TOUCH CONTROLS BINDING ---
+        function bindTouchButton(elementId, mappedKeyCodes, actionCallback = null) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+
+            const triggerPress = (e) => {
+                e.preventDefault(); // Prevent double-firing and scrolling
+                mappedKeyCodes.forEach(code => keys[code] = true);
+                if (actionCallback) actionCallback();
+            };
+
+            const triggerRelease = (e) => {
+                e.preventDefault();
+                mappedKeyCodes.forEach(code => keys[code] = false);
+                if (mappedKeyCodes.includes('KeyQ') || mappedKeyCodes.includes('ArrowUp')) upPressed = false;
+                if (mappedKeyCodes.includes('Space')) spacePressed = false;
+            };
+
+            el.addEventListener('touchstart', triggerPress, {passive: false});
+            el.addEventListener('touchend', triggerRelease, {passive: false});
+            el.addEventListener('mousedown', triggerPress);
+            el.addEventListener('mouseup', triggerRelease);
+            el.addEventListener('mouseleave', triggerRelease);
+        }
+
+        // Bind HTML buttons to the internal KeyCodes so logic remains exactly the same
+        bindTouchButton('btn-left', ['KeyO', 'ArrowLeft']);
+        bindTouchButton('btn-right', ['KeyP', 'ArrowRight']);
+        bindTouchButton('btn-up', ['KeyQ', 'ArrowUp'], handleJumpAction);
+        bindTouchButton('btn-down', ['KeyA', 'ArrowDown']);
+        bindTouchButton('btn-jump', ['KeyQ', 'ArrowUp'], handleJumpAction);
+        bindTouchButton('btn-action', ['Space'], handleInteractAction);
+
+
+        function initLevel(word) {
+            currentWord = word.toUpperCase();
+            barrels = [];
+            platforms = [];
+            ladders = [];
+            letterBulbs = [];
+            sockets = [];
+            
+            player.x = 50;
+            player.y = 530;
+            player.vx = 0;
+            player.vy = 0;
+            player.heldLetter = null;
+
+            // Platforms
+            platforms.push({ x: 0, y: 570, w: 800, h: 20, tilt: 0 }); // Ground
+            platforms.push({ x: 0, y: 470, w: 720, h: 15, tilt: 0.03 }); // Tier 1
+            platforms.push({ x: 80, y: 370, w: 720, h: 15, tilt: -0.03 }); // Tier 2
+            platforms.push({ x: 0, y: 270, w: 720, h: 15, tilt: 0.03 }); // Tier 3
+            platforms.push({ x: 80, y: 170, w: 720, h: 15, tilt: -0.03 }); // Tier 4
+            platforms.push({ x: 0, y: 85, w: 720, h: 20, tilt: 0.03 });   // Tier 5
+
+            // Ladders (Adjusted precise heights to meet the platform surfaces exactly)
+            ladders.push({ x: 680, y: 460, w: 40, h: 110 }); // T0 to T1
+            ladders.push({ x: 100, y: 360, w: 40, h: 114 }); // T1 to T2
+            ladders.push({ x: 680, y: 260, w: 40, h: 92 });  // T2 to T3
+            ladders.push({ x: 100, y: 160, w: 40, h: 114 }); // T3 to T4
+            ladders.push({ x: 400, y: 75, w: 40, h: 85 });   // T4 to T5
+
+            // Round Power Sockets
+            const totalSocketWidth = currentWord.length * 70;
+            const startSocketX = (800 - totalSocketWidth) / 2;
+            for (let i = 0; i < currentWord.length; i++) {
+                sockets.push({
+                    x: startSocketX + (i * 70),
+                    y: 20,
+                    w: 50,
+                    h: 50,
+                    letter: currentWord[i],
+                    filledBulb: null
+                });
+            }
+
+            // Lightbulbs
+            const shuffledLetters = currentWord.split('').sort(() => Math.random() - 0.5);
+            shuffledLetters.forEach((char, i) => {
+                const tier = (i % 4) + 1;
+                const p = platforms[tier];
+                letterBulbs.push({
+                    x: p.x + 150 + (Math.random() * (p.w - 300)),
+                    y: p.y - 35,
+                    w: 30,
+                    h: 40,
+                    letter: char,
+                    collected: false
+                });
+            });
+        }
+
+        // --- GEMINI API INTEGRATION ---
+        
+        // Helper function to handle network retries (Exponential Backoff)
+        async function fetchWithRetry(url, options, maxRetries = 5) {
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
+            }
+        }
+
+        // Generate theme-based words using Gemini 2.5 Flash
+        async function generateWords() {
+            const theme = document.getElementById('themeInput').value.trim() || 'Random cool words';
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const errorDisplay = document.getElementById('ai-error');
+            const wordInput = document.getElementById('wordInput');
+            
+            errorDisplay.innerText = "";
+            loadingOverlay.classList.remove('hidden');
+            
+            // Crafting a strict prompt for optimal game words
+            const prompt = `Generate exactly 4 spelling words suitable for a children's spelling game based on the theme: "${theme}". Words should be between 3 and 7 letters long. They must be single words with no spaces or special characters.`;
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            
+            // Requesting Structured JSON Response
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            words: {
+                                type: "ARRAY",
+                                items: { type: "STRING" }
+                            }
+                        }
+                    }
+                }
+            };
+
+            try {
+                const result = await fetchWithRetry(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (textResponse) {
+                    const data = JSON.parse(textResponse);
+                    if (data.words && data.words.length > 0) {
+                        // Strip out any weird characters and capitalize them to be safe
+                        const cleanWords = data.words.map(w => w.replace(/[^a-zA-Z]/g, '').toUpperCase()).filter(w => w.length > 0);
+                        wordInput.value = cleanWords.join(', ');
+                    } else {
+                         throw new Error("No words returned from AI.");
+                    }
+                } else {
+                    throw new Error("Invalid API response structure.");
+                }
+            } catch (error) {
+                console.error("AI Generation Error:", error);
+                errorDisplay.innerText = "Communication Error: Please enter words manually.";
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+
+        function startGame() {
+            const input = document.getElementById('wordInput').value;
+            words = input.split(',').map(w => w.trim()).filter(w => w.length > 0);
+            if (words.length === 0) return;
+            
+            currentWordIndex = 0;
+            lives = 5;
+            gameState = 'PLAYING';
+            
+            menu.classList.add('hidden');
+            desktopHint.classList.remove('hidden');
+            touchControlsUI.classList.add('active'); // Show touch controls
+            
+            initLevel(words[currentWordIndex]);
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Interaction for A key (or Touch Action Button)
+        function handleInteractAction() {
+            if (gameState !== 'PLAYING') return;
+
+            let interacted = false;
+            let pCenter = player.x + player.w/2;
+
+            // 1. Check Sockets
+            let sTarget = sockets.find(s => 
+                pCenter > s.x - 10 && pCenter < s.x + s.w + 10 && 
+                player.y + player.h > s.y && player.y < s.y + s.h + 20
+            );
+
+            if (sTarget) {
+                if (player.heldLetter && !sTarget.filledBulb) {
+                    // Place into empty socket
+                    sTarget.filledBulb = player.heldLetter;
+                    player.heldLetter.x = sTarget.x + (sTarget.w/2 - player.heldLetter.w/2);
+                    player.heldLetter.y = sTarget.y - 5;
+                    player.heldLetter.collected = false;
+                    player.heldLetter = null;
+                    interacted = true;
+                    checkWin();
+                } else if (!player.heldLetter && sTarget.filledBulb) {
+                    // Take out of socket
+                    player.heldLetter = sTarget.filledBulb;
+                    player.heldLetter.collected = true;
+                    sTarget.filledBulb = null;
+                    interacted = true;
+                } else if (player.heldLetter && sTarget.filledBulb) {
+                    // Swap held with socket
+                    let temp = sTarget.filledBulb;
+                    sTarget.filledBulb = player.heldLetter;
+                    player.heldLetter.x = sTarget.x + (sTarget.w/2 - player.heldLetter.w/2);
+                    player.heldLetter.y = sTarget.y - 5;
+                    player.heldLetter.collected = false;
+                    
+                    player.heldLetter = temp;
+                    player.heldLetter.collected = true;
+                    interacted = true;
+                    checkWin();
+                }
+            }
+
+            // 2. Check Ground Bulbs
+            if (!interacted) {
+                let bTarget = letterBulbs.find(b => 
+                    !b.collected && !sockets.some(soc => soc.filledBulb === b) &&
+                    pCenter > b.x - 10 && pCenter < b.x + b.w + 10 && 
+                    player.y + player.h > b.y && player.y < b.y + b.h + 20
+                );
+
+                if (bTarget) {
+                    if (!player.heldLetter) {
+                        player.heldLetter = bTarget;
+                        bTarget.collected = true;
+                        interacted = true;
+                    } else {
+                        // Swap with ground bulb
+                        let temp = player.heldLetter;
+                        player.heldLetter = bTarget;
+                        bTarget.collected = true;
+                        
+                        temp.collected = false;
+                        temp.x = player.x + (player.w/2 - temp.w/2);
+                        temp.y = player.y + player.h - temp.h;
+                        interacted = true;
+                    }
+                }
+            }
+        }
+
+        // Jump action for Q key (or Touch Jump Button)
+        function handleJumpAction() {
+            if (gameState !== 'PLAYING') return;
+
+            let onLadder = ladders.some(l => player.x + player.w > l.x && player.x < l.x + l.w && player.y + player.h >= l.y - 5 && player.y + player.h <= l.y + l.h + 5);
+            if (player.onGround && !onLadder) {
+                player.vy = JUMP_FORCE;
+                player.onGround = false;
+            }
+        }
+
+        function update() {
+            if (gameState !== 'PLAYING') return;
+            frameCount++;
+
+            // Player Horizontal Move (O for Left, P for Right, or Arrow fallbacks)
+            if (keys['KeyO'] || keys['ArrowLeft']) { 
+                player.vx = -MOVE_SPEED; 
+                player.facing = -1; 
+                player.animFrame += 0.2;
+            } else if (keys['KeyP'] || keys['ArrowRight']) { 
+                player.vx = MOVE_SPEED; 
+                player.facing = 1;
+                player.animFrame += 0.2;
+            } else { 
+                player.vx *= 0.8; 
+            }
+
+            let onLadder = false;
+            let currentLadder = null;
+            ladders.forEach(l => {
+                if (player.x + player.w > l.x && player.x < l.x + l.w &&
+                    player.y + player.h >= l.y - 5 && player.y + player.h <= l.y + l.h + 5) {
+                    onLadder = true;
+                    currentLadder = l;
+                }
+            });
+
+            // Player Vertical Move
+            if (onLadder) {
+                if (keys['KeyQ'] || keys['ArrowUp']) player.vy = -3;
+                else if (keys['KeyA'] || keys['ArrowDown']) player.vy = 3;
+                else player.vy = 0;
+                player.onGround = true;
+                
+                // Limit downward climbing so we don't fall through the bottom platform
+                if (currentLadder && player.vy > 0) {
+                    if (player.y + player.h + player.vy > currentLadder.y + currentLadder.h) {
+                        player.vy = (currentLadder.y + currentLadder.h) - (player.y + player.h);
+                    }
+                }
+            } else {
+                player.vy += GRAVITY;
+            }
+
+            player.x += player.vx;
+            player.y += player.vy;
+
+            player.onGround = false;
+            platforms.forEach(p => {
+                const relX = player.x + player.w / 2 - p.x;
+                const surfaceY = p.y + (relX * p.tilt);
+                if (player.x + player.w > p.x && player.x < p.x + p.w) {
+                    if (player.vy >= 0 && player.y + player.h <= surfaceY + 15 && player.y + player.h >= surfaceY - 15) {
+                        // Bypass platform collision if explicitly climbing down a ladder
+                        if (onLadder && (keys['KeyA'] || keys['ArrowDown'])) {
+                            return; 
+                        }
+                        player.y = surfaceY - player.h;
+                        player.vy = 0;
+                        player.onGround = true;
+                    }
+                }
+            });
+
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
+
+            // Barrels logic
+            if (frameCount % BARREL_SPAWN_RATE === 0) {
+                barrels.push({ x: 120, y: 50, r: 14, vx: BARREL_SPEED, vy: 0 });
+            }
+
+            barrels.forEach((b, index) => {
+                b.vy += GRAVITY * 0.4;
+                b.x += b.vx;
+                b.y += b.vy;
+
+                if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); }
+                if (b.x > canvas.width - b.r) { b.x = canvas.width - b.r; b.vx = -Math.abs(b.vx); }
+
+                platforms.forEach(p => {
+                    const relX = b.x - p.x;
+                    const surfaceY = p.y + (relX * p.tilt);
+                    if (b.x > p.x && b.x < p.x + p.w) {
+                        if (b.y + b.r > surfaceY - 15 && b.y + b.r < surfaceY + 15) {
+                            b.y = surfaceY - b.r;
+                            b.vy = 0;
+                            if (p.tilt > 0) b.vx = Math.abs(BARREL_SPEED);
+                            else if (p.tilt < 0) b.vx = -Math.abs(BARREL_SPEED);
+                        }
+                    }
+                });
+
+                const dist = Math.hypot(b.x - (player.x + player.w/2), b.y - (player.y + player.h/2));
+                if (dist < b.r + 15) loseLife();
+                if (b.y > canvas.height) barrels.splice(index, 1);
+            });
+
+            // Update held letter position
+            if (player.heldLetter) {
+                player.heldLetter.x = player.x + (player.w/2 - player.heldLetter.w/2);
+                player.heldLetter.y = player.y - 35;
+            }
+        }
+
+        function loseLife() {
+            if (gameState !== 'PLAYING') return;
+            lives--;
+            if (lives <= 0) {
+                gameState = 'GAMEOVER';
+                document.getElementById('endTitle').innerText = "SYSTEM FAILURE";
+                document.getElementById('endTitle').className = "text-3xl mb-6 text-red-500 drop-shadow-[0_0_10px_rgba(255,0,0,0.8)]";
+                document.getElementById('endStats').innerHTML = `Words Completed: <span class="text-cyan-400">${currentWordIndex}</span>`;
+                gameOverScreen.classList.remove('hidden');
+                touchControlsUI.classList.remove('active');
+                desktopHint.classList.add('hidden');
+            } else {
+                player.x = 50;
+                player.y = 530;
+                barrels = []; // Reset barrels to prevent bombardment
+                if (player.heldLetter) {
+                    // Drop letter where they died
+                    player.heldLetter.collected = false;
+                    player.heldLetter = null;
+                }
+            }
+        }
+
+        function checkWin() {
+            // Player only wins if all sockets are full AND match the correct letters
+            const isWin = sockets.every(s => s.filledBulb && s.filledBulb.letter === s.letter);
+            
+            if (isWin) {
+                setTimeout(() => {
+                    currentWordIndex++;
+                    if (currentWordIndex >= words.length) {
+                        gameState = 'GAMEOVER';
+                        document.getElementById('endTitle').innerText = "MISSION COMPLETE";
+                        document.getElementById('endTitle').className = "text-3xl mb-6 text-green-400 drop-shadow-[0_0_15px_rgba(0,255,0,0.8)]";
+                        document.getElementById('endStats').innerText = `You mastered all ${words.length} words!`;
+                        gameOverScreen.classList.remove('hidden');
+                        touchControlsUI.classList.remove('active');
+                        desktopHint.classList.add('hidden');
+                    } else {
+                        initLevel(words[currentWordIndex]);
+                    }
+                }, 1000);
+            }
+        }
+
+        // --- MODERN DRAWING FUNCTIONS ---
+
+        function drawKong(ctx, x, y) {
+            // Cyber Kong
+            let grad = ctx.createLinearGradient(x, y, x, y+50);
+            grad.addColorStop(0, '#556688');
+            grad.addColorStop(1, '#223344');
+            ctx.fillStyle = grad;
+            
+            // Body
+            ctx.beginPath(); ctx.roundRect(x, y+15, 70, 45, 10); ctx.fill();
+            // Cyber Chest plates
+            ctx.fillStyle = '#00ffff';
+            ctx.shadowBlur = 10; ctx.shadowColor = '#00ffff';
+            ctx.beginPath(); ctx.roundRect(x+15, y+25, 15, 20, 4); ctx.fill();
+            ctx.beginPath(); ctx.roundRect(x+40, y+25, 15, 20, 4); ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Head
+            ctx.fillStyle = grad;
+            ctx.beginPath(); ctx.roundRect(x+15, y, 40, 30, 8); ctx.fill();
+            
+            // Cyber Eyes
+            ctx.fillStyle = '#ff0055';
+            ctx.shadowBlur = 15; ctx.shadowColor = '#ff0055';
+            ctx.beginPath(); ctx.roundRect(x+22, y+10, 8, 4, 2); ctx.fill();
+            ctx.beginPath(); ctx.roundRect(x+40, y+10, 8, 4, 2); ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Arms
+            ctx.fillStyle = grad;
+            ctx.beginPath(); ctx.roundRect(x-20, y+20, 25, 45, 10); ctx.fill(); // Left
+            ctx.beginPath(); ctx.roundRect(x+65, y+20, 25, 45, 10); ctx.fill(); // Right
+        }
+
+        function drawPlayer(ctx, x, y, facing, frame) {
+            ctx.save();
+            ctx.translate(x + 15, y + 20);
+            if (facing === -1) ctx.scale(-1, 1);
+            
+            // Backpack
+            ctx.fillStyle = '#334455';
+            ctx.beginPath(); ctx.roundRect(-16, -10, 8, 20, 4); ctx.fill();
+            
+            // Legs (animated)
+            const legOff = Math.sin(frame) * 6;
+            ctx.fillStyle = '#111'; 
+            ctx.beginPath(); ctx.roundRect(-8, 8, 8, 14 + legOff, 4); ctx.fill();
+            ctx.beginPath(); ctx.roundRect(2, 8, 8, 14 - legOff, 4); ctx.fill();
+
+            // Torso Suit
+            let torsoGrad = ctx.createLinearGradient(0, -10, 0, 10);
+            torsoGrad.addColorStop(0, '#00ffff');
+            torsoGrad.addColorStop(1, '#0055aa');
+            ctx.fillStyle = torsoGrad;
+            ctx.beginPath(); ctx.roundRect(-10, -5, 20, 16, 5); ctx.fill();
+
+            // Helmet
+            ctx.fillStyle = '#eeeeff';
+            ctx.beginPath(); ctx.arc(0, -14, 11, 0, Math.PI * 2); ctx.fill();
+            // Glowing Visor
+            ctx.fillStyle = '#ff0055';
+            ctx.shadowBlur = 8; ctx.shadowColor = '#ff0055';
+            ctx.beginPath(); ctx.roundRect(0, -18, 13, 8, 4); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            ctx.restore();
+        }
+
+        function drawBulb(ctx, x, y, letter, isLit, isCorrect) {
+            // Neon Lightbulb 
+            const color = isLit ? (isCorrect ? '#00ff00' : '#ff0055') : '#00ffff'; 
+            
+            ctx.save();
+            if (isLit) {
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = color;
+            }
+            
+            // Glass dome
+            ctx.beginPath();
+            ctx.arc(x + 15, y + 15, 14, 0, Math.PI * 2);
+            ctx.fillStyle = isLit ? color : 'rgba(0, 255, 255, 0.15)';
+            ctx.fill();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Metal Base
+            ctx.fillStyle = '#778899';
+            ctx.beginPath(); ctx.roundRect(x + 7, y + 26, 16, 8, 2); ctx.fill();
+            ctx.fillStyle = '#445566';
+            ctx.beginPath(); ctx.roundRect(x + 9, y + 34, 12, 4, 2); ctx.fill();
+
+            // Letter
+            ctx.fillStyle = isLit ? '#000' : color;
+            ctx.font = 'bold 16px "Orbitron"';
+            ctx.textAlign = 'center';
+            ctx.fillText(letter, x + 15, y + 20);
+            
+            ctx.restore();
+        }
+
+        function drawSocket(ctx, x, y, expectedLetter, filledBulb) {
+            // Modern round power socket
+            ctx.beginPath();
+            ctx.arc(x + 25, y + 25, 24, 0, Math.PI * 2);
+            ctx.fillStyle = '#111118';
+            ctx.fill();
+            ctx.strokeStyle = '#00aaaa';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Inner outlet details
+            ctx.beginPath();
+            ctx.arc(x + 15, y + 25, 5, 0, Math.PI*2);
+            ctx.arc(x + 35, y + 25, 5, 0, Math.PI*2);
+            ctx.fillStyle = '#000';
+            ctx.fill();
+
+            // Background Expected Letter
+            ctx.fillStyle = '#334455';
+            ctx.font = 'bold 12px "Orbitron"';
+            ctx.textAlign = 'center';
+            ctx.fillText(expectedLetter, x + 25, y - 10);
+
+            // Draw erratic electricity if the socket is empty
+            if (!filledBulb && Math.random() > 0.2) {
+                ctx.save();
+                ctx.strokeStyle = (Math.random() > 0.5) ? '#00ffff' : '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#00ffff';
+                ctx.beginPath();
+                ctx.moveTo(x + 15, y + 25); // Start at left contact
+                
+                // Random erratic zigzag point in the middle
+                const midX = x + 25 + (Math.random() * 10 - 5);
+                const midY = y + 25 + (Math.random() * 16 - 8);
+                ctx.lineTo(midX, midY);
+                
+                ctx.lineTo(x + 35, y + 25); // End at right contact
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Platforms
+            platforms.forEach(p => {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(Math.atan(p.tilt));
+                
+                let platGrad = ctx.createLinearGradient(0, 0, 0, p.h);
+                platGrad.addColorStop(0, '#0088ff');
+                platGrad.addColorStop(1, '#001144');
+                ctx.fillStyle = platGrad;
+                
+                ctx.beginPath();
+                ctx.roundRect(0, 0, p.w, p.h, 6);
+                ctx.fill();
+                
+                // Neon Edge
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.restore();
+            });
+
+            // Ladders
+            ctx.fillStyle = '#00ffff';
+            ladders.forEach(l => {
+                ctx.fillRect(l.x, l.y, 4, l.h);
+                ctx.fillRect(l.x + l.w - 4, l.y, 4, l.h);
+                for (let i = 10; i < l.h; i += 20) {
+                    ctx.fillRect(l.x, l.y + i, l.w, 4);
+                }
+            });
+
+            // Kong
+            drawKong(ctx, 40, 25);
+
+            // Sockets
+            sockets.forEach(s => drawSocket(ctx, s.x, s.y, s.letter, s.filledBulb));
+
+            // Bulbs
+            letterBulbs.forEach(b => {
+                // If it's collected by player, don't draw it here (drawn with player later)
+                if (!b.collected) {
+                    let containingSocket = sockets.find(s => s.filledBulb === b);
+                    let isLit = !!containingSocket;
+                    let isCorrect = containingSocket ? (containingSocket.letter === b.letter) : false;
+                    drawBulb(ctx, b.x, b.y, b.letter, isLit, isCorrect);
+                }
+            });
+
+            // Barrels (Energy Cores)
+            barrels.forEach(b => {
+                ctx.fillStyle = '#223344';
+                ctx.beginPath(); 
+                ctx.roundRect(b.x - b.r, b.y - b.r, b.r*2, b.r*2, 4); 
+                ctx.fill();
+                
+                // Toxic glowing center
+                ctx.fillStyle = '#00ff00';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#00ff00';
+                ctx.fillRect(b.x - b.r + 4, b.y - b.r + 4, b.r*2 - 8, b.r*2 - 8);
+                ctx.shadowBlur = 0;
+            });
+
+            // Player
+            drawPlayer(ctx, player.x, player.y, player.facing, player.animFrame);
+            if (player.heldLetter) {
+                drawBulb(ctx, player.heldLetter.x, player.heldLetter.y, player.heldLetter.letter, false, false);
+            }
+
+            // HUD
+            ctx.fillStyle = '#00ffff';
+            ctx.font = 'bold 16px "Orbitron"';
+            ctx.textAlign = 'left';
+            ctx.fillText(`LIVES: ${"💙".repeat(Math.max(0, lives))}`, 20, 585);
+            ctx.textAlign = 'right';
+            ctx.fillText(`WORD: ${currentWordIndex + 1}/${words.length}`, 780, 585);
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            if (gameState === 'PLAYING') requestAnimationFrame(gameLoop);
+        }
+
+        // --- Render Menu Art ---
+        const mCanvas = document.getElementById('menuCanvas');
+        const mCtx = mCanvas.getContext('2d');
+        let menuFrame = 0;
+
+        function renderMenuArt() {
+            mCtx.clearRect(0, 0, mCanvas.width, mCanvas.height);
+            
+            // Simple bounce physics using sine waves
+            const kongBounce = Math.sin(menuFrame) * 4;
+            const playerBounce = Math.cos(menuFrame * 1.5) * 3;
+            
+            // Draw Kong scaled up and bouncing
+            mCtx.save();
+            mCtx.translate(0, kongBounce);
+            mCtx.scale(1.2, 1.2);
+            drawKong(mCtx, 30, 10);
+            mCtx.restore();
+
+            // Draw Player scaled up, facing left towards Kong, with leg animation
+            mCtx.save();
+            mCtx.translate(0, playerBounce);
+            mCtx.scale(1.4, 1.4);
+            drawPlayer(mCtx, 110, 15, -1, menuFrame * 2);
+            mCtx.restore();
+        }
+        
+        function menuLoop() {
+            if (gameState === 'MENU') {
+                menuFrame += 0.06;
+                renderMenuArt();
+                requestAnimationFrame(menuLoop);
+            }
+        }
+        
+        // Start the menu animation loop
+        menuLoop();
+
+    </script>
 </body>
 </html>
-
