@@ -1,0 +1,893 @@
+import React, { useState, useEffect, useReducer } from 'react';
+import { Coins, Trophy, AlertCircle, Hand } from 'lucide-react';
+
+// --- CONSTANTS & HELPERS ---
+const SUITS = ['♣', '♠', '♦', '♥'];
+const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+
+const EMOJI_OPTIONS = [
+  '😎', '🤠', '👽', '🐶', '🐱', '🦊', '🐼', '🦁', '🐸', '🦄', '🐲', '🐵', '🐷', '🦖', '🐙',
+  '👻', '💩', '🤡', '🤖', '🎃', '👹', '👺', '🐊', '🦈', '🦍', '🦥', '🦦', '🦨', '🦡', '🥸'
+];
+const AI_EMOJIS = ['🤖', '👾', '💻', '📡'];
+
+const getSuitWeight = (suit) => SUITS.indexOf(suit) + 1; // 1 to 4
+const getRankValue = (rank) => RANKS.indexOf(rank) + 2; // 2 to 14
+
+const createDeck = () => {
+  const deck = [];
+  for (let suit of SUITS) {
+    for (let rank of RANKS) {
+      deck.push({ rank, suit, val: getRankValue(rank) });
+    }
+  }
+  return deck;
+};
+
+const shuffle = (array) => {
+  const newArr = [...array];
+  for (let i = newArr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+  }
+  return newArr;
+};
+
+const drawCenterCardsWithGap = (deck) => {
+  let currentDeck = [...deck];
+  while (currentDeck.length >= 2) {
+    let c1 = currentDeck.pop();
+    let c2 = currentDeck.pop();
+
+    let v1 = c1.val;
+    let v2 = c2.val;
+
+    if (c1.rank === 'A' && c2.rank === 'A') {
+      v1 = 2; v2 = 14;
+    } else if (c1.rank === 'A') {
+      v1 = Math.abs(14 - v2) > Math.abs(2 - v2) ? 14 : 2;
+    } else if (c2.rank === 'A') {
+      v2 = Math.abs(14 - v1) > Math.abs(2 - v1) ? 14 : 2;
+    }
+
+    if (Math.abs(v1 - v2) - 1 >= 5) {
+      c1.playVal = v1;
+      c2.playVal = v2;
+      return { 
+        centerCards: v1 < v2 ? [c1, c2] : [c2, c1], 
+        newDeck: currentDeck 
+      };
+    }
+  }
+  return drawCenterCardsWithGap(shuffle(createDeck()));
+};
+
+// --- INITIAL STATE & REDUCER ---
+const initialState = {
+  globalPhase: 'menu',
+  players: [],
+  deck: [],
+  centerCards: [],
+  pot: 0,
+  activePlayerId: null,
+  turnQueue: [],
+  turnQueueIdx: 0,
+  subPhase: null,
+  polePosition: null,
+  logs: [],
+  startingTokens: 20,
+  humanCount: 1,
+  startingPlayerId: 0
+};
+
+function gameReducer(state, action) {
+  const addLog = (msg) => [msg, ...state.logs].slice(0, 5);
+
+  switch (action.type) {
+    case 'START_GAME': {
+      const { tokens, humans, humanConfigs } = action.payload;
+      const initialPlayers = [];
+      for (let i = 0; i < 4; i++) {
+        const isHuman = i < humans;
+        const name = isHuman ? humanConfigs[i].name : `AI Bot ${i - humans + 1}`;
+        const emoji = isHuman ? humanConfigs[i].emoji : AI_EMOJIS[(i - humans) % AI_EMOJIS.length];
+        initialPlayers.push({
+          id: i, isHuman, name, emoji, tokens, hand: [], revealedCardIdx: null, isPlaying: false, hasFolded: false
+        });
+      }
+
+      return {
+        ...state,
+        globalPhase: 'start_round',
+        startingTokens: tokens,
+        humanCount: humans,
+        startingPlayerId: 0,
+        pot: 0,
+        players: initialPlayers
+      };
+    }
+
+    case 'START_ROUND': {
+      const activePlayers = state.players.filter(p => p.tokens > 0);
+      if (activePlayers.length <= 1) {
+        return { ...state, globalPhase: 'game_over' };
+      }
+
+      let newDeck = shuffle(createDeck());
+      const newPlayers = state.players.map(p => {
+        if (p.tokens <= 0) return { ...p, hand: [], isPlaying: false, hasFolded: true };
+        return {
+          ...p,
+          hand: [newDeck.pop(), newDeck.pop()],
+          revealedCardIdx: null,
+          isPlaying: false,
+          hasFolded: false
+        };
+      });
+
+      const { centerCards, newDeck: remainingDeck } = drawCenterCardsWithGap(newDeck);
+      
+      let nextStartId = state.startingPlayerId;
+      let firstActiveId = null;
+      for (let i = 0; i < 4; i++) {
+        let checkId = (nextStartId + i) % 4;
+        if (!newPlayers[checkId].hasFolded) {
+          firstActiveId = checkId;
+          break;
+        }
+      }
+
+      return {
+        ...state,
+        globalPhase: 'ante',
+        players: newPlayers,
+        deck: remainingDeck,
+        centerCards: centerCards.map(c => ({...c, isNew: false})),
+        activePlayerId: firstActiveId,
+        startingPlayerId: (nextStartId + 1) % 4,
+        polePosition: null,
+        logs: addLog("New round started! Center cards drawn.")
+      };
+    }
+
+    case 'SUBMIT_ANTE': {
+      const { playerId, willPlay } = action.payload;
+      const player = state.players.find(p => p.id === playerId);
+      
+      let newPot = state.pot;
+      let newTokens = player.tokens;
+      if (willPlay) {
+        newPot += 1;
+        newTokens -= 1;
+      }
+
+      const newPlayers = state.players.map(p => 
+        p.id === playerId ? { ...p, tokens: newTokens, isPlaying: willPlay, hasFolded: !willPlay } : p
+      );
+
+      let nextId = null;
+      for (let i = 1; i <= 4; i++) {
+        let checkId = (playerId + i) % 4;
+        let p = newPlayers[checkId];
+        if (!p.isPlaying && !p.hasFolded) {
+          nextId = checkId;
+          break;
+        }
+      }
+
+      if (nextId === null) {
+        let firstPlayingId = null;
+        for (let i = 1; i <= 4; i++) {
+          let checkId = (playerId + i) % 4;
+          if (newPlayers[checkId].isPlaying) {
+            firstPlayingId = checkId;
+            break;
+          }
+        }
+        if (firstPlayingId === null) {
+          return { ...state, players: newPlayers, pot: newPot, globalPhase: 'round_end', logs: addLog("Everyone folded. Pot carries over.") };
+        }
+        return { ...state, players: newPlayers, pot: newPot, globalPhase: 'reveal', activePlayerId: firstPlayingId };
+      }
+
+      return { ...state, players: newPlayers, pot: newPot, activePlayerId: nextId, logs: addLog(`${player.name} ${willPlay ? 'anted to play' : 'folded'}.`) };
+    }
+
+    case 'SUBMIT_REVEAL': {
+      const { playerId, cardIdx } = action.payload;
+      const player = state.players.find(p => p.id === playerId);
+      
+      const newPlayers = state.players.map(p => 
+        p.id === playerId ? { ...p, revealedCardIdx: cardIdx } : p
+      );
+
+      let nextId = null;
+      for (let i = 1; i <= 4; i++) {
+        let checkId = (playerId + i) % 4;
+        let p = newPlayers[checkId];
+        if (p.isPlaying && p.revealedCardIdx === null) {
+          nextId = checkId;
+          break;
+        }
+      }
+
+      if (nextId === null) {
+        const playingPlayers = newPlayers.filter(p => p.isPlaying);
+        playingPlayers.sort((a, b) => {
+          const cardA = a.hand[a.revealedCardIdx];
+          const cardB = b.hand[b.revealedCardIdx];
+          const scoreA = cardA.val * 10 + getSuitWeight(cardA.suit);
+          const scoreB = cardB.val * 10 + getSuitWeight(cardB.suit);
+          return scoreB - scoreA;
+        });
+        
+        const queue = playingPlayers.map(p => p.id);
+        const topPlayer = newPlayers.find(p => p.id === queue[0]);
+
+        return { 
+          ...state, 
+          players: newPlayers, 
+          globalPhase: 'play', 
+          turnQueue: queue, 
+          turnQueueIdx: 0,
+          subPhase: 'decide_play',
+          logs: addLog(`Turn order decided. ${topPlayer.name} goes first.`)
+        };
+      }
+
+      return { ...state, players: newPlayers, activePlayerId: nextId };
+    }
+
+    case 'SUBMIT_PLAY_DECISION': {
+      const { decision } = action.payload; 
+      const playerId = state.turnQueue[state.turnQueueIdx];
+      const player = state.players.find(p => p.id === playerId);
+      const isFirst = state.turnQueueIdx === 0;
+
+      if (decision === 'fold') {
+        const newPlayers = state.players.map(p => p.id === playerId ? { ...p, hasFolded: true } : p);
+        const nextIdx = state.turnQueueIdx + 1;
+        if (nextIdx >= state.turnQueue.length) {
+          return { ...state, players: newPlayers, globalPhase: 'round_end', logs: addLog(`${player.name} folded.`) };
+        }
+        return { ...state, players: newPlayers, turnQueueIdx: nextIdx, subPhase: 'decide_play', logs: addLog(`${player.name} folded.`) };
+      }
+
+      let newPot = state.pot;
+      let newPlayers = [...state.players];
+      if (!isFirst) {
+        newPot += 1;
+        newPlayers = newPlayers.map(p => p.id === playerId ? { ...p, tokens: p.tokens - 1 } : p);
+      }
+
+      const nextSubPhase = state.centerCards.length === 3 ? 'choose_gap' : 'evaluate';
+      return { 
+        ...state, 
+        players: newPlayers, 
+        pot: newPot, 
+        subPhase: nextSubPhase,
+        logs: addLog(`${player.name} stepped up to play!`)
+      };
+    }
+
+    case 'SUBMIT_GAP_CHOICE': {
+      const { gap } = action.payload; 
+      let newCenter = state.centerCards.map(c => ({...c, isNew: false})); 
+      if (gap === 'left') {
+        newCenter = [newCenter[0], newCenter[1]]; 
+      } else {
+        newCenter = [newCenter[1], newCenter[2]]; 
+      }
+      return { ...state, centerCards: newCenter, subPhase: 'evaluate' };
+    }
+
+    case 'EVALUATE_TURN': {
+      const playerId = state.turnQueue[state.turnQueueIdx];
+      const player = state.players.find(p => p.id === playerId);
+      const hiddenCard = player.hand[player.revealedCardIdx === 0 ? 1 : 0];
+      
+      const L = state.centerCards[0];
+      const R = state.centerCards[1];
+      
+      let playedVal = hiddenCard.val;
+      let displayRank = null;
+
+      // Handle Ace dynamic gap splitting
+      if (hiddenCard.rank === 'A') {
+        playedVal = Math.ceil((L.playVal + R.playVal) / 2);
+        displayRank = playedVal <= 10 ? playedVal.toString() : RANKS[playedVal - 2];
+      }
+      
+      const success = playedVal > L.playVal && playedVal < R.playVal;
+      let newCenter = state.centerCards.map(c => ({...c, isNew: false}));
+      let newPole = state.polePosition;
+      let msg = "";
+
+      if (success) {
+        newCenter = [L, { ...hiddenCard, playVal: playedVal, displayRank, isNew: true }, R];
+        newPole = playerId;
+        msg = `${player.name} successfully split the gap${hiddenCard.rank === 'A' ? ` with an Ace acting as ${displayRank}` : ''}!`;
+      } else {
+        msg = `${player.name} missed the gap.`;
+      }
+
+      const newPlayers = state.players.map(p => {
+        if (p.id !== playerId) return p;
+        return { ...p, revealedCardIdx: 2 }; 
+      });
+
+      const nextIdx = state.turnQueueIdx + 1;
+      const nextGlobalPhase = nextIdx >= state.turnQueue.length ? 'round_end' : state.globalPhase;
+
+      return {
+        ...state,
+        players: newPlayers,
+        centerCards: newCenter,
+        polePosition: newPole,
+        turnQueueIdx: nextIdx,
+        subPhase: nextGlobalPhase === 'round_end' ? null : 'decide_play',
+        globalPhase: nextGlobalPhase,
+        logs: addLog(msg)
+      };
+    }
+
+    case 'DISTRIBUTE_POT': {
+      let newPlayers = [...state.players];
+      let newPot = state.pot;
+      if (state.polePosition !== null) {
+        newPlayers = newPlayers.map(p => 
+          p.id === state.polePosition ? { ...p, tokens: p.tokens + state.pot } : p
+        );
+        newPot = 0;
+      }
+      return { ...state, players: newPlayers, pot: newPot };
+    }
+
+    default:
+      return state;
+  }
+}
+
+// --- COMPONENTS ---
+
+const Card = ({ card, hidden, onClick, selectable, isNew }) => {
+  if (hidden) {
+    return (
+      <div 
+        onClick={onClick}
+        className={`w-14 h-20 sm:w-20 sm:h-28 rounded-lg shadow-xl border-2 border-white bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-600 to-blue-900 
+        ${selectable ? 'cursor-pointer hover:-translate-y-2 ring-4 ring-yellow-400 animate-pulse' : ''} transition-all duration-300 z-10`}
+      >
+        <div className="w-full h-full border border-blue-400/30 rounded flex items-center justify-center opacity-30">
+          <div className="w-8 h-8 rotate-45 border-2 border-white"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const isRed = card.suit === '♥' || card.suit === '♦';
+  return (
+    <div 
+      onClick={onClick}
+      className={`w-14 h-20 sm:w-20 sm:h-28 rounded-lg shadow-xl border border-gray-200 bg-white flex flex-col justify-between p-1 sm:p-2 select-none
+      ${selectable ? 'cursor-pointer hover:-translate-y-2 ring-4 ring-yellow-400' : ''} 
+      ${isNew ? 'animate-card-pop z-20 ring-4 ring-green-400 shadow-[0_0_20px_rgba(74,222,128,0.6)]' : 'z-10'}
+      ${isRed ? 'text-red-600' : 'text-gray-900'} transition-all duration-300 relative`}
+    >
+      <div className="text-xs sm:text-base font-bold leading-none">{card.rank}</div>
+      <div className="flex-1 flex items-center justify-center relative">
+        {card.displayRank && (
+          <span className="absolute inset-0 flex items-center justify-center text-3xl sm:text-5xl font-black z-20 text-blue-700 drop-shadow-[0_0_8px_rgba(255,255,255,1)]">
+            {card.displayRank}
+          </span>
+        )}
+        <div className={`text-xl sm:text-4xl text-center self-center ${card.displayRank ? 'opacity-20' : ''}`}>{card.suit}</div>
+      </div>
+      <div className="text-xs sm:text-base font-bold leading-none self-end rotate-180">{card.rank}</div>
+    </div>
+  );
+};
+
+export default function App() {
+  const [state, dispatch] = useReducer(gameReducer, initialState);
+  const [tokensInput, setTokensInput] = useState(20);
+  const [humansInput, setHumansInput] = useState(1);
+  const [humanConfigs, setHumanConfigs] = useState([{ name: 'You', emoji: '😎' }]);
+  const [flyingCoins, setFlyingCoins] = useState([]);
+
+  useEffect(() => {
+    setHumanConfigs(prev => {
+      const newConfigs = [...prev];
+      while (newConfigs.length < humansInput) {
+        newConfigs.push({ name: `Player ${newConfigs.length + 1}`, emoji: EMOJI_OPTIONS[newConfigs.length % EMOJI_OPTIONS.length] });
+      }
+      return newConfigs.slice(0, humansInput);
+    });
+  }, [humansInput]);
+
+  useEffect(() => {
+    let timer;
+    if (state.globalPhase === 'start_round') {
+      dispatch({ type: 'START_ROUND' });
+      return;
+    }
+    
+    if (state.globalPhase === 'round_end') {
+      timer = setTimeout(() => {
+        dispatch({ type: 'DISTRIBUTE_POT' });
+        setTimeout(() => dispatch({ type: 'START_ROUND' }), 3000);
+      }, 3000); 
+      return () => clearTimeout(timer);
+    }
+
+    const currentPlayerId = (state.globalPhase === 'ante' || state.globalPhase === 'reveal') 
+      ? state.activePlayerId 
+      : state.turnQueue[state.turnQueueIdx];
+      
+    if (currentPlayerId === undefined || currentPlayerId === null) return;
+    const player = state.players.find(p => p.id === currentPlayerId);
+
+    if (player && !player.isHuman) {
+      timer = setTimeout(() => {
+        
+        if (state.globalPhase === 'ante') {
+          dispatch({ type: 'SUBMIT_ANTE', payload: { playerId: player.id, willPlay: player.tokens > 0 } });
+        } 
+        
+        else if (state.globalPhase === 'reveal') {
+          const c0 = player.hand[0];
+          const c1 = player.hand[1];
+          const score = (c) => c.val * 10 + getSuitWeight(c.suit);
+          const idx = score(c0) > score(c1) ? 0 : 1;
+          dispatch({ type: 'SUBMIT_REVEAL', payload: { playerId: player.id, cardIdx: idx } });
+        } 
+        
+        else if (state.globalPhase === 'play') {
+          const hiddenCard = player.hand[player.revealedCardIdx === 0 ? 1 : 0];
+          const L = state.centerCards[0].playVal;
+          const R = state.centerCards[state.centerCards.length - 1].playVal;
+          const M = state.centerCards.length === 3 ? state.centerCards[1].playVal : null;
+
+          const evalAce = (lVal, rVal) => Math.ceil((lVal + rVal) / 2);
+
+          if (state.subPhase === 'decide_play') {
+            let willPlay = false;
+            if (state.centerCards.length === 2) {
+              const val = hiddenCard.rank === 'A' ? evalAce(L, R) : hiddenCard.val;
+              if (val > L && val < R) willPlay = true;
+              
+              // Take more risk: play if the gap size is > 1
+              if (R - L - 1 > 1) willPlay = true;
+            } else {
+              const valLeft = hiddenCard.rank === 'A' ? evalAce(L, M) : hiddenCard.val;
+              const valRight = hiddenCard.rank === 'A' ? evalAce(M, R) : hiddenCard.val;
+              if ((valLeft > L && valLeft < M) || (valRight > M && valRight < R)) willPlay = true;
+              
+              // Take more risk: play if the largest gap is > 1
+              const gapLeft = M - L - 1;
+              const gapRight = R - M - 1;
+              if (Math.max(gapLeft, gapRight) > 1) willPlay = true;
+            }
+            
+            const isFirst = state.turnQueueIdx === 0;
+            if (isFirst) willPlay = true; // Always take a free play!
+            if (!isFirst && player.tokens < 1) willPlay = false;
+
+            dispatch({ type: 'SUBMIT_PLAY_DECISION', payload: { decision: willPlay ? 'pay' : 'fold' } });
+          } 
+          
+          else if (state.subPhase === 'choose_gap') {
+            let gap = 'left';
+            const valRight = hiddenCard.rank === 'A' ? evalAce(M, R) : hiddenCard.val;
+            const valLeft = hiddenCard.rank === 'A' ? evalAce(L, M) : hiddenCard.val;
+            
+            if (valRight > M && valRight < R) {
+              gap = 'right';
+            } else if (valLeft > L && valLeft < M) {
+              gap = 'left';
+            } else {
+              // If gambling, guess the wider gap
+              const gapLeft = M - L - 1;
+              const gapRight = R - M - 1;
+              if (gapRight > gapLeft) gap = 'right';
+            }
+            dispatch({ type: 'SUBMIT_GAP_CHOICE', payload: { gap } });
+          } 
+          
+          else if (state.subPhase === 'evaluate') {
+            dispatch({ type: 'EVALUATE_TURN' });
+          }
+        }
+      }, 1500);
+    }
+
+    return () => clearTimeout(timer);
+  }, [state.globalPhase, state.subPhase, state.activePlayerId, state.turnQueueIdx, state.players, state.centerCards]);
+
+  const handleHumanPay = (playerId) => {
+    const coinId = Date.now();
+    setFlyingCoins(prev => [...prev, coinId]);
+    setTimeout(() => {
+      setFlyingCoins(prev => prev.filter(id => id !== coinId));
+    }, 800);
+
+    if (state.globalPhase === 'ante') {
+      dispatch({ type: 'SUBMIT_ANTE', payload: { playerId, willPlay: true } });
+    } else {
+      dispatch({ type: 'SUBMIT_PLAY_DECISION', payload: { decision: 'pay' } });
+    }
+  };
+
+  const handleHumanFold = (playerId) => {
+    if (state.globalPhase === 'ante') {
+      dispatch({ type: 'SUBMIT_ANTE', payload: { playerId, willPlay: false } });
+    } else {
+      dispatch({ type: 'SUBMIT_PLAY_DECISION', payload: { decision: 'fold' } });
+    }
+  };
+
+  // --- RENDER HELPERS ---
+  const activePId = (state.globalPhase === 'ante' || state.globalPhase === 'reveal') 
+      ? state.activePlayerId 
+      : state.turnQueue[state.turnQueueIdx];
+
+  const renderPlayerArea = (player, position) => {
+    if (!player) return null;
+    const isTurn = player.id === activePId && state.globalPhase !== 'round_end' && state.globalPhase !== 'game_over';
+    const hasPole = state.polePosition === player.id;
+    const isWinner = state.globalPhase === 'round_end' && state.polePosition === player.id;
+    const isLoser = state.globalPhase === 'round_end' && state.polePosition !== null && state.polePosition !== player.id;
+    
+    const posClasses = {
+      'top': 'flex-col justify-start pb-4',
+      'bottom': 'flex-col-reverse justify-start pt-4',
+      'left': 'flex-row justify-start pr-4',
+      'right': 'flex-row-reverse justify-start pl-4'
+    };
+
+    return (
+      <div className={`flex items-center gap-4 ${posClasses[position]} w-full h-full relative ${isWinner ? 'z-50' : 'z-10'} ${isLoser ? 'opacity-30 grayscale blur-[1px]' : ''} transition-all duration-700`}>
+        <div className={`relative flex flex-col items-center bg-gray-900/50 p-2 sm:p-3 rounded-xl border-2 ${isTurn ? 'border-yellow-400 bg-gray-800/80 shadow-[0_0_15px_rgba(250,204,21,0.5)]' : 'border-gray-700'} ${isWinner ? 'scale-[1.4] sm:scale-[1.6] bg-gray-800 border-yellow-400 shadow-[0_0_50px_rgba(250,204,21,1)]' : ''} transition-all duration-500`}>
+          {hasPole && <Trophy className={`absolute -top-3 -right-3 text-yellow-400 drop-shadow-md w-8 h-8 ${isWinner ? 'animate-bounce' : ''}`} />}
+          <div className="text-3xl sm:text-4xl drop-shadow-md mb-1">{player.emoji}</div>
+          <div className="text-white font-bold text-xs sm:text-sm mt-1 whitespace-nowrap">{player.name}</div>
+          <div className="flex items-center text-yellow-400 text-xs sm:text-sm font-bold mt-1">
+            <Coins className="w-4 h-4 mr-1" /> {player.tokens}
+          </div>
+          {player.hasFolded && <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center font-bold text-red-500 backdrop-blur-[1px] z-20">FOLDED</div>}
+        </div>
+
+        {/* Player Cards */}
+        {!player.hasFolded && player.hand.length > 0 && (
+          <div className="flex gap-2">
+            {player.hand.map((card, idx) => {
+              const isRevealed = player.revealedCardIdx === idx || player.revealedCardIdx === 2;
+              
+              const isSelectableForReveal = player.isHuman && isTurn && state.globalPhase === 'reveal' && !isRevealed;
+              const isSelectableForPlay = player.isHuman && isTurn && state.globalPhase === 'play' && state.subPhase === 'evaluate' && !isRevealed;
+              
+              return (
+                <Card 
+                  key={idx} 
+                  card={card} 
+                  hidden={!isRevealed} 
+                  selectable={isSelectableForReveal || isSelectableForPlay}
+                  onClick={() => {
+                    if (isSelectableForReveal) {
+                      dispatch({ type: 'SUBMIT_REVEAL', payload: { playerId: player.id, cardIdx: idx } });
+                    } else if (isSelectableForPlay) {
+                      dispatch({ type: 'EVALUATE_TURN' });
+                    }
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // --- VIEWS ---
+
+  if (state.globalPhase === 'menu') {
+    return (
+      <div className="min-h-screen bg-green-900 flex items-center justify-center text-white" style={{ fontFamily: "'Bitcount Grid Double', monospace" }}>
+        <style>
+          {`@import url('https://fonts.googleapis.com/css2?family=Bitcount+Grid+Double&display=swap');`}
+        </style>
+        <div className="bg-gray-900 p-8 rounded-2xl shadow-2xl text-center max-w-md w-full border border-gray-700 max-h-[90vh] overflow-y-auto">
+          <h1 className="text-4xl sm:text-5xl font-black mb-2 text-yellow-400 tracking-wider">SPLIT THE GAP</h1>
+          <p className="text-gray-400 mb-8 text-sm">A game of calculated risks and tight spaces.</p>
+          
+          <div className="mb-6 text-left">
+            <label className="block text-gray-300 font-bold mb-2 text-center">Starting Tokens per Player:</label>
+            <input 
+              type="number" 
+              value={tokensInput} 
+              onChange={(e) => setTokensInput(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-full bg-gray-800 text-white text-center text-2xl font-bold p-3 rounded-lg border border-gray-600 focus:border-yellow-400 focus:outline-none"
+            />
+          </div>
+
+          <div className="mb-8 text-left">
+            <label className="block text-gray-300 font-bold mb-3 text-center">How many Human Players? (1-4)</label>
+            <div className="flex justify-center gap-3">
+              {[1, 2, 3, 4].map(num => (
+                <button 
+                  key={num} 
+                  onClick={() => setHumansInput(num)} 
+                  className={`w-14 h-14 rounded-full font-bold text-2xl transition-all shadow-md ${humansInput === num ? 'bg-yellow-400 text-gray-900 scale-110' : 'bg-gray-700 text-white hover:bg-gray-600'}`}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 text-center mt-3 uppercase tracking-widest">
+              AI bots will fill the remaining {4 - humansInput} {4 - humansInput === 1 ? 'seat' : 'seats'}
+            </p>
+          </div>
+
+          <div className="mb-8 space-y-4">
+            {humanConfigs.map((config, idx) => (
+              <div key={idx} className="bg-gray-800 p-4 rounded-xl border border-gray-600">
+                <div className="flex gap-4 items-center mb-3">
+                  <div className="text-4xl bg-gray-700 w-16 h-16 rounded-full flex items-center justify-center shadow-inner shrink-0">
+                    {config.emoji}
+                  </div>
+                  <input
+                    type="text"
+                    value={config.name}
+                    onChange={(e) => {
+                      const newConfigs = [...humanConfigs];
+                      newConfigs[idx].name = e.target.value;
+                      setHumanConfigs(newConfigs);
+                    }}
+                    placeholder={`Player ${idx + 1} Name`}
+                    className="flex-1 bg-gray-900 w-full text-white font-bold p-3 rounded-lg border border-gray-500 focus:border-yellow-400 focus:outline-none"
+                    maxLength={12}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <button
+                    onClick={() => {
+                      const newConfigs = [...humanConfigs];
+                      newConfigs[idx].emoji = EMOJI_OPTIONS[Math.floor(Math.random() * EMOJI_OPTIONS.length)];
+                      setHumanConfigs(newConfigs);
+                    }}
+                    className="text-2xl p-1 rounded-lg transition-transform hover:bg-gray-700 hover:scale-110"
+                    title="Random Emoji"
+                  >
+                    🎲
+                  </button>
+                  {EMOJI_OPTIONS.map(emoji => (
+                    <button
+                      key={emoji}
+                      onClick={() => {
+                        const newConfigs = [...humanConfigs];
+                        newConfigs[idx].emoji = emoji;
+                        setHumanConfigs(newConfigs);
+                      }}
+                      className={`text-2xl p-1 rounded-lg transition-transform ${config.emoji === emoji ? 'bg-yellow-500 scale-110 shadow-lg' : 'hover:bg-gray-700 hover:scale-110'}`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button 
+            onClick={() => dispatch({ type: 'START_GAME', payload: { tokens: tokensInput, humans: humansInput, humanConfigs } })}
+            className="w-full bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-black text-2xl py-4 rounded-xl shadow-lg transition-transform hover:scale-105 active:scale-95 uppercase tracking-wide"
+          >
+            START GAME
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (state.globalPhase === 'game_over') {
+    const winner = state.players.reduce((prev, current) => (prev.tokens > current.tokens) ? prev : current);
+    return (
+      <div className="min-h-screen bg-green-900 flex items-center justify-center text-white" style={{ fontFamily: "'Bitcount Grid Double', monospace" }}>
+        <div className="bg-gray-900 p-10 rounded-2xl shadow-2xl text-center border border-yellow-500/50">
+          <Trophy className="w-24 h-24 text-yellow-400 mx-auto mb-4" />
+          <h1 className="text-4xl font-black mb-2 text-white uppercase tracking-wider">GAME OVER</h1>
+          <p className="text-xl text-yellow-400 font-bold mb-8">{winner.name} wins with {winner.tokens} tokens!</p>
+          <button 
+            onClick={() => dispatch({ type: 'START_GAME', payload: { tokens: state.startingTokens, humans: state.humanCount, humanConfigs } })}
+            className="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-black px-8 py-3 rounded-lg shadow-lg text-xl uppercase tracking-wider"
+          >
+            PLAY AGAIN
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const activePlayer = state.players.find(p => p.id === activePId);
+  const isActivePIdHuman = activePlayer?.isHuman;
+  const activeQueuePlayer = state.players.find(p => p.id === state.turnQueue[state.turnQueueIdx]);
+  const isActiveQueueHuman = activeQueuePlayer?.isHuman;
+
+  // Determine if there is a decision to be made by a human right now
+  const isDecisionPhase = state.globalPhase === 'ante' || (state.globalPhase === 'play' && state.subPhase === 'decide_play');
+  const deciderId = state.globalPhase === 'ante' ? state.activePlayerId : state.turnQueue[state.turnQueueIdx];
+  const decidingPlayer = state.players.find(p => p.id === deciderId);
+  const showDecisionUI = isDecisionPhase && decidingPlayer?.isHuman && !decidingPlayer?.hasFolded;
+  const isFreePlay = state.globalPhase === 'play' && state.turnQueueIdx === 0;
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Bitcount+Grid+Double&display=swap');
+        @keyframes flyCoin {
+          0% { transform: translateY(0) scale(1); opacity: 1; }
+          100% { transform: translateY(-30vh) scale(0.5); opacity: 0; }
+        }
+        .animate-fly-coin {
+          animation: flyCoin 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+        @keyframes cardPop {
+          0% { transform: scale(1.5) translateY(-20px); opacity: 0; }
+          80% { transform: scale(0.95); opacity: 1; }
+          100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .animate-card-pop {
+          animation: cardPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .font-bitcount {
+          font-family: 'Bitcount Grid Double', monospace;
+        }
+      `}</style>
+      <div className="min-h-screen bg-green-900 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-green-800 to-gray-900 flex flex-col p-2 sm:p-6 select-none relative overflow-hidden font-bitcount">
+        
+        {/* Logs Overlay */}
+        <div className="absolute top-4 left-4 z-10 w-48 sm:w-64 space-y-1 opacity-80 hover:opacity-100 transition-opacity">
+          {state.logs.map((log, i) => (
+            <div key={i} className="bg-black/60 text-white text-xs sm:text-sm p-2 rounded shadow backdrop-blur-sm">
+              {log}
+            </div>
+          ))}
+        </div>
+
+        {/* Flying Coins Container */}
+        {flyingCoins.map(id => (
+          <div key={id} className="absolute bottom-[30%] left-[50%] -translate-x-1/2 z-50 animate-fly-coin pointer-events-none">
+            <Coins className="w-10 h-10 text-yellow-400 drop-shadow-lg" />
+          </div>
+        ))}
+
+        {/* Main Table Area */}
+        <div className="flex-1 relative max-w-5xl w-full mx-auto grid grid-cols-3 grid-rows-3 gap-2 sm:gap-4 h-full">
+          
+          {/* Top: Player 2 (or AI 2) */}
+          <div className="col-start-2 row-start-1 flex justify-center items-end">
+            {renderPlayerArea(state.players[2], 'top')}
+          </div>
+          
+          {/* Left: Player 1 (or AI 1) */}
+          <div className="col-start-1 row-start-2 flex justify-end items-center">
+            {renderPlayerArea(state.players[1], 'left')}
+          </div>
+
+          {/* Center Table */}
+          <div className="col-start-2 row-start-2 relative rounded-[3rem] border-4 border-green-700/50 bg-green-800/80 shadow-[inset_0_0_50px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center p-4 overflow-hidden">
+            
+            <div className="absolute top-4 flex items-center justify-center bg-gray-900/80 px-4 py-2 rounded-full border border-yellow-500/30 text-yellow-400 font-bold shadow-lg z-20 text-lg tracking-widest">
+              <Coins className="w-5 h-5 mr-2" /> POT: {state.pot}
+            </div>
+
+            <div className="flex gap-2 sm:gap-4 mt-6 z-10">
+              {state.centerCards.map((c, i) => (
+                <Card key={i} card={c} hidden={false} isNew={c.isNew} />
+              ))}
+            </div>
+
+            {/* Clickable Gaps Overlay (Only active during choose_gap phase for human) */}
+            {state.subPhase === 'choose_gap' && isActiveQueueHuman && (
+              <div className="absolute inset-0 flex z-30">
+                <div 
+                  className="w-1/2 h-full cursor-pointer hover:bg-yellow-400/20 flex items-center justify-center transition-colors group"
+                  onClick={() => dispatch({ type: 'SUBMIT_GAP_CHOICE', payload: { gap: 'left' }})}
+                >
+                  <div className="bg-black/80 text-yellow-400 px-4 py-2 rounded-full font-bold opacity-0 group-hover:opacity-100 transition-opacity tracking-wider">Select Left Gap</div>
+                </div>
+                <div 
+                  className="w-1/2 h-full cursor-pointer hover:bg-yellow-400/20 flex items-center justify-center transition-colors group"
+                  onClick={() => dispatch({ type: 'SUBMIT_GAP_CHOICE', payload: { gap: 'right' }})}
+                >
+                  <div className="bg-black/80 text-yellow-400 px-4 py-2 rounded-full font-bold opacity-0 group-hover:opacity-100 transition-opacity tracking-wider">Select Right Gap</div>
+                </div>
+              </div>
+            )}
+
+            {/* Center Info Text */}
+            <div className="absolute bottom-6 text-center w-full px-4 z-20">
+              <span className="bg-black/70 text-white px-3 py-1 rounded text-sm uppercase tracking-widest font-bold shadow-md">
+                {state.globalPhase === 'ante' && "Ante Phase"}
+                {state.globalPhase === 'reveal' && "Reveal for Turn Order"}
+                {state.globalPhase === 'play' && `Turn: ${state.players[state.turnQueue[state.turnQueueIdx]]?.name}`}
+                {state.globalPhase === 'round_end' && "Round Finished"}
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Player 3 (or AI 3) */}
+          <div className="col-start-3 row-start-2 flex justify-start items-center">
+            {renderPlayerArea(state.players[3], 'right')}
+          </div>
+
+          {/* Bottom: Player 0 */}
+          <div className="col-start-2 row-start-3 flex justify-center items-start">
+            {renderPlayerArea(state.players[0], 'bottom')}
+          </div>
+
+        </div>
+
+        {/* Central Prompts replacing the action bar */}
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 pointer-events-none z-50 w-full flex justify-center">
+          {isActivePIdHuman && state.globalPhase === 'reveal' && (
+            <div className="bg-gray-900/90 border border-yellow-500/50 p-4 rounded-xl shadow-2xl backdrop-blur-sm text-yellow-400 font-bold animate-pulse text-sm sm:text-xl flex items-center tracking-wide">
+              <AlertCircle className="w-6 h-6 mr-2"/> {activePlayer.name}, select a card from your hand to reveal!
+            </div>
+          )}
+
+          {isActiveQueueHuman && state.globalPhase === 'play' && (
+            <>
+              {state.subPhase === 'choose_gap' && (
+                <div className="bg-gray-900/90 border border-indigo-500/50 p-4 rounded-xl shadow-2xl backdrop-blur-sm text-indigo-300 font-bold animate-pulse text-sm sm:text-xl flex items-center tracking-wide">
+                  <AlertCircle className="w-6 h-6 mr-2"/> {activeQueuePlayer.name}, click the Left or Right gap on the table!
+                </div>
+              )}
+              {state.subPhase === 'evaluate' && (
+                <div className="bg-gray-900/90 border border-yellow-500/50 p-4 rounded-xl shadow-2xl backdrop-blur-sm text-yellow-400 font-bold animate-pulse text-sm sm:text-xl flex items-center tracking-wide">
+                  <AlertCircle className="w-6 h-6 mr-2"/> {activeQueuePlayer.name}, click your hidden card to play it into the gap!
+                </div>
+              )}
+            </>
+          )}
+
+          {(state.globalPhase === 'round_end' || 
+          (!isActivePIdHuman && state.globalPhase !== 'menu' && state.globalPhase !== 'game_over' && state.globalPhase !== 'play') || 
+          (!isActiveQueueHuman && state.globalPhase === 'play')) && (
+            <div className="bg-gray-900/70 border border-gray-700 p-3 rounded-xl shadow-lg backdrop-blur-sm text-gray-300 font-medium text-sm sm:text-lg flex items-center tracking-wide">
+              {state.globalPhase === 'round_end' ? "Waiting for next round..." : `${state.globalPhase === 'play' ? activeQueuePlayer?.name : activePlayer?.name} is thinking...`}
+            </div>
+          )}
+        </div>
+
+        {/* Fixed Bottom-Left Decision UI for Active Human Player */}
+        {showDecisionUI && (
+          <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-50 flex flex-col items-start gap-3 bg-gray-900/90 p-4 sm:p-5 rounded-2xl border-2 border-gray-600 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-md">
+            <div className="text-yellow-400 font-black tracking-widest text-sm sm:text-lg uppercase drop-shadow-md">
+              {decidingPlayer.emoji} {decidingPlayer.name}'s Turn
+            </div>
+            <div className="flex gap-4 w-full justify-center">
+               <div 
+                 onClick={() => handleHumanPay(decidingPlayer.id)}
+                 className="cursor-pointer group flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-yellow-500 hover:bg-yellow-400 border-4 border-yellow-200 shadow-[0_0_20px_rgba(234,179,8,0.5)] transition-transform hover:scale-110 active:scale-95 relative"
+                 title={isFreePlay ? "Play for Free!" : "Pay 1 Token"}
+               >
+                 <Coins className="w-10 h-10 sm:w-12 sm:h-12 text-yellow-900 drop-shadow-sm" />
+                 {!isFreePlay && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-sm font-black rounded-full w-8 h-8 flex items-center justify-center border-2 border-gray-900 shadow-md">-1</span>}
+               </div>
+               
+               <div 
+                 onClick={() => handleHumanFold(decidingPlayer.id)}
+                 className="cursor-pointer flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-700 hover:bg-red-500 border-4 border-gray-500 hover:border-red-200 shadow-lg transition-colors hover:scale-110 active:scale-95"
+                 title="Fold Hand"
+               >
+                 <Hand className="w-9 h-9 sm:w-11 sm:h-11 text-gray-300 drop-shadow-sm" />
+               </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </>
+  );
+}
