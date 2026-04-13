@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Spelling Sprint & Draw</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bitcount+Grid+Double&family=Fredoka+One&display=swap');
+        
+        body {
+            font-family: 'Bitcount Grid Double', 'Courier New', monospace;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        .title-font { font-family: 'Fredoka+One', cursive; }
+
+        .screen {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Drawing Canvas */
+        .canvas-container {
+            border: 6px solid #4F46E5;
+            background: white;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        #drawing-canvas {
+            cursor: crosshair;
+            touch-action: none;
+            width: 100%;
+            max-width: 400px;
+            height: 500px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* Letter formatting */
+        .letter-box {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 3rem;
+            height: 4rem;
+            margin: 0.25rem;
+            font-size: 2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-bottom: 4px solid #4F46E5;
+            color: #312E81;
+        }
+        
+        .letter-box.filled {
+            border-bottom-color: #10B981;
+            color: #10B981;
+        }
+
+        /* Shake Animation for wrong letter */
+        .shake {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+            color: #EF4444 !important;
+            border-bottom-color: #EF4444 !important;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
+            40%, 60% { transform: translate3d(8px, 0, 0); }
+        }
+
+        .huge-timer {
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Mobile Input helper */
+        #mobile-input {
+            position: absolute;
+            opacity: 0;
+            top: -1000px;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex items-center justify-center">
+
+    <div id="app" class="w-full max-w-2xl mx-auto">
+        
+        <!-- SCREEN 1: SETUP -->
+        <div id="setup-screen" class="screen active bg-white p-6 md:p-10 rounded-3xl shadow-xl space-y-8 w-full">
+            <h1 class="text-5xl text-center title-font text-indigo-600 drop-shadow-sm">Spelling Sprint!</h1>
+            
+            <div class="space-y-4">
+                <h2 class="text-2xl font-bold text-gray-700">1. Enter Players (1-4)</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input type="text" id="p1" placeholder="Player 1 Name" class="p-3 border-2 border-indigo-100 rounded-xl focus:border-indigo-500 outline-none text-lg" value="Player 1">
+                    <input type="text" id="p2" placeholder="Player 2 Name" class="p-3 border-2 border-indigo-100 rounded-xl focus:border-indigo-500 outline-none text-lg" value="Player 2">
+                    <input type="text" id="p3" placeholder="Player 3 Name (Optional)" class="p-3 border-2 border-indigo-100 rounded-xl focus:border-indigo-500 outline-none text-lg">
+                    <input type="text" id="p4" placeholder="Player 4 Name (Optional)" class="p-3 border-2 border-indigo-100 rounded-xl focus:border-indigo-500 outline-none text-lg">
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h2 class="text-2xl font-bold text-gray-700">2. Choose Difficulty</h2>
+                <div class="flex gap-3 flex-col sm:flex-row">
+                    <button onclick="setDifficulty(1)" id="btn-diff-1" class="flex-1 py-3 px-4 bg-green-100 text-green-700 font-bold rounded-xl border-4 border-green-500 hover:bg-green-200 transition text-lg">Level 1</button>
+                    <button onclick="setDifficulty(2)" id="btn-diff-2" class="flex-1 py-3 px-4 bg-yellow-100 text-yellow-700 font-bold rounded-xl border-4 border-transparent hover:bg-yellow-200 transition text-lg">Level 2</button>
+                    <button onclick="setDifficulty(3)" id="btn-diff-3" class="flex-1 py-3 px-4 bg-red-100 text-red-700 font-bold rounded-xl border-4 border-transparent hover:bg-red-200 transition text-lg">Level 3</button>
+                    <button onclick="setDifficulty(4)" id="btn-diff-4" class="flex-1 py-3 px-4 bg-purple-100 text-purple-700 font-bold rounded-xl border-4 border-transparent hover:bg-purple-200 transition text-lg">Custom</button>
+                </div>
+                
+                <div id="custom-list-container" class="hidden mt-4 space-y-2 bg-purple-50 p-4 rounded-xl border-2 border-purple-200">
+                    <label class="font-bold text-purple-700">Enter your 10 custom words (separated by commas):</label>
+                    <textarea id="custom-words" class="w-full p-3 border-2 border-purple-200 rounded-xl focus:border-purple-500 outline-none text-lg font-sans" rows="3" placeholder="e.g. science, biology, chemistry, physics..."></textarea>
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl text-2xl shadow-lg transition transform hover:-translate-y-1 title-font">
+                START GAME
+            </button>
+        </div>
+
+        <!-- SCREEN 2: PASS DEVICE -->
+        <div id="pass-screen" class="screen bg-white p-8 md:p-12 rounded-3xl shadow-xl text-center space-y-8">
+            <h2 class="text-3xl font-bold text-gray-500">Get Ready!</h2>
+            <h1 class="text-5xl title-font text-indigo-600">Pass device to <span id="pass-player-name" class="text-pink-500"></span></h1>
+            <p class="text-xl text-gray-600">Make sure you are ready to memorize the word!</p>
+            <button onclick="startMemorizePhase()" class="w-full py-4 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl text-2xl shadow-lg transition transform hover:-translate-y-1">
+                I'm Ready!
+            </button>
+        </div>
+
+        <!-- SCREEN 3: MEMORIZE WORD -->
+        <div id="memorize-screen" class="screen bg-indigo-600 p-12 rounded-3xl shadow-xl text-center space-y-8 text-white">
+            <h2 class="text-3xl font-bold text-indigo-200">Memorize this word!</h2>
+            <h1 id="memorize-word" class="text-7xl md:text-8xl title-font tracking-widest uppercase">WORD</h1>
+            <div class="text-2xl font-bold bg-indigo-800 rounded-full py-2 px-6 inline-block mx-auto">
+                <span id="memorize-timer">3</span> seconds left
+            </div>
+        </div>
+
+        <!-- SCREEN 4: WAIT / COUNTDOWN -->
+        <div id="wait-screen" class="screen bg-pink-500 p-12 rounded-3xl shadow-xl text-center space-y-6 text-white justify-center min-h-[400px]">
+            <h2 id="wait-message" class="text-4xl font-bold title-font">Get Ready to Type!</h2>
+            <h1 id="wait-timer" class="text-9xl title-font drop-shadow-lg">3</h1>
+        </div>
+
+        <!-- SCREEN 5: SPELLING GAMEPLAY -->
+        <div id="spell-screen" class="screen bg-white p-6 md:p-10 rounded-3xl shadow-xl text-center space-y-8 relative">
+            <div class="flex justify-between items-center bg-gray-100 p-4 rounded-xl">
+                <span class="text-xl font-bold text-gray-600">Player: <span id="spell-player-name" class="text-indigo-600"></span></span>
+                <span id="game-timer" class="text-3xl font-bold text-indigo-600 huge-timer">0.00</span>
+            </div>
+
+            <!-- Focus catcher for mobile keyboards -->
+            <div id="typing-area" class="py-12 cursor-text" onclick="focusInput()">
+                <div id="word-display" class="flex justify-center flex-wrap gap-2">
+                    <!-- Letter boxes injected here -->
+                </div>
+                <p id="focus-hint" class="text-gray-400 mt-4 text-sm hidden">Tap letters to type (Make sure keyboard is open)</p>
+            </div>
+
+            <input type="text" id="mobile-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+
+            <div class="pt-4 border-t-2 border-dashed border-gray-200">
+                <button onclick="triggerHelp()" id="btn-help" class="py-3 px-8 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold rounded-xl text-xl shadow-md transition">
+                    Need Help? (View Word)
+                </button>
+            </div>
+            
+            <!-- Overlay for when help is active -->
+            <div id="help-overlay" class="absolute inset-0 bg-white/95 rounded-3xl z-10 flex flex-col items-center justify-center hidden">
+                <h2 class="text-2xl font-bold text-gray-500 mb-4">Remember the word:</h2>
+                <h1 id="help-word" class="text-6xl title-font text-indigo-600 uppercase mb-8">WORD</h1>
+                <h1 id="help-timer-display" class="text-5xl font-bold text-pink-500">2</h1>
+            </div>
+        </div>
+
+        <!-- SCREEN 6: ROUND RESULTS -->
+        <div id="results-screen" class="screen bg-white p-8 rounded-3xl shadow-xl text-center space-y-6">
+            <h1 class="text-4xl title-font text-indigo-600 border-b-2 pb-4">Round Results</h1>
+            <h2 class="text-2xl font-bold text-gray-700">Word was: <span id="result-word" class="uppercase text-green-600"></span></h2>
+            
+            <div id="results-list" class="space-y-3 text-xl font-bold text-left max-w-sm mx-auto">
+                <!-- Results injected here -->
+            </div>
+
+            <div class="pt-6">
+                <h2 class="text-3xl title-font text-pink-500 mb-4"><span id="round-winner-name"></span> Wins the Round!</h2>
+                <button onclick="startDrawingPhase()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl text-2xl shadow-lg transition">
+                    Go to Canvas!
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREEN 7: DRAWING CANVAS -->
+        <div id="draw-screen" class="screen bg-white p-6 rounded-3xl shadow-xl text-center space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-indigo-600"><span id="draw-player-name"></span>'s Turn</h2>
+                <div class="bg-red-100 text-red-600 px-4 py-2 rounded-xl font-bold text-xl">
+                    <span id="draw-timer">20</span>s
+                </div>
+            </div>
+            
+            <h1 class="text-3xl title-font text-pink-500 animate-pulse">Draw: <span id="draw-instruction"></span>!</h1>
+            
+            <div class="canvas-container bg-gray-50 relative">
+                <canvas id="drawing-canvas" width="400" height="500"></canvas>
+            </div>
+            
+            <button id="btn-finish-draw" onclick="finishDrawingEarly()" class="w-full py-3 bg-gray-200 text-gray-700 font-bold rounded-xl text-xl hidden">
+                Finish Early
+            </button>
+        </div>
+
+        <!-- SCREEN 8: WINNER OVERALL -->
+        <div id="winner-screen" class="screen bg-white p-8 rounded-3xl shadow-2xl text-center space-y-6 transform scale-100 border-8 border-yellow-400">
+            <h2 class="text-4xl font-bold text-gray-700">MASTERPIECE COMPLETE!</h2>
+            <h1 class="text-6xl title-font text-indigo-600 animate-bounce mt-4"><span id="overall-winner-name"></span> WINS!</h1>
+            
+            <div class="canvas-container mx-auto my-6 border-yellow-400">
+                <canvas id="winner-canvas" width="400" height="500" class="block mx-auto bg-white"></canvas>
+            </div>
+
+            <button onclick="location.reload()" class="w-full py-4 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl text-2xl shadow-lg transition">
+                Play Again
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- DATA ---
+        const WORD_LISTS = {
+            1: ["wind", "bug", "fish", "bush", "nest", "reptile", "tiger", "rainbow", "crocodile", "river", "sing", "pen", "school", "name", "paint", "count", "quiz", "homework", "pencil", "clock", "hop", "game", "swing", "ship", "race", "costume", "puppet", "catch", "winner", "pirate", "apple", "honey", "butter", "cheese", "jelly", "orange", "bread", "picnic", "biscuit", "sandwich"],
+            2: ["snail", "lizard", "penguin", "pelican", "gecko", "buffalo", "feather", "giraffe", "tuatara", "caterpillar", "possum", "stingray", "button", "bounce", "concert", "rescue", "pretty", "learn", "lunch", "animal", "stationery", "jewellery", "vegetable", "library", "nurse", "pilot", "builder", "musician", "cousin", "firefighter", "mechanic", "engineer", "niece", "uncle", "scientist", "librarian", "moat", "invisible", "crystal", "journey", "adventure", "treasure", "vampire", "mythical", "quest", "wizard", "twinkle", "fascinate", "harbour", "Christchurch", "valley", "mountain", "village", "forecast", "season", "Auckland", "lightning", "ravine", "waterfall", "savannah"],
+            3: ["relic", "lantern", "festival", "mirage", "warlock", "delicious", "mosque", "marble", "spire", "gadget", "vortex", "charisma", "nuisance", "catastrophe", "labyrinth", "spectacle", "tapestry", "seashell", "meadow", "fossil", "extinct", "pollen", "nocturnal", "prey", "burrow", "decay", "geyser", "leviathan", "mammal", "armadillo", "sprout", "glacier", "mantis", "massive", "cheerful", "gloomy", "nimble", "dynamic", "intriguing", "climatic", "gleaming", "wobbly", "timid", "exuberant", "bizarre", "humorous", "systematic", "ferocious", "reckless", "vibrant", "curious", "grumpy", "proud", "jealous", "anxious", "enthralling", "hopeful", "furious", "dazzling", "thoughtful", "fierce", "confident", "disappointed", "compassion", "apprehension", "exhilaration", "recycle", "rubbish", "plastic", "preserve", "compost", "environment", "solar", "energy", "emission", "organic", "habitat", "conservation", "pollution", "renewable", "reduce", "transportation"]
+        };
+
+        const BODY_PARTS = [
+            'Head', 'Torso', 'Left Arm', 'Right Arm', 'Left Hand', 'Right Hand', 
+            'Left Leg', 'Right Leg', 'Left Foot', 'Right Foot', 'Hat'
+        ];
+
+        // --- STATE ---
+        let selectedDifficulty = 1;
+        let players = []; // { name, drawingData: null, partIndex: 0 }
+        let currentDeck = [];
+        let currentWord = "";
+        
+        let currentPlayerIndex = 0;
+        let roundTimes = []; // Times for the current word
+
+        // Spelling Mechanics
+        let typedWord = "";
+        let isSpellingActive = false;
+        
+        // Timers
+        let spellStartTime = 0;
+        let spellInterval = null;
+        let currentElapsedTime = 0;
+
+        // UI Elements
+        const screens = document.querySelectorAll('.screen');
+        const mobileInput = document.getElementById('mobile-input');
+
+        // --- SETUP LOGIC ---
+        function setDifficulty(level) {
+            selectedDifficulty = level;
+            document.querySelectorAll('[id^="btn-diff-"]').forEach(btn => {
+                btn.classList.remove('border-green-500', 'border-yellow-500', 'border-red-500', 'border-purple-500', 'border-transparent');
+                btn.classList.add('border-transparent');
+            });
+            const colors = {1: 'border-green-500', 2: 'border-yellow-500', 3: 'border-red-500', 4: 'border-purple-500'};
+            document.getElementById(`btn-diff-${level}`).classList.remove('border-transparent');
+            document.getElementById(`btn-diff-${level}`).classList.add(colors[level]);
+
+            const customContainer = document.getElementById('custom-list-container');
+            if(level === 4) {
+                customContainer.classList.remove('hidden');
+            } else {
+                customContainer.classList.add('hidden');
+            }
+        }
+
+        function startGame() {
+            const names = [
+                document.getElementById('p1').value.trim(),
+                document.getElementById('p2').value.trim(),
+                document.getElementById('p3').value.trim(),
+                document.getElementById('p4').value.trim()
+            ].filter(n => n !== "");
+
+            if (names.length === 0) {
+                alert("Please enter at least 1 player name!");
+                return;
+            }
+
+            if (selectedDifficulty === 4) {
+                const customInput = document.getElementById('custom-words').value;
+                const words = customInput.split(',').map(w => w.trim()).filter(w => w.length > 0);
+                if (words.length === 0) {
+                    alert("Please enter at least one word for your custom list!");
+                    return;
+                }
+                WORD_LISTS[4] = words;
+            }
+
+            players = names.map(name => ({
+                name,
+                drawingData: null,
+                partIndex: 0
+            }));
+
+            // Prepare Deck
+            currentDeck = [...WORD_LISTS[selectedDifficulty]].sort(() => Math.random() - 0.5);
+            
+            startNewRound();
+        }
+
+        function showScreen(id) {
+            screens.forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        // --- ROUND PROGRESSION ---
+        function startNewRound() {
+            if (currentDeck.length === 0) {
+                currentDeck = [...WORD_LISTS[selectedDifficulty]].sort(() => Math.random() - 0.5);
+            }
+            currentWord = currentDeck.pop();
+            currentPlayerIndex = 0;
+            roundTimes = [];
+            
+            startPlayerTurn();
+        }
+
+        function startPlayerTurn() {
+            typedWord = "";
+            currentElapsedTime = 0;
+            document.getElementById('pass-player-name').innerText = players[currentPlayerIndex].name;
+            showScreen('pass-screen');
+        }
+
+        // --- PHASE 1: MEMORIZE ---
+        function startMemorizePhase() {
+            showScreen('memorize-screen');
+            document.getElementById('memorize-word').innerText = currentWord;
+            
+            let timeLeft = 3;
+            document.getElementById('memorize-timer').innerText = timeLeft;
+            
+            const intv = setInterval(() => {
+                timeLeft--;
+                document.getElementById('memorize-timer').innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(intv);
+                    startWaitPhase();
+                }
+            }, 1000);
+        }
+
+        // --- PHASE 2: WAIT ---
+        function startWaitPhase() {
+            showScreen('wait-screen');
+            document.getElementById('wait-message').innerText = "Get Ready to Type!";
+            let timeLeft = 3;
+            document.getElementById('wait-timer').innerText = timeLeft;
+            
+            const intv = setInterval(() => {
+                timeLeft--;
+                if(timeLeft > 0) {
+                    document.getElementById('wait-timer').innerText = timeLeft;
+                } else {
+                    clearInterval(intv);
+                    startSpellingPhase();
+                }
+            }, 1000);
+        }
+
+        // --- PHASE 3: SPELLING ---
+        function startSpellingPhase() {
+            showScreen('spell-screen');
+            document.getElementById('spell-player-name').innerText = players[currentPlayerIndex].name;
+            document.getElementById('game-timer').innerText = "0.00";
+            
+            renderWordBoxes();
+            
+            isSpellingActive = true;
+            typedWord = "";
+            
+            // Start Timer
+            spellStartTime = Date.now() - currentElapsedTime;
+            spellInterval = setInterval(() => {
+                currentElapsedTime = Date.now() - spellStartTime;
+                document.getElementById('game-timer').innerText = (currentElapsedTime / 1000).toFixed(2);
+            }, 10);
+
+            focusInput();
+        }
+
+        function renderWordBoxes() {
+            const container = document.getElementById('word-display');
+            container.innerHTML = '';
+            for (let i = 0; i < currentWord.length; i++) {
+                const box = document.createElement('div');
+                box.className = 'letter-box';
+                box.id = `box-${i}`;
+                box.innerText = '_';
+                container.appendChild(box);
+            }
+        }
+
+        function focusInput() {
+            if (!isSpellingActive) return;
+            mobileInput.value = "";
+            mobileInput.focus();
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+                document.getElementById('focus-hint').classList.remove('hidden');
+            }
+        }
+
+        // Handle Input events (works better for mobile keyboards than keydown)
+        mobileInput.addEventListener('input', (e) => {
+            if (!isSpellingActive) return;
+            const val = mobileInput.value;
+            if (val.length > 0) {
+                const char = val.charAt(val.length - 1);
+                processKeystroke(char);
+                mobileInput.value = ""; // clear immediately
+            }
+        });
+
+        // Fallback for Desktop
+        document.addEventListener('keydown', (e) => {
+            // Ignore if active element is input to avoid double firing, or if not spelling
+            if (!isSpellingActive || document.activeElement === mobileInput) return; 
+            // Ignore modifiers
+            if (e.key.length > 1) return;
+            processKeystroke(e.key);
+        });
+
+        function processKeystroke(key) {
+            const expectedChar = currentWord[typedWord.length];
+            
+            if (key.toLowerCase() === expectedChar.toLowerCase()) {
+                // Correct letter
+                const box = document.getElementById(`box-${typedWord.length}`);
+                box.innerText = key.toUpperCase();
+                box.classList.add('filled');
+                typedWord += key.toLowerCase();
+
+                if (typedWord.length === currentWord.length) {
+                    finishSpelling();
+                }
+            } else {
+                // Wrong letter -> Reset
+                typedWord = "";
+                renderWordBoxes(); // Re-render blanks
+                
+                // Visual feedback
+                const container = document.getElementById('word-display');
+                container.classList.add('shake');
+                const boxes = document.querySelectorAll('.letter-box');
+                boxes.forEach(b => b.classList.add('shake'));
+                
+                setTimeout(() => {
+                    container.classList.remove('shake');
+                    boxes.forEach(b => b.classList.remove('shake'));
+                }, 400);
+            }
+        }
+
+        // --- HELP MECHANIC ---
+        function triggerHelp() {
+            if (!isSpellingActive) return;
+            
+            isSpellingActive = false; // Disable typing
+            mobileInput.blur();
+            
+            // Note: Timer KEEPS GOING as per instructions.
+            
+            const overlay = document.getElementById('help-overlay');
+            const helpWord = document.getElementById('help-word');
+            const helpTimer = document.getElementById('help-timer-display');
+            
+            overlay.classList.remove('hidden');
+            helpWord.innerText = currentWord;
+            helpWord.style.display = 'block';
+            
+            // Show word for 2s
+            helpTimer.innerText = "2";
+            setTimeout(() => {
+                helpTimer.innerText = "1";
+            }, 1000);
+
+            setTimeout(() => {
+                // Hide word, wait 2s
+                helpWord.style.display = 'none';
+                helpTimer.innerText = "Wait... 2";
+                
+                setTimeout(() => {
+                    helpTimer.innerText = "Wait... 1";
+                }, 1000);
+
+                setTimeout(() => {
+                    // Resume
+                    overlay.classList.add('hidden');
+                    typedWord = ""; // Clear typed word!
+                    renderWordBoxes();
+                    isSpellingActive = true;
+                    focusInput();
+                }, 2000);
+
+            }, 2000);
+        }
+
+        // --- END TURN / ROUND ---
+        function finishSpelling() {
+            isSpellingActive = false;
+            clearInterval(spellInterval);
+            mobileInput.blur();
+            
+            roundTimes.push({
+                playerIndex: currentPlayerIndex,
+                time: currentElapsedTime
+            });
+
+            currentPlayerIndex++;
+            if (currentPlayerIndex < players.length) {
+                startPlayerTurn();
+            } else {
+                showRoundResults();
+            }
+        }
+
+        function showRoundResults() {
+            showScreen('results-screen');
+            document.getElementById('result-word').innerText = currentWord;
+            
+            const list = document.getElementById('results-list');
+            list.innerHTML = '';
+            
+            // Sort times to find winner
+            roundTimes.sort((a, b) => a.time - b.time);
+            
+            roundTimes.forEach((rt, idx) => {
+                const p = players[rt.playerIndex];
+                const timeStr = (rt.time / 1000).toFixed(2) + "s";
+                const el = document.createElement('div');
+                el.className = `p-3 rounded-lg flex justify-between ${idx === 0 ? 'bg-green-100 text-green-700 border-2 border-green-500' : 'bg-gray-100'}`;
+                el.innerHTML = `<span>${idx + 1}. ${p.name}</span> <span>${timeStr}</span>`;
+                list.appendChild(el);
+            });
+
+            const winner = players[roundTimes[0].playerIndex];
+            document.getElementById('round-winner-name').innerText = winner.name;
+            
+            // Store winner for drawing phase
+            document.getElementById('results-screen').dataset.winnerIndex = roundTimes[0].playerIndex;
+        }
+
+        // --- DRAWING PHASE ---
+        const canvas = document.getElementById('drawing-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        let isDrawing = false;
+        let drawTimerIntv = null;
+        let drawingWinnerIndex = 0;
+
+        function startDrawingPhase() {
+            drawingWinnerIndex = parseInt(document.getElementById('results-screen').dataset.winnerIndex);
+            const winner = players[drawingWinnerIndex];
+            
+            showScreen('draw-screen');
+            document.getElementById('draw-player-name').innerText = winner.name;
+            document.getElementById('draw-instruction').innerText = BODY_PARTS[winner.partIndex];
+            
+            // Setup Canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = '#000000';
+
+            // Load previous drawing if exists
+            if (winner.drawingData) {
+                const img = new Image();
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0);
+                };
+                img.src = winner.drawingData;
+            }
+
+            // Start 20s Timer
+            let timeLeft = 20;
+            document.getElementById('draw-timer').innerText = timeLeft;
+            
+            drawTimerIntv = setInterval(() => {
+                timeLeft--;
+                document.getElementById('draw-timer').innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    finishDrawingPhase();
+                }
+            }, 1000);
+        }
+
+        // Canvas Events
+        function getPointerPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            // Scale appropriately if CSS size differs from raw pixel size
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            
+            if(e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+            
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        function startPosition(e) {
+            e.preventDefault();
+            isDrawing = true;
+            draw(e);
+        }
+
+        function endPosition() {
+            isDrawing = false;
+            ctx.beginPath();
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getPointerPos(e);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        canvas.addEventListener('mousedown', startPosition);
+        canvas.addEventListener('mouseup', endPosition);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseout', endPosition);
+
+        canvas.addEventListener('touchstart', startPosition, {passive: false});
+        canvas.addEventListener('touchend', endPosition, {passive: false});
+        canvas.addEventListener('touchmove', draw, {passive: false});
+        canvas.addEventListener('touchcancel', endPosition, {passive: false});
+
+        function finishDrawingEarly() {
+            // Optional manual skip
+            finishDrawingPhase();
+        }
+
+        function finishDrawingPhase() {
+            clearInterval(drawTimerIntv);
+            const winner = players[drawingWinnerIndex];
+            
+            // Save state
+            winner.drawingData = canvas.toDataURL();
+            winner.partIndex++;
+
+            if (winner.partIndex >= BODY_PARTS.length) {
+                // Game Over - they drew the Hat!
+                showWinnerScreen(winner);
+            } else {
+                // Next Round
+                startNewRound();
+            }
+        }
+
+        function showWinnerScreen(winner) {
+            showScreen('winner-screen');
+            document.getElementById('overall-winner-name').innerText = winner.name;
+            
+            const wCanvas = document.getElementById('winner-canvas');
+            const wCtx = wCanvas.getContext('2d');
+            
+            const img = new Image();
+            img.onload = () => {
+                wCtx.drawImage(img, 0, 0);
+            };
+            img.src = winner.drawingData;
+        }
+
+    </script>
+</body>
+</html>
