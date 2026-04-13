@@ -365,7 +365,12 @@
                         
                         <div className="text-lg font-extrabold text-purple-700 mb-4 bg-purple-50 px-6 py-2 rounded-xl border border-purple-200 shadow-sm flex items-center space-x-2">
                           <span>💡</span>
-                          <span>{divisor} × {quotient} {allowRemainders && remainder && parseInt(remainder) > 0 ? `+ ${remainder} ` : ''}= {dividend}</span>
+                          <span>
+                            {allowRemainders && remainder && parseInt(remainder) > 0 
+                              ? `(${divisor} × ${quotient} = ${divisor * parseInt(quotient)}) + ${remainder} = ${dividend}` 
+                              : `${divisor} × ${quotient} = ${dividend}`
+                            }
+                          </span>
                         </div>
 
                         <button onClick={() => generateProblem(allowRemainders)} className="flex items-center px-8 py-3 bg-green-500 text-white text-base font-bold rounded-full shadow-md hover:bg-green-600 hover:scale-105 transition-all">
