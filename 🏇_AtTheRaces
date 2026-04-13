@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Racer</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Bitcount+Grid+Double&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & Babel for in-browser JSX compilation -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body {
+            font-family: "Bitcount Grid Double", "Courier New", monospace;
+        }
+        @keyframes gallop {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px) scaleY(1.05) scaleX(0.95); }
+        }
+        .gallop-anim {
+            animation: gallop 0.4s ease-in-out infinite;
+            display: inline-block;
+        }
+        @keyframes settleBounce {
+            0% { transform: translateY(-100px); animation-timing-function: ease-in; }
+            20% { transform: translateY(0); animation-timing-function: ease-out; }
+            40% { transform: translateY(-50px); animation-timing-function: ease-in; }
+            60% { transform: translateY(0); animation-timing-function: ease-out; }
+            75% { transform: translateY(-20px); animation-timing-function: ease-in; }
+            85% { transform: translateY(0); animation-timing-function: ease-out; }
+            95% { transform: translateY(-5px); animation-timing-function: ease-in; }
+            100% { transform: translateY(0); animation-timing-function: ease-out; }
+        }
+        .settle-bounce-anim {
+            animation: settleBounce 1.5s forwards;
+        }
+        @keyframes tensionRumble {
+            0%, 100% { transform: translate(0, 0); }
+            20% { transform: translate(-2px, 1px); }
+            40% { transform: translate(2px, -1px); }
+            60% { transform: translate(-1px, 2px); }
+            80% { transform: translate(1px, -2px); }
+        }
+        .tension-shake {
+            animation: tensionRumble 0.3s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- The data-type="module" allows Babel to parse the Firebase import statements -->
+    <script type="text/babel" data-type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        // --- GAME CONFIGURATION & CONSTANTS ---
+        const CREATURES = [
+          { id: 'unicorn', name: 'Unicorn', emoji: '🦄', color: 'bg-pink-100' },
+          { id: 'dragon', name: 'Dragon', emoji: '🐉', color: 'bg-red-100' },
+          { id: 'trex', name: 'T-Rex', emoji: '🦖', color: 'bg-green-100' },
+          { id: 'turtle', name: 'Speedy Turtle', emoji: '🐢', color: 'bg-emerald-100' },
+          { id: 'eagle', name: 'Griffin', emoji: '🦅', color: 'bg-yellow-100' },
+          { id: 'octopus', name: 'Kraken', emoji: '🐙', color: 'bg-purple-100' },
+          { id: 'cheetah', name: 'Cheetah', emoji: '🐆', color: 'bg-orange-100' },
+          { id: 'alien', name: 'Alien Slime', emoji: '👽', color: 'bg-lime-100' }
+        ];
+
+        const OPERATIONS = ['Addition', 'Subtraction', 'Multiplication', 'Division', 'Mixed'];
+        const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
+        const TOTAL_DISTANCE = 1000;
+
+        // Opponent timings in milliseconds
+        const OPPONENT_SPEEDS = {
+          'Easy': 5000,
+          'Medium': 3500,
+          'Hard': 2000
+        };
+
+        const TOKEN_TYPES = [
+          { id: 'BACK', icon: '🛑', desc: 'Knock Back' },
+          { id: 'TINY', icon: '🔎', desc: 'Tiny Font' },
+          { id: 'SHAKE', icon: '🫨', desc: 'Screen Shake' },
+          { id: 'RUBBERBAND', icon: '🪀', desc: 'Rubberband' }
+        ];
+
+        // --- BOT NAMES ---
+        const BOT_NAMES = [
+          'Darf Fader', 'Aerial', 'Luke Skydorker', 'Mick E. Moose',
+          'Donny Ducktape', 'Goofus', 'Peter Pancreas', 'Cinderfella',
+          'Snow Whiteout', 'Buzz Lightbulb', 'Woody Pecker', 'Simba-ton',
+          'Chewbarka', 'Yodeler', 'Aladd-out', 'Kylo Renovation'
+        ];
+
+        // --- FIREBASE INIT ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const app = Object.keys(firebaseConfig).length ? initializeApp(firebaseConfig) : null;
+        const auth = app ? getAuth(app) : null;
+        const db = app ? getFirestore(app) : null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        function App() {
+          // --- STATE ---
+          const [user, setUser] = useState(null);
+          const [gameState, setGameState] = useState('setup'); // setup, lobby, playing, finished
+          const [playMode, setPlayMode] = useState('solo'); // solo, host, join
+          const [roomCode, setRoomCode] = useState('');
+          const [joinCodeInput, setJoinCodeInput] = useState('');
+          const [errorMsg, setErrorMsg] = useState('');
+          
+          // Settings State
+          const [settings, setSettings] = useState({
+            operation: 'Addition',
+            digits: 1,
+            difficulty: 'Medium',
+            numEquations: 10,
+            opponentCount: 3,
+            creatureId: 'unicorn',
+            creatureName: 'Sparkles',
+          });
+
+          // Race State
+          const [racers, setRacers] = useState({});
+          const [myProgress, setMyProgress] = useState(0);
+          const [activePenalty, setActivePenalty] = useState(null);
+          
+          const [currentEquation, setCurrentEquation] = useState(null);
+          const [userAnswer, setUserAnswer] = useState('');
+          const [errorShake, setErrorShake] = useState(false);
+          
+          // Placements / Standings
+          const [standings, setStandings] = useState([]);
+
+          // Refs
+          const inputRef = useRef(null);
+          const racersRef = useRef({});
+          const myProgressRef = useRef(0);
+          const isHostRef = useRef(false);
+          const penaltyRef = useRef(null);
+          const bonusCountRef = useRef(0);
+          const standingsRef = useRef([]);
+
+          // --- INIT FIREBASE AUTH ---
+          useEffect(() => {
+            if (!auth) return;
+            const initAuth = async () => {
+              try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                  await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                  await signInAnonymously(auth);
+                }
+              } catch (err) {
+                console.error("Auth error:", err);
+              }
+            };
+            initAuth();
+            const unsubscribe = onAuthStateChanged(auth, setUser);
+            return () => unsubscribe();
+          }, []);
+
+          // Sync refs
+          useEffect(() => { racersRef.current = racers; }, [racers]);
+          useEffect(() => { myProgressRef.current = myProgress; }, [myProgress]);
+          useEffect(() => { penaltyRef.current = activePenalty; }, [activePenalty]);
+          useEffect(() => { isHostRef.current = (playMode === 'host' || playMode === 'solo'); }, [playMode]);
+          useEffect(() => { standingsRef.current = standings; }, [standings]);
+
+          // --- HELPER: GET ROOM REF ---
+          const getRoomRef = (code) => doc(db, 'artifacts', appId, 'public', 'data', code);
+
+          // --- LOGIC: EQUATION GENERATOR ---
+          const generateEquation = useCallback(() => {
+            const opList = settings.operation === 'Mixed' 
+              ? ['+', '-', '*', '/'] 
+              : [{'Addition': '+', 'Subtraction': '-', 'Multiplication': '*', 'Division': '/'}[settings.operation]];
+            
+            const selectedOp = opList[Math.floor(Math.random() * opList.length)];
+            let min = settings.digits === 1 ? 1 : 10;
+            let max = settings.digits === 1 ? 9 : 99;
+
+            let num1 = Math.floor(Math.random() * (max - min + 1)) + min;
+            let num2 = Math.floor(Math.random() * (max - min + 1)) + min;
+            let answer = 0;
+            
+            let isBonus = false;
+            if (bonusCountRef.current < 2 && Math.random() < 0.20) {
+              isBonus = true;
+              bonusCountRef.current += 1;
+            }
+
+            if (selectedOp === '+') { answer = num1 + num2; } 
+            else if (selectedOp === '-') {
+              if (num2 > num1) [num1, num2] = [num2, num1];
+              answer = num1 - num2;
+            } 
+            else if (selectedOp === '*') { answer = num1 * num2; } 
+            else if (selectedOp === '/') {
+              answer = Math.floor(Math.random() * (max - min + 1)) + min;
+              num1 = num2 * answer;
+            }
+            return { num1, num2, op: selectedOp, answer, isBonus };
+          }, [settings]);
+
+          // --- LOBBY & MULTIPLAYER LOGIC ---
+          const createSoloGame = () => {
+            setPlayMode('solo');
+            initializeRaceState(settings);
+            setGameState('playing');
+          };
+
+          const hostGame = async () => {
+            if (!user) return;
+            const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+            setRoomCode(code);
+            setPlayMode('host');
+            
+            const initialRacers = {
+              [user.uid]: { id: user.uid, name: settings.creatureName, emoji: CREATURES.find(c=>c.id===settings.creatureId).emoji, progress: 0, isHuman: true, isHost: true }
+            };
+            
+            await setDoc(getRoomRef(code), {
+              status: 'lobby',
+              settings,
+              racers: initialRacers,
+              penalties: {}
+            });
+            setGameState('lobby');
+          };
+
+          const joinGame = async () => {
+            if (!user || !joinCodeInput) return;
+            const code = joinCodeInput.toUpperCase();
+            const roomSnap = await getDoc(getRoomRef(code));
+            
+            if (roomSnap.exists() && roomSnap.data().status === 'lobby') {
+              const data = roomSnap.data();
+              setSettings(data.settings);
+              setRoomCode(code);
+              setPlayMode('join');
+              
+              const newRacers = { ...data.racers };
+              newRacers[user.uid] = { id: user.uid, name: settings.creatureName, emoji: CREATURES.find(c=>c.id===settings.creatureId).emoji, progress: 0, isHuman: true, isHost: false };
+              
+              await updateDoc(getRoomRef(code), { racers: newRacers });
+              setGameState('lobby');
+            } else {
+              setErrorMsg("Room not found or already started.");
+              setTimeout(() => setErrorMsg(''), 3000);
+            }
+          };
+
+          const startMultiplayerGame = async () => {
+            if (playMode !== 'host') return;
+            const currentRacers = { ...racersRef.current };
+            const humanCount = Object.keys(currentRacers).length;
+            const totalSlots = settings.opponentCount + 1;
+            
+            const usedEmojis = Object.values(currentRacers).map(r => r.emoji);
+            const availableBots = CREATURES.filter(c => !usedEmojis.includes(c.emoji));
+            const shuffledNames = [...BOT_NAMES].sort(() => 0.5 - Math.random());
+
+            for (let i = 0; i < totalSlots - humanCount; i++) {
+              const botId = `bot_${i}`;
+              currentRacers[botId] = { 
+                id: botId, name: shuffledNames[i % shuffledNames.length], 
+                emoji: availableBots[i % availableBots.length]?.emoji || '🤖', 
+                progress: 0, isHuman: false 
+              };
+            }
+            await updateDoc(getRoomRef(roomCode), { status: 'playing', racers: currentRacers });
+          };
+
+          useEffect(() => {
+            if (!user || gameState === 'setup' || playMode === 'solo') return;
+
+            const unsubscribe = onSnapshot(getRoomRef(roomCode), (doc) => {
+              if (doc.exists()) {
+                const data = doc.data();
+                setRacers(data.racers);
+                
+                if (data.status === 'playing' && gameState === 'lobby') {
+                  initializeRaceState(data.settings);
+                  setGameState('playing');
+                }
+
+                if (data.penalties && data.penalties[user.uid]) {
+                  const pen = data.penalties[user.uid];
+                  if (pen.expiresAt > Date.now()) {
+                    if (pen.type === 'BACK') setMyProgress(p => Math.max(0, p - 100));
+                    else if (pen.type === 'RUBBERBAND') {
+                        const sorted = Object.values(data.racers).map(r => r.progress).sort((a,b)=>a-b);
+                        const myProg = data.racers[user.uid].progress;
+                        const trailing = sorted.filter(p => p < myProg - 10);
+                        if (trailing.length > 0) setMyProgress(trailing[trailing.length-1]);
+                        else setMyProgress(Math.max(0, myProg - 100));
+                    }
+                    else setActivePenalty(pen);
+                  }
+                }
+
+                const currentStandings = [...standingsRef.current];
+                let newFinishers = [];
+                Object.values(data.racers).forEach(r => {
+                    if (r.progress >= TOTAL_DISTANCE && !currentStandings.some(s => s.id === r.id)) {
+                        newFinishers.push(r);
+                    }
+                });
+                
+                if (newFinishers.length > 0) {
+                    newFinishers.sort((a,b) => b.progress - a.progress);
+                    const updatedStandings = [...currentStandings, ...newFinishers];
+                    setStandings(updatedStandings);
+                    
+                    if (updatedStandings.length >= 3 || updatedStandings.length >= Object.keys(data.racers).length) {
+                        setGameState('finished');
+                    }
+                }
+              }
+            }, (err) => console.error(err));
+            return () => unsubscribe();
+          }, [user, roomCode, gameState, playMode]);
+
+          const initializeRaceState = (gameSettings) => {
+            setMyProgress(0);
+            setStandings([]);
+            setActivePenalty(null);
+            bonusCountRef.current = 0;
+            setCurrentEquation(generateEquation());
+            setUserAnswer('');
+            
+            if (playMode === 'solo') {
+              const initialRacers = {
+                'player': { id: 'player', name: gameSettings.creatureName, emoji: CREATURES.find(c=>c.id===gameSettings.creatureId).emoji, progress: 0, isHuman: true }
+              };
+              const availableBots = CREATURES.filter(c => c.id !== gameSettings.creatureId);
+              const shuffledNames = [...BOT_NAMES].sort(() => 0.5 - Math.random());
+              
+              for(let i=0; i<gameSettings.opponentCount; i++) {
+                initialRacers[`bot_${i}`] = { 
+                  id: `bot_${i}`, name: shuffledNames[i % shuffledNames.length], 
+                  emoji: availableBots[i % availableBots.length]?.emoji || '🤖', 
+                  progress: 0, isHuman: false 
+                };
+              }
+              setRacers(initialRacers);
+            }
+          };
+
+          // --- GAME PHYSICS LOOP ---
+          useEffect(() => {
+            if (gameState !== 'playing') return;
+
+            const expectedTimeMs = settings.numEquations * OPPONENT_SPEEDS[settings.difficulty];
+            const baseDistanceTarget = TOTAL_DISTANCE * 0.20; 
+            const baseSpeedPer100ms = baseDistanceTarget / (expectedTimeMs / 100);
+
+            const intervalId = setInterval(() => {
+              if (!penaltyRef.current || penaltyRef.current.expiresAt < Date.now()) {
+                  setMyProgress(p => Math.min(TOTAL_DISTANCE, p + baseSpeedPer100ms));
+              }
+            }, 100);
+
+            return () => clearInterval(intervalId);
+          }, [gameState, settings]);
+
+          // --- HOST SYNC / BOT PHYSICS ---
+          useEffect(() => {
+            if (gameState !== 'playing') return;
+
+            const syncInterval = setInterval(() => {
+              if (playMode === 'solo') {
+                setRacers(prev => {
+                  const next = {};
+                  for (const key in prev) {
+                    next[key] = { ...prev[key] };
+                  }
+                  
+                  if (next['player']) next['player'].progress = myProgressRef.current;
+                  
+                  Object.values(next).filter(r => !r.isHuman).forEach(bot => {
+                    const expectedTimeMs = settings.numEquations * OPPONENT_SPEEDS[settings.difficulty];
+                    const baseSpeedPerSec = (TOTAL_DISTANCE * 0.20) / (expectedTimeMs / 1000);
+                    
+                    const chanceToSolve = 1000 / OPPONENT_SPEEDS[settings.difficulty];
+                    let solveBoost = 0;
+                    if (Math.random() < chanceToSolve) {
+                       solveBoost = ((TOTAL_DISTANCE * 0.80) / settings.numEquations) * (0.7 + Math.random() * 0.6);
+                    }
+                    
+                    bot.progress = Math.min(TOTAL_DISTANCE, bot.progress + baseSpeedPerSec + solveBoost);
+                  });
+
+                  const currentStandings = [...standingsRef.current];
+                  let newFinishers = [];
+                  Object.values(next).forEach(r => {
+                      if (r.progress >= TOTAL_DISTANCE && !currentStandings.some(s => s.id === r.id)) {
+                          newFinishers.push(r);
+                      }
+                  });
+                  
+                  if (newFinishers.length > 0) {
+                      newFinishers.sort((a,b) => b.progress - a.progress);
+                      const updatedStandings = [...currentStandings, ...newFinishers];
+                      setStandings(updatedStandings);
+                      
+                      if (updatedStandings.length >= 3 || updatedStandings.length >= Object.keys(next).length) {
+                          setGameState('finished');
+                      }
+                  }
+                  return next;
+                });
+              } else if (playMode !== 'solo' && user) {
+                let updates = { [`racers.${user.uid}.progress`]: myProgressRef.current };
+                
+                if (isHostRef.current) {
+                  Object.values(racersRef.current).filter(r => !r.isHuman).forEach(bot => {
+                    const expectedTimeMs = settings.numEquations * OPPONENT_SPEEDS[settings.difficulty];
+                    const baseSpeedPerSec = (TOTAL_DISTANCE * 0.20) / (expectedTimeMs / 1000);
+                    
+                    const chanceToSolve = 1000 / OPPONENT_SPEEDS[settings.difficulty];
+                    let solveBoost = 0;
+                    if (Math.random() < chanceToSolve) {
+                       solveBoost = ((TOTAL_DISTANCE * 0.80) / settings.numEquations) * (0.7 + Math.random() * 0.6);
+                    }
+                    const newProg = Math.min(TOTAL_DISTANCE, bot.progress + baseSpeedPerSec + solveBoost);
+                    updates[`racers.${bot.id}.progress`] = newProg;
+                  });
+                }
+                updateDoc(getRoomRef(roomCode), updates).catch(console.error);
+              }
+            }, 1000);
+
+            return () => clearInterval(syncInterval);
+          }, [gameState, playMode, settings, user, roomCode]);
+
+          const handleBonusWin = async () => {
+            const myId = playMode === 'solo' ? 'player' : (user?.uid || 'player');
+            const opponents = Object.values(racersRef.current).filter(r => r.id !== myId);
+            if (opponents.length === 0) return;
+            
+            const target = opponents[Math.floor(Math.random() * opponents.length)];
+            const tokenType = TOKEN_TYPES[Math.floor(Math.random() * TOKEN_TYPES.length)].id;
+            
+            if (playMode === 'solo') {
+              if (tokenType === 'BACK') {
+                setRacers(prev => ({...prev, [target.id]: {...prev[target.id], progress: Math.max(0, prev[target.id].progress - 100)}}));
+              } else if (tokenType === 'RUBBERBAND') {
+                const sorted = Object.values(racersRef.current).map(r => r.progress).sort((a,b)=>a-b);
+                const targetProg = racersRef.current[target.id].progress;
+                const trailing = sorted.filter(p => p < targetProg - 10);
+                const newP = trailing.length > 0 ? trailing[trailing.length-1] : Math.max(0, targetProg - 100);
+                setRacers(prev => ({...prev, [target.id]: {...prev[target.id], progress: newP}}));
+              } else {
+                setRacers(prev => ({...prev, [target.id]: {...prev[target.id], progress: Math.max(0, prev[target.id].progress - 50)}}));
+              }
+            } else {
+              await updateDoc(getRoomRef(roomCode), {
+                [`penalties.${target.id}`]: { type: tokenType, expiresAt: Date.now() + 3000 }
+              });
+            }
+          };
+
+          const handleAnswerSubmit = (e) => {
+            e.preventDefault();
+            if (!userAnswer || gameState !== 'playing') return;
+
+            if (parseInt(userAnswer, 10) === currentEquation.answer) {
+              const boostAmount = (TOTAL_DISTANCE * 0.80) / settings.numEquations; 
+              setMyProgress(prev => Math.min(TOTAL_DISTANCE, prev + boostAmount));
+              
+              if (currentEquation.isBonus) handleBonusWin();
+
+              setUserAnswer('');
+              setCurrentEquation(generateEquation());
+              setActivePenalty(null); 
+            } else {
+              setErrorShake(true);
+              setUserAnswer('');
+              setTimeout(() => setErrorShake(false), 500);
+            }
+            if (inputRef.current) inputRef.current.focus();
+          };
+
+          useEffect(() => {
+            if (gameState === 'playing' && inputRef.current) inputRef.current.focus();
+          }, [gameState, currentEquation, activePenalty]);
+
+          const renderSetup = () => (
+            <div className="max-w-4xl mx-auto w-full bg-white p-4 md:p-6 rounded-2xl shadow-xl border-2 border-indigo-100">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-center text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 mb-4 tracking-tight">🏁 Math Racer 🏁</h1>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4 bg-indigo-50 p-4 rounded-xl">
+                  <h2 className="text-xl font-bold text-indigo-800 border-b-2 border-indigo-200 pb-1">1. Settings</h2>
+                  
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Operation</label>
+                    <select className="w-full p-2 text-sm border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                      value={settings.operation} onChange={(e) => setSettings({...settings, operation: e.target.value})}>
+                      {OPERATIONS.map(op => <option key={op} value={op}>{op}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Digits</label>
+                      <select className="w-full p-2 text-sm border border-indigo-200 rounded-lg bg-white"
+                        value={settings.digits} onChange={(e) => setSettings({...settings, digits: parseInt(e.target.value)})}>
+                        <option value={1}>1 Digit</option>
+                        <option value={2}>2 Digits</option>
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">AI Difficulty</label>
+                      <select className="w-full p-2 text-sm border border-indigo-200 rounded-lg bg-white"
+                        value={settings.difficulty} onChange={(e) => setSettings({...settings, difficulty: e.target.value})}>
+                        {DIFFICULTIES.map(d => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Race Length: <span className="text-indigo-600 font-bold">{settings.numEquations} equations</span></label>
+                    <input type="range" min="5" max="20" value={settings.numEquations} onChange={(e) => setSettings({...settings, numEquations: parseInt(e.target.value)})}
+                      className="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer" />
+                  </div>
+                </div>
+
+                <div className="space-y-4 bg-purple-50 p-4 rounded-xl">
+                  <h2 className="text-xl font-bold text-purple-800 border-b-2 border-purple-200 pb-1">2. Racer Setup</h2>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Choose Creature</label>
+                    <div className="grid grid-cols-4 gap-1">
+                      {CREATURES.map(c => (
+                        <button key={c.id} title={c.name} onClick={() => setSettings({...settings, creatureId: c.id})}
+                          className={`text-2xl p-1 rounded-lg transition-transform ${settings.creatureId === c.id ? 'bg-purple-200 scale-110 ring-2 ring-purple-500 shadow-inner' : 'hover:bg-purple-100'}`}>
+                          <div style={{transform: 'scaleX(-1)'}}>{c.emoji}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Name</label>
+                    <input type="text" maxLength="15" value={settings.creatureName} onChange={(e) => setSettings({...settings, creatureName: e.target.value})}
+                      className="w-full p-2 text-sm border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white" placeholder="Name your racer..." />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <h2 className="text-lg font-bold text-center text-gray-800 mb-2">3. Play Mode</h2>
+                {errorMsg && <div className="text-red-500 font-bold text-center text-sm mb-2">{errorMsg}</div>}
+                
+                <div className="flex flex-col md:flex-row justify-center items-center gap-3">
+                  <button onClick={createSoloGame} className="w-full md:w-auto bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold py-2 px-4 rounded-lg shadow hover:scale-105 transition-transform text-sm">
+                    🚀 Solo
+                  </button>
+                  <div className="text-gray-400 font-bold text-xs">- OR -</div>
+                  <button onClick={hostGame} disabled={!user} className="w-full md:w-auto bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-2 px-4 rounded-lg shadow hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100 text-sm">
+                    👑 Host
+                  </button>
+                  <div className="flex w-full md:w-auto bg-white rounded-lg overflow-hidden shadow border border-gray-300">
+                    <input type="text" placeholder="CODE" value={joinCodeInput} onChange={e=>setJoinCodeInput(e.target.value)} maxLength={4} className="w-20 p-2 font-mono font-bold text-center uppercase outline-none text-sm" />
+                    <button onClick={joinGame} disabled={!user || joinCodeInput.length < 4} className="bg-green-500 text-white font-bold px-4 disabled:opacity-50 hover:bg-green-600 text-sm">Join</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+
+          const renderLobby = () => (
+            <div className="max-w-2xl mx-auto bg-white p-10 rounded-3xl shadow-2xl text-center border-4 border-purple-100">
+              <h1 className="text-4xl font-extrabold text-purple-600 mb-4">Multiplayer Lobby</h1>
+              <p className="text-gray-600 mb-8">Share this code with friends to join:</p>
+              
+              <div className="text-7xl font-mono font-black tracking-widest text-indigo-700 bg-indigo-50 py-6 rounded-2xl border-4 border-indigo-200 mb-8">
+                {roomCode}
+              </div>
+
+              <h3 className="text-xl font-bold text-left text-gray-700 mb-4 border-b-2 pb-2">Racers Joined ({Object.keys(racers).length} / {settings.opponentCount + 1})</h3>
+              <div className="space-y-3 text-left mb-8">
+                {Object.values(racers).map(r => (
+                  <div key={r.id} className="flex items-center gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <span className="text-3xl" style={{transform: 'scaleX(-1)'}}>{r.emoji}</span>
+                    <span className="font-bold text-lg text-gray-800">{r.name} {r.isHost ? '👑' : ''}</span>
+                  </div>
+                ))}
+              </div>
+
+              {playMode === 'host' ? (
+                <button onClick={startMultiplayerGame} className="w-full bg-gradient-to-r from-green-400 to-emerald-600 text-white font-extrabold text-2xl py-5 rounded-2xl shadow-xl hover:scale-105 transition-transform">
+                  Start Race! 🏁
+                </button>
+              ) : (
+                <div className="text-xl font-bold text-gray-500 animate-pulse">Waiting for host to start...</div>
+              )}
+            </div>
+          );
+
+          const renderTrack = () => {
+            const myId = playMode === 'solo' ? 'player' : (user?.uid || 'player');
+            const getLeft = (prog) => `calc(${(prog / TOTAL_DISTANCE) * 100}% - 30px)`;
+            
+            const allRacers = Object.values(racers).sort((a,b) => a.id.localeCompare(b.id));
+
+            return (
+              <div className="bg-amber-100 p-2 rounded-xl shadow-inner border-4 border-amber-300 relative w-full overflow-hidden shrink-0">
+                <div className="absolute right-0 top-0 bottom-0 w-8 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjMDAwIi8+PHJlY3QgeD0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iI2ZmZiIvPjxyZWN0IHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIxMCIgeT0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iIzAwMCIvPjwvc3ZnPg==')] opacity-80 border-l-4 border-red-500 z-0"></div>
+
+                {allRacers.map((racer) => {
+                  const isMe = racer.id === myId;
+                  const progress = isMe ? myProgress : racer.progress;
+
+                  return (
+                    <div key={racer.id} className={`relative h-14 border-t border-amber-400 flex items-center bg-black/5 mb-1 rounded-md ${isMe ? 'bg-indigo-100/50 border-l-4 border-indigo-400' : ''}`}>
+                      <div className="absolute flex flex-col items-center z-10"
+                           style={{ left: getLeft(progress), transition: isMe ? 'left 0.2s ease-out' : 'left 1s linear' }}>
+                         <div className={`text-[10px] font-bold px-2 rounded-full mb-0.5 whitespace-nowrap shadow-sm ${isMe ? 'text-white bg-indigo-600' : 'text-gray-700 bg-white/80'}`}>
+                           {racer.name}
+                         </div>
+                         <div className={`${isMe ? 'text-5xl drop-shadow-[0_0_10px_red] z-20' : 'text-3xl drop-shadow-md'}`} style={{transform: 'scaleX(-1)'}}>
+                           <div className={gameState === 'playing' ? 'gallop-anim' : ''}>
+                             {racer.emoji}
+                           </div>
+                         </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          };
+
+          const renderGame = () => {
+            const isTiny = activePenalty?.type === 'TINY' && activePenalty.expiresAt > Date.now();
+            const isShake = activePenalty?.type === 'SHAKE' && activePenalty.expiresAt > Date.now();
+            
+            const myId = playMode === 'solo' ? 'player' : (user?.uid || 'player');
+            const isFinished = standings.some(r => r.id === myId);
+
+            const isNearEnd = myProgress >= TOTAL_DISTANCE * 0.75 && !isFinished;
+
+            return (
+              <div className={`max-w-4xl mx-auto w-full flex flex-col gap-4 items-center ${isNearEnd ? 'tension-shake' : ''}`}>
+                
+                <div className="bg-white p-4 md:p-6 rounded-2xl shadow-md text-center border-2 border-blue-200 w-full max-w-lg relative overflow-hidden shrink-0 min-h-[220px] flex items-center justify-center">
+                  
+                  {activePenalty && activePenalty.expiresAt > Date.now() && (
+                     <div className="absolute top-0 left-0 right-0 bg-red-500 text-white text-xs font-bold py-1 animate-pulse z-50">
+                       ⚠️ {TOKEN_TYPES.find(t=>t.id===activePenalty.type)?.desc} PENALTY ACTIVE! ⚠️
+                     </div>
+                  )}
+
+                  {isFinished ? (
+                    <div className="py-4 animate-pulse">
+                      <h2 className="text-4xl font-extrabold text-green-500 mb-2">You Finished! 🏁</h2>
+                      <p className="text-lg text-gray-500 font-bold">Waiting for others to cross...</p>
+                    </div>
+                  ) : (
+                    currentEquation && (
+                      <form onSubmit={handleAnswerSubmit} className="space-y-3 w-full">
+                        <div className="flex justify-center items-center px-2">
+                          <div className={`font-bold uppercase text-sm tracking-widest ${currentEquation.isBonus ? 'text-yellow-600 animate-bounce' : 'text-gray-500'}`}>
+                            {currentEquation.isBonus ? '🌟 BONUS QUESTION 🌟' : 'Speed Math'}
+                          </div>
+                        </div>
+
+                        <div className={`font-extrabold text-gray-800 transition-all duration-300 ${isTiny ? 'text-sm' : 'text-4xl md:text-5xl tracking-tighter'} ${isShake || errorShake ? '-translate-x-2 animate-[shake_0.2s_ease-in-out_infinite]' : ''}`}>
+                          <style>{`@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }`}</style>
+                          {currentEquation.num1} {currentEquation.op} {currentEquation.num2} = ?
+                        </div>
+                        
+                        <div className="flex justify-center mt-2">
+                          <input ref={inputRef} type="number" value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)}
+                            className={`text-center text-2xl p-2 w-32 border-4 rounded-xl focus:outline-none transition-transform ${errorShake ? 'border-red-500 bg-red-50' : 'border-blue-300 focus:border-blue-500 bg-gray-50'}`}
+                            placeholder="..." autoComplete="off" />
+                        </div>
+                        <button type="submit" className="hidden">Submit</button>
+                      </form>
+                    )
+                  )}
+                </div>
+
+                {renderTrack()}
+
+              </div>
+            );
+          };
+
+          const renderFinished = () => {
+            const myId = playMode === 'solo' ? 'player' : (user?.uid || 'player');
+            const myRankIndex = standings.findIndex(r => r.id === myId);
+            const isTop3 = myRankIndex !== -1 && myRankIndex < 3;
+
+            return (
+              <div className="max-w-2xl mx-auto w-full bg-white p-10 rounded-3xl shadow-2xl text-center border-8 border-indigo-50 relative overflow-hidden">
+                {isTop3 && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 animate-pulse"></div>}
+                
+                <div className={`space-y-6 ${isTop3 ? 'settle-bounce-anim' : ''} relative z-10`}>
+                  <h2 className={`text-5xl md:text-6xl font-extrabold ${isTop3 ? 'text-green-500' : 'text-blue-500'}`}>
+                    {isTop3 ? 'PODIUM FINISH!' : 'RACE OVER'}
+                  </h2>
+                  
+                  <div className="flex flex-col gap-4 mt-8">
+                    {standings.map((racer, idx) => {
+                      const medals = ['🥇', '🥈', '🥉'];
+                      const colors = ['bg-yellow-100 border-yellow-400', 'bg-gray-100 border-gray-400', 'bg-orange-100 border-orange-400'];
+                      if (idx >= 3) return null; // Only show Top 3
+                      
+                      return (
+                        <div key={racer.id} className={`flex items-center justify-between p-4 rounded-xl border-4 ${colors[idx]} ${racer.id === myId ? 'ring-4 ring-indigo-500 scale-105 shadow-lg' : ''}`}>
+                          <div className="text-4xl md:text-5xl drop-shadow-md">{medals[idx]}</div>
+                          <div className="text-4xl md:text-5xl drop-shadow-md" style={{transform: 'scaleX(-1)'}}>{racer.emoji}</div>
+                          <div className="text-xl md:text-2xl font-bold flex-1 text-left ml-4 truncate text-gray-800">
+                            {racer.name} {racer.id === myId ? <span className="text-indigo-500 text-sm md:text-lg">(You)</span> : ''}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="mt-12 flex justify-center gap-6 relative z-10">
+                  <button onClick={() => setGameState('setup')} className="bg-indigo-600 text-white font-bold py-4 px-10 rounded-full shadow-xl hover:bg-indigo-700 transition-colors text-xl">
+                    Return to Setup
+                  </button>
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100 p-2 md:p-4 flex items-center justify-center overflow-x-hidden">
+              {gameState === 'setup' && renderSetup()}
+              {gameState === 'lobby' && renderLobby()}
+              {gameState === 'playing' && renderGame()}
+              {gameState === 'finished' && renderFinished()}
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
