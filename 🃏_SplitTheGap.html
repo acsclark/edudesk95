@@ -136,7 +136,8 @@
           logs: [],
           startingTokens: 20,
           humanCount: 1,
-          startingPlayerId: 0
+          startingPlayerId: 0,
+          currentAnteCost: 1
         };
 
         function gameReducer(state, action) {
@@ -162,7 +163,8 @@
                 humanCount: humans,
                 startingPlayerId: 0,
                 pot: 0,
-                players: initialPlayers
+                players: initialPlayers,
+                currentAnteCost: 1
               };
             }
 
@@ -186,11 +188,24 @@
 
               const { centerCards, newDeck: remainingDeck } = drawCenterCardsWithGap(newDeck);
               
+              // Ace penalty check for center cards!
+              let acesInCenter = centerCards.filter(c => c.rank === 'A').length;
+              let startPot = 0;
+              let startPlayers = newPlayers;
+              let logsArray = state.logs;
+              let anteCost = acesInCenter + 1; // 0 aces = 1 coin, 1 ace = 2 coins, 2 aces = 3 coins
+
+              if (acesInCenter > 0) {
+                  logsArray = [`Center has ${acesInCenter} Ace(s)! Ante costs ${anteCost} this round.`, ...logsArray].slice(0, 5);
+              } else {
+                  logsArray = ["New round started! Center cards drawn.", ...logsArray].slice(0, 5);
+              }
+
               let nextStartId = state.startingPlayerId;
               let firstActiveId = null;
               for (let i = 0; i < 4; i++) {
                 let checkId = (nextStartId + i) % 4;
-                if (!newPlayers[checkId].hasFolded) {
+                if (!startPlayers[checkId].hasFolded) {
                   firstActiveId = checkId;
                   break;
                 }
@@ -199,25 +214,32 @@
               return {
                 ...state,
                 globalPhase: 'ante',
-                players: newPlayers,
+                players: startPlayers,
                 deck: remainingDeck,
                 centerCards: centerCards.map(c => ({...c, isNew: false})),
                 activePlayerId: firstActiveId,
                 startingPlayerId: (nextStartId + 1) % 4,
+                pot: state.pot + startPot,
                 polePosition: null,
-                logs: addLog("New round started! Center cards drawn.")
+                currentAnteCost: anteCost,
+                logs: logsArray
               };
             }
 
             case 'SUBMIT_ANTE': {
-              const { playerId, willPlay } = action.payload;
+              let { playerId, willPlay } = action.payload;
               const player = state.players.find(p => p.id === playerId);
+              const cost = state.currentAnteCost || 1;
               
+              if (willPlay && player.tokens < cost) {
+                  willPlay = false; // Forced to fold if they don't have enough tokens for the ante
+              }
+
               let newPot = state.pot;
               let newTokens = player.tokens;
               if (willPlay) {
-                newPot += 1;
-                newTokens -= 1;
+                newPot += cost;
+                newTokens -= cost;
               }
 
               const newPlayers = state.players.map(p => 
@@ -255,15 +277,31 @@
             case 'SUBMIT_REVEAL': {
               const { playerId, cardIdx } = action.payload;
               const player = state.players.find(p => p.id === playerId);
+              const revealedCard = player.hand[cardIdx];
+              const isAce = revealedCard.rank === 'A';
               
-              const newPlayers = state.players.map(p => 
+              let currentPot = state.pot;
+              let currentPlayers = state.players.map(p => 
                 p.id === playerId ? { ...p, revealedCardIdx: cardIdx } : p
               );
+              let logsArray = state.logs;
+
+              // Apply the Ace Reveal Penalty
+              if (isAce) {
+                  currentPlayers = currentPlayers.map(p => {
+                      if (!p.hasFolded && p.tokens > 0) {
+                          currentPot += 1;
+                          return { ...p, tokens: p.tokens - 1 };
+                      }
+                      return p;
+                  });
+                  logsArray = [`${player.name} revealed an Ace! Active players pay 1 to pot.`, ...logsArray].slice(0, 5);
+              }
 
               let nextId = null;
               for (let i = 1; i <= 4; i++) {
                 let checkId = (playerId + i) % 4;
-                let p = newPlayers[checkId];
+                let p = currentPlayers[checkId];
                 if (p.isPlaying && p.revealedCardIdx === null) {
                   nextId = checkId;
                   break;
@@ -271,7 +309,7 @@
               }
 
               if (nextId === null) {
-                const playingPlayers = newPlayers.filter(p => p.isPlaying);
+                const playingPlayers = currentPlayers.filter(p => p.isPlaying);
                 playingPlayers.sort((a, b) => {
                   const cardA = a.hand[a.revealedCardIdx];
                   const cardB = b.hand[b.revealedCardIdx];
@@ -281,20 +319,21 @@
                 });
                 
                 const queue = playingPlayers.map(p => p.id);
-                const topPlayer = newPlayers.find(p => p.id === queue[0]);
+                const topPlayer = currentPlayers.find(p => p.id === queue[0]);
 
                 return { 
                   ...state, 
-                  players: newPlayers, 
+                  players: currentPlayers, 
+                  pot: currentPot,
                   globalPhase: 'play', 
                   turnQueue: queue, 
                   turnQueueIdx: 0,
                   subPhase: 'decide_play',
-                  logs: addLog(`Turn order decided. ${topPlayer.name} goes first.`)
+                  logs: [`Turn order decided. ${topPlayer.name} goes first.`, ...logsArray].slice(0, 5)
                 };
               }
 
-              return { ...state, players: newPlayers, activePlayerId: nextId };
+              return { ...state, players: currentPlayers, pot: currentPot, activePlayerId: nextId, logs: logsArray };
             }
 
             case 'SUBMIT_PLAY_DECISION': {
@@ -303,20 +342,26 @@
               const player = state.players.find(p => p.id === playerId);
               const isFirst = state.turnQueueIdx === 0;
 
-              if (decision === 'fold') {
-                const newPlayers = state.players.map(p => p.id === playerId ? { ...p, hasFolded: true } : p);
-                const nextIdx = state.turnQueueIdx + 1;
-                if (nextIdx >= state.turnQueue.length) {
-                  return { ...state, players: newPlayers, globalPhase: 'round_end', logs: addLog(`${player.name} folded.`) };
-                }
-                return { ...state, players: newPlayers, turnQueueIdx: nextIdx, subPhase: 'decide_play', logs: addLog(`${player.name} folded.`) };
-              }
-
               let newPot = state.pot;
               let newPlayers = [...state.players];
-              if (!isFirst) {
-                newPot += 1;
-                newPlayers = newPlayers.map(p => p.id === playerId ? { ...p, tokens: p.tokens - 1 } : p);
+              let finalDecision = decision;
+
+              if (decision === 'pay' && !isFirst) {
+                  if (player.tokens >= 1) {
+                      newPot += 1;
+                      newPlayers = newPlayers.map(p => p.id === playerId ? { ...p, tokens: p.tokens - 1 } : p);
+                  } else {
+                      finalDecision = 'fold'; // Forced fold if 0 tokens
+                  }
+              }
+
+              if (finalDecision === 'fold') {
+                newPlayers = newPlayers.map(p => p.id === playerId ? { ...p, hasFolded: true } : p);
+                const nextIdx = state.turnQueueIdx + 1;
+                if (nextIdx >= state.turnQueue.length) {
+                  return { ...state, players: newPlayers, pot: newPot, globalPhase: 'round_end', logs: addLog(`${player.name} folded.`) };
+                }
+                return { ...state, players: newPlayers, pot: newPot, turnQueueIdx: nextIdx, subPhase: 'decide_play', logs: addLog(`${player.name} folded.`) };
               }
 
               const nextSubPhase = state.centerCards.length === 3 ? 'choose_gap' : 'evaluate';
@@ -344,6 +389,7 @@
               const playerId = state.turnQueue[state.turnQueueIdx];
               const player = state.players.find(p => p.id === playerId);
               const hiddenCard = player.hand[player.revealedCardIdx === 0 ? 1 : 0];
+              const isAce = hiddenCard.rank === 'A';
               
               const L = state.centerCards[0];
               const R = state.centerCards[1];
@@ -351,7 +397,7 @@
               let playedVal = hiddenCard.val;
               let displayRank = null;
 
-              if (hiddenCard.rank === 'A') {
+              if (isAce) {
                 playedVal = Math.ceil((L.playVal + R.playVal) / 2);
                 displayRank = playedVal <= 10 ? playedVal.toString() : RANKS[playedVal - 2];
               }
@@ -364,12 +410,27 @@
               if (success) {
                 newCenter = [L, { ...hiddenCard, playVal: playedVal, displayRank, isNew: true }, R];
                 newPole = playerId;
-                msg = `${player.name} successfully split the gap${hiddenCard.rank === 'A' ? ` with an Ace acting as ${displayRank}` : ''}!`;
+                msg = `${player.name} successfully split the gap${isAce ? ` with an Ace acting as ${displayRank}` : ''}!`;
               } else {
                 msg = `${player.name} missed the gap.`;
               }
 
-              const newPlayers = state.players.map(p => {
+              let currentPot = state.pot;
+              let currentPlayers = state.players;
+
+              // Apply the Ace Play Penalty
+              if (isAce) {
+                  currentPlayers = currentPlayers.map(p => {
+                      if (!p.hasFolded && p.tokens > 0) {
+                          currentPot += 1;
+                          return { ...p, tokens: p.tokens - 1 };
+                      }
+                      return p;
+                  });
+                  msg += " (Ace Penalty: Active players pay 1!)";
+              }
+
+              const newPlayers = currentPlayers.map(p => {
                 if (p.id !== playerId) return p;
                 return { ...p, revealedCardIdx: 2 }; 
               });
@@ -380,12 +441,13 @@
               return {
                 ...state,
                 players: newPlayers,
+                pot: currentPot,
                 centerCards: newCenter,
                 polePosition: newPole,
                 turnQueueIdx: nextIdx,
                 subPhase: nextGlobalPhase === 'round_end' ? null : 'decide_play',
                 globalPhase: nextGlobalPhase,
-                logs: addLog(msg)
+                logs: [msg, ...state.logs].slice(0, 5)
               };
             }
 
@@ -471,12 +533,16 @@
                   
                   <p><strong className="text-red-600">FULL TABLE:</strong> If there are 3 cards in the middle, choose to aim for the Left gap or the Right gap before revealing.</p>
                   
-                  <p><strong className="text-gray-900">ACES:</strong> Aces automatically calculate to the best possible value to widen the gap.</p>
+                  <p><strong className="text-gray-900">ACES & THE ACE PENALTY:</strong> Aces calculate dynamically to widen the gap. <strong>Penalty:</strong> If Aces are dealt to the center initially, the Ante costs +1 token per Ace (e.g. 2 Aces = 3 tokens)! Whenever an Ace is revealed or played later, active players must immediately pay 1 token to the pot!</p>
                   
                   <p><strong className="text-red-600">WINNING:</strong> The last player to successfully split the gap wins the pot! Play continues until one player holds all the tokens.</p>
                 </div>
 
-                <div className="mt-4 text-center pt-2 border-t-[3px] border-gray-800">
+                <div className="w-full flex justify-center items-center mt-2 pointer-events-none animate-bounce">
+                  <span className="bg-gray-200/80 text-gray-600 text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm border border-gray-300">↓ Scroll for more ↓</span>
+                </div>
+
+                <div className="mt-2 text-center pt-2 border-t-[3px] border-gray-800">
                   <p className="text-xs sm:text-sm font-bold tracking-widest text-gray-500 uppercase flex items-center justify-center gap-2">
                     <span className="text-red-600">♥</span> SPLIT THE GAP <span className="text-gray-900">♠</span>
                   </p>
@@ -530,7 +596,7 @@
               timer = setTimeout(() => {
                 
                 if (state.globalPhase === 'ante') {
-                  dispatch({ type: 'SUBMIT_ANTE', payload: { playerId: player.id, willPlay: player.tokens > 0 } });
+                  dispatch({ type: 'SUBMIT_ANTE', payload: { playerId: player.id, willPlay: player.tokens >= (state.currentAnteCost || 1) } });
                 } 
                 
                 else if (state.globalPhase === 'reveal') {
@@ -823,6 +889,8 @@
           const decidingPlayer = state.players.find(p => p.id === deciderId);
           const showDecisionUI = isDecisionPhase && decidingPlayer?.isHuman && !decidingPlayer?.hasFolded;
           const isFreePlay = state.globalPhase === 'play' && state.turnQueueIdx === 0;
+          const costToPay = state.globalPhase === 'ante' ? (state.currentAnteCost || 1) : 1;
+          const canPay = isFreePlay || (decidingPlayer && decidingPlayer.tokens >= costToPay);
 
           return (
             <>
@@ -982,14 +1050,16 @@
                       {decidingPlayer.emoji} {decidingPlayer.name}'s Turn
                     </div>
                     <div className="flex gap-4 w-full justify-center">
-                       <div 
-                         onClick={() => handleHumanPay(decidingPlayer.id)}
-                         className="cursor-pointer group flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-yellow-500 hover:bg-yellow-400 border-4 border-yellow-200 shadow-[0_0_20px_rgba(234,179,8,0.5)] transition-transform hover:scale-110 active:scale-95 relative"
-                         title={isFreePlay ? "Play for Free!" : "Pay 1 Token"}
-                       >
-                         <Coins className="w-10 h-10 sm:w-12 sm:h-12 text-yellow-900 drop-shadow-sm" />
-                         {!isFreePlay && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-sm font-black rounded-full w-8 h-8 flex items-center justify-center border-2 border-gray-900 shadow-md">-1</span>}
-                       </div>
+                       {canPay && (
+                         <div 
+                           onClick={() => handleHumanPay(decidingPlayer.id)}
+                           className="cursor-pointer group flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-yellow-500 hover:bg-yellow-400 border-4 border-yellow-200 shadow-[0_0_20px_rgba(234,179,8,0.5)] transition-transform hover:scale-110 active:scale-95 relative"
+                           title={isFreePlay ? "Play for Free!" : `Pay ${costToPay} Token${costToPay > 1 ? 's' : ''}`}
+                         >
+                           <Coins className="w-10 h-10 sm:w-12 sm:h-12 text-yellow-900 drop-shadow-sm" />
+                           {!isFreePlay && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-sm font-black rounded-full w-8 h-8 flex items-center justify-center border-2 border-gray-900 shadow-md">-{costToPay}</span>}
+                         </div>
+                       )}
                        
                        <div 
                          onClick={() => handleHumanFold(decidingPlayer.id)}
