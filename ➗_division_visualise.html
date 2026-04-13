@@ -25,7 +25,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React;
 
         // --- Icon Components ---
         const CheckCircle = ({ className }) => (
@@ -52,69 +52,32 @@
         );
 
         // --- Main App Components ---
-        const InteractiveCanvas = ({ dots, groups, selectedIds, divisor, dividend, success, onDotClick, onUngroup, dotsStateRef }) => {
-          const [, setTick] = useState(0);
-
-          // Refs to grab the latest react state without restarting the animation loop
-          const latestGroups = useRef(groups);
-          const latestSelectedIds = useRef(selectedIds);
-
-          useEffect(() => {
-              latestGroups.current = groups;
-              latestSelectedIds.current = selectedIds;
-          }, [groups, selectedIds]);
-
-          // Animation Loop - Calculates the smooth movement of dots
-          useEffect(() => {
-            let req;
-            const loop = () => {
-              const now = Date.now();
-              const currentGroups = latestGroups.current;
+        const InteractiveCanvas = ({ dots, groups, selectedIds, divisor, dividend, success, onDotClick, onUngroup }) => {
+          
+          // Function to calculate exact coordinate for a dot dynamically
+          const getDotPos = (dotId) => {
+            const d = dots.find(dot => dot.id === dotId);
+            if (!d) return { x: 0, y: 0 };
+            
+            const groupIndex = groups.findIndex(g => g.dotIds.includes(dotId));
+            if (groupIndex !== -1) {
+              // DOT IS GROUPED: Move to its specific slot in the array
+              const group = groups[groupIndex];
+              const colIndex = group.dotIds.indexOf(dotId);
               
-              if (dotsStateRef.current.length > 0) {
-                dotsStateRef.current.forEach(d => {
-                  const groupIndex = currentGroups.findIndex(g => g.dotIds.includes(d.id));
-                  
-                  if (groupIndex !== -1) {
-                    // DOT IS GROUPED: Move to its specific slot in the array
-                    const group = currentGroups[groupIndex];
-                    const colIndex = group.dotIds.indexOf(d.id);
-                    
-                    // Grid layout math
-                    const dotSpacing = 65;
-                    const expectedTotalRows = Math.floor(dividend / divisor);
-                    const startX = 500 - ((divisor - 1) * dotSpacing) / 2;
-                    const startY = 300 - ((expectedTotalRows - 1) * dotSpacing) / 2;
-                    
-                    const targetX = startX + colIndex * dotSpacing;
-                    const targetY = startY + groupIndex * dotSpacing;
-                    
-                    // Smooth interpolation (lerp) towards target
-                    d.currX += (targetX - d.currX) * 0.15;
-                    d.currY += (targetY - d.currY) * 0.15;
-                  } else {
-                    // DOT IS UNGROUPED: Float around its base position strictly on edges
-                    const floatX = Math.sin(now * 0.001 * d.speed + d.phaseX) * 12;
-                    const floatY = Math.cos(now * 0.001 * d.speed + d.phaseY) * 12;
-                    
-                    const targetX = d.baseX + floatX;
-                    const targetY = d.baseY + floatY;
-                    
-                    // Fast lerp to catch up with the floating formula
-                    d.currX += (targetX - d.currX) * 0.2;
-                    d.currY += (targetY - d.currY) * 0.2;
-                  }
-                });
-              }
+              const dotSpacing = 65;
+              const expectedTotalRows = Math.floor(dividend / divisor);
+              const startX = 500 - ((divisor - 1) * dotSpacing) / 2;
+              const startY = 300 - ((expectedTotalRows - 1) * dotSpacing) / 2;
               
-              setTick(now); // Force re-render with new positions
-              req = requestAnimationFrame(loop);
-            };
-            req = requestAnimationFrame(loop);
-            return () => cancelAnimationFrame(req);
-          }, [dividend, divisor, dotsStateRef]);
-
-          const currentDots = dotsStateRef.current;
+              return {
+                x: startX + colIndex * dotSpacing,
+                y: startY + groupIndex * dotSpacing
+              };
+            }
+            // DOT IS UNGROUPED: Stay at its initial edge spawn point
+            return { x: d.baseX, y: d.baseY };
+          };
 
           return (
             <div className="w-full max-w-lg relative bg-gray-100 rounded-2xl h-[340px] border-2 border-gray-200 shadow-inner overflow-hidden mb-4">
@@ -129,17 +92,19 @@
               <svg viewBox="0 0 1000 600" className="w-full h-full">
                 {/* Draw Array Rows */}
                 {groups.map((g, index) => {
-                  const rowDots = g.dotIds.map(id => currentDots.find(dot => dot.id === id)).filter(Boolean);
-                  if (rowDots.length === 0) return null;
+                  const pts = g.dotIds.map(id => {
+                    const pos = getDotPos(id);
+                    return `${pos.x},${pos.y}`;
+                  }).join(' ');
                   
-                  const pts = rowDots.map(d => `${d.currX},${d.currY}`).join(' ');
-                  const lastDot = rowDots[rowDots.length - 1];
-                  const textX = lastDot ? lastDot.currX + 55 : 0;
-                  const textY = lastDot ? lastDot.currY : 0;
+                  const lastDotId = g.dotIds[g.dotIds.length - 1];
+                  const lastPos = lastDotId ? getDotPos(lastDotId) : { x: 0, y: 0 };
+                  const textX = lastPos.x + 55;
+                  const textY = lastPos.y;
                   
                   return (
                     <g key={g.id}>
-                      <polyline points={pts} fill="none" stroke="rgba(249, 115, 22, 0.25)" strokeWidth="50" strokeLinecap="round" strokeLinejoin="round" onClick={() => !success && onUngroup(g.id)} className="cursor-pointer hover:stroke-[rgba(249,115,22,0.4)] transition-all" />
+                      <polyline points={pts} fill="none" stroke="rgba(249, 115, 22, 0.25)" strokeWidth="50" strokeLinecap="round" strokeLinejoin="round" onClick={() => !success && onUngroup(g.id)} className="cursor-pointer hover:stroke-[rgba(249,115,22,0.4)] transition-all duration-300" />
                       <polyline points={pts} fill="none" stroke="#ea580c" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none" />
                       <text x={textX} y={textY} textAnchor="start" dominantBaseline="central" className="font-black text-4xl pointer-events-none select-none" fill="#9a3412" stroke="white" strokeWidth="4" paintOrder="stroke">
                         {(index + 1) * divisor}
@@ -152,23 +117,27 @@
                 {selectedIds.length > 1 && (
                   <polyline 
                     points={selectedIds.map(id => {
-                      const d = currentDots.find(dot => dot.id === id);
-                      return d ? `${d.currX},${d.currY}` : "";
+                      const pos = getDotPos(id);
+                      return `${pos.x},${pos.y}`;
                     }).join(' ')} 
                     fill="none" stroke="#a855f7" strokeWidth="6" strokeDasharray="12 12" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none opacity-60"
                   />
                 )}
 
                 {/* Draw All Dots */}
-                {currentDots.map(d => {
+                {dots.map(d => {
                   const isGrouped = groups.some(g => g.dotIds.includes(d.id));
                   const isSelected = selectedIds.includes(d.id);
+                  const pos = getDotPos(d.id);
                   
                   return (
                     <g 
                       key={d.id} 
-                      transform={`translate(${d.currX}, ${d.currY})`}
-                      className={`transition-all duration-200 ${success ? '' : 'cursor-pointer hover:opacity-80'}`} 
+                      style={{ 
+                        transform: `translate(${pos.x}px, ${pos.y}px)`, 
+                        transition: 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)' 
+                      }}
+                      className={success ? '' : 'cursor-pointer hover:opacity-80'} 
                       onClick={() => {
                         if (success) return;
                         if (isGrouped) {
@@ -180,7 +149,7 @@
                       }}
                     >
                       <circle cx="0" cy="0" r={isSelected ? 32 : 28} fill={isGrouped ? "#f97316" : isSelected ? "#a855f7" : "#3b82f6"} stroke={isGrouped ? "#c2410c" : isSelected ? "#7e22ce" : "#1d4ed8"} strokeWidth="4" className="transition-colors duration-200" />
-                      <text x="0" y="4" textAnchor="middle" dominantBaseline="central" fontSize={isSelected ? "58px" : "50px"} className="pointer-events-none select-none">
+                      <text x="0" y="4" textAnchor="middle" dominantBaseline="central" fontSize={isSelected ? "58px" : "50px"} className="pointer-events-none select-none transition-all duration-200">
                         {d.emoji}
                       </text>
                     </g>
@@ -205,7 +174,6 @@
           const [success, setSuccess] = useState(false);
           const [error, setError] = useState(false);
 
-          const dotsStateRef = useRef([]);
           const EMOJIS = ['😀', '🤪', '😨', '😡', '😎', '😍', '🤩', '😭', '🤯', '🥶', '🤠', '🥳', '👽', '👻', '🤖', '🥺', '🥱', '🤬', '🥰', '😵‍💫'];
 
           const generateProblem = (useRemainders) => {
@@ -226,46 +194,50 @@
             setGroups([]);
             setSelectedIds([]);
 
-            const newDots = Array.from({ length: dvd }, (_, i) => {
-              // Ensure dots strictly spawn on the outer edges so they never hide behind the array
-              const side = Math.floor(Math.random() * 4);
+            const newDots = [];
+            for (let i = 0; i < dvd; i++) {
               let baseX, baseY;
-              
-              if (side === 0) { // Top Edge
-                baseX = 200 + Math.random() * 600;
-                baseY = 40 + Math.random() * 50;
-              } else if (side === 1) { // Bottom Edge
-                baseX = 200 + Math.random() * 600;
-                baseY = 510 + Math.random() * 50;
-              } else if (side === 2) { // Left Edge
-                baseX = 50 + Math.random() * 130;
-                baseY = 50 + Math.random() * 500;
-              } else { // Right Edge
-                baseX = 820 + Math.random() * 130;
-                baseY = 50 + Math.random() * 500;
+              let isOverlapping = true;
+              let attempts = 0;
+
+              // Keep trying to find a spot until it doesn't overlap with any existing dot
+              while (isOverlapping && attempts < 200) {
+                // Ensure dots strictly spawn on the outer edges so they never hide behind the array
+                const side = Math.floor(Math.random() * 4);
+                
+                if (side === 0) { // Top Edge
+                  baseX = 200 + Math.random() * 600;
+                  baseY = 40 + Math.random() * 50;
+                } else if (side === 1) { // Bottom Edge
+                  baseX = 200 + Math.random() * 600;
+                  baseY = 510 + Math.random() * 50;
+                } else if (side === 2) { // Left Edge
+                  baseX = 50 + Math.random() * 130;
+                  baseY = 50 + Math.random() * 500;
+                } else { // Right Edge
+                  baseX = 820 + Math.random() * 130;
+                  baseY = 50 + Math.random() * 500;
+                }
+
+                // Check distance against all previously placed dots
+                isOverlapping = newDots.some(d => {
+                  const dx = d.baseX - baseX;
+                  const dy = d.baseY - baseY;
+                  return Math.sqrt(dx * dx + dy * dy) < 70; // 70px minimum distance guarantees no overlap
+                });
+
+                attempts++;
               }
               
-              return {
+              newDots.push({
                 id: `dot-${Date.now()}-${i}`, 
                 baseX, 
                 baseY, 
-                currX: baseX, 
-                currY: baseY,
-                phaseX: Math.random() * Math.PI * 2, 
-                phaseY: Math.random() * Math.PI * 2, 
-                speed: 1 + Math.random(),
-                emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
-                pulsePhase: Math.random() * Math.PI * 2,
-                pulseSpeed: 0.8 + Math.random() * 0.4,
-                rotPhase: Math.random() * Math.PI * 2,
-                rotSpeed: 0.8 + Math.random() * 0.4,
-                currScale: 1,
-                currRot: 0
-              };
-            });
+                emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)]
+              });
+            }
             
             setDots(newDots);
-            dotsStateRef.current = newDots;
           };
 
           useEffect(() => { 
@@ -289,15 +261,15 @@
           useEffect(() => {
             if (selectedIds.length === divisor) {
               const sortedIds = [...selectedIds].sort((a, b) => {
-                const dotA = dotsStateRef.current.find(d => d.id === a);
-                const dotB = dotsStateRef.current.find(d => d.id === b);
-                return (dotA?.currX || 0) - (dotB?.currX || 0);
+                const dotA = dots.find(d => d.id === a);
+                const dotB = dots.find(d => d.id === b);
+                return (dotA?.baseX || 0) - (dotB?.baseX || 0);
               });
               
               setGroups(prev => [...prev, { id: Date.now(), dotIds: sortedIds }]);
               setSelectedIds([]);
             }
-          }, [selectedIds, divisor]);
+          }, [selectedIds, divisor, dots]);
 
           const checkAnswer = () => {
             const q = Math.floor(dividend / divisor);
@@ -357,7 +329,7 @@
                     )}
                   </div>
 
-                  <InteractiveCanvas dots={dots} groups={groups} selectedIds={selectedIds} divisor={divisor} dividend={dividend} success={success} onDotClick={handleDotClick} onUngroup={(id) => setGroups(groups.filter(g => g.id !== id))} dotsStateRef={dotsStateRef} />
+                  <InteractiveCanvas dots={dots} groups={groups} selectedIds={selectedIds} divisor={divisor} dividend={dividend} success={success} onDotClick={handleDotClick} onUngroup={(id) => setGroups(groups.filter(g => g.id !== id))} />
 
                   <div className="w-full flex flex-col items-center min-h-[80px] justify-center">
                     {!success ? (
