@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassCard Battle Arena</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'tumble': 'tumble 0.4s infinite linear',
+                        'shake': 'shake 0.4s cubic-bezier(.36,.07,.19,.97) both',
+                        'shine': 'shine 3s infinite linear',
+                        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        tumble: {
+                            '0%': { transform: 'rotateX(0deg) rotateY(0deg) rotateZ(0deg)' },
+                            '100%': { transform: 'rotateX(360deg) rotateY(720deg) rotateZ(360deg)' },
+                        },
+                        shake: {
+                            '0%, 100%': { transform: 'translateX(0)' },
+                            '25%': { transform: 'translateX(-10px) rotate(-2deg)' },
+                            '50%': { transform: 'translateX(10px) rotate(2deg)' },
+                            '75%': { transform: 'translateX(-10px) rotate(-2deg)' },
+                        },
+                        shine: {
+                            '0%': { transform: 'translateX(-150%) rotate(45deg)' },
+                            '100%': { transform: 'translateX(150%) rotate(45deg)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom animated sparkle effect for the .holo layer */
+        .arena-holo {
+            opacity: 0.55 !important;
+            mix-blend-mode: color-dodge !important;
+            animation: holoDrift 15s linear infinite !important;
+            pointer-events: none;
+        }
+
+        @keyframes holoDrift {
+            0% { background-position: 0% 0%; filter: brightness(0.9); }
+            50% { filter: brightness(1.3); }
+            100% { background-position: 100% 100%; filter: brightness(0.9); }
+        }
+
+        .clip-hexagon { clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+    </style>
+    <!-- Placeholder for custom styles extracted from uploaded files -->
+    <style id="shared-styles"></style>
+</head>
+<body class="h-screen w-screen bg-slate-950 text-slate-100 font-sans p-2 md:p-3 flex flex-col items-center overflow-hidden relative">
+
+    <!-- ICONS (Inline SVGs for self-containment) -->
+    <svg style="display:none;">
+        <symbol id="icon-swords" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" x2="9" y1="14" y2="18"/><line x1="7" x2="4" y1="17" y2="20"/><line x1="3" x2="5" y1="19" y2="21"/></symbol>
+        <symbol id="icon-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></symbol>
+        <symbol id="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></symbol>
+        <symbol id="icon-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+        <symbol id="icon-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+        <symbol id="icon-dice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M9 9h.01"/><path d="M15 9h.01"/><path d="M9 15h.01"/><path d="M15 15h.01"/></symbol>
+        <symbol id="icon-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+        <symbol id="icon-timer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></symbol>
+        <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+    </svg>
+
+    <!-- UI ALERTS -->
+    <div id="error-msg" class="hidden bg-red-900 border-l-4 border-red-500 p-2 mb-2 mt-2 rounded flex items-center max-w-2xl w-full text-sm shrink-0 z-10">
+        <span class="text-red-100" id="error-text"></span>
+    </div>
+
+    <!-- SCREEN: UPLOAD -->
+    <div id="screen-upload" class="w-full flex flex-col items-center">
+        <div class="text-center mb-2 shrink-0">
+            <h1 class="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 flex items-center justify-center">
+                <svg class="mr-3 text-yellow-400 w-6 h-6"><use href="#icon-swords"></use></svg>
+                ClassCard Arena
+                <svg class="ml-3 text-red-500 w-6 h-6"><use href="#icon-swords"></use></svg>
+            </h1>
+        </div>
+
+        <div class="w-full max-w-4xl bg-slate-900 rounded-2xl shadow-2xl p-5 border border-slate-800 mt-2 z-10">
+            <div class="grid md:grid-cols-2 gap-5">
+                <!-- Player 1 -->
+                <div id="p1-upload-area" class="border-2 border-dashed rounded-xl p-5 text-center transition-colors border-slate-600 hover:border-blue-400 bg-slate-800">
+                    <!-- Dynamic Content -->
+                </div>
+
+                <!-- Player 2 -->
+                <div id="p2-upload-area" class="border-2 border-dashed rounded-xl p-5 text-center transition-colors border-slate-600 hover:border-red-400 bg-slate-800">
+                    <!-- Dynamic Content -->
+                </div>
+            </div>
+
+            <div class="mt-5 flex flex-col sm:flex-row justify-center gap-3">
+                <button onclick="loadDemo()" class="px-5 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg font-bold transition-colors text-xs md:text-sm">
+                    Load Demo Decks
+                </button>
+                <button id="btn-start-game" onclick="startGame()" disabled class="px-6 py-2 rounded-lg font-bold transition-all text-xs md:text-sm bg-slate-800 text-slate-500 cursor-not-allowed">
+                    ENTER THE ARENA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCREEN: BATTLE -->
+    <div id="screen-battle" class="hidden flex-1 w-full max-w-5xl flex flex-col items-center min-h-0 pb-1 z-10 pt-2">
+        <div class="bg-slate-900 border border-slate-700 rounded-full w-10 h-10 mb-2 shadow-[0_0_15px_rgba(250,204,21,0.3)] flex items-center justify-center z-20 shrink-0 text-sm text-yellow-500 animate-pulse font-black">
+            VS
+        </div>
+
+        <div class="flex-1 w-full flex justify-between items-center relative min-h-0">
+            <!-- Vertical Title -->
+            <div class="absolute left-0 md:left-2 lg:-left-4 top-1/2 transform -translate-y-1/2 hidden sm:flex items-center justify-center pointer-events-none z-0 opacity-20 md:opacity-40">
+                <h1 class="transform -rotate-90 whitespace-nowrap text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 tracking-widest flex items-center drop-shadow-md">
+                    <svg class="mr-4 text-yellow-400 rotate-90 w-6 h-6"><use href="#icon-swords"></use></svg>
+                    CLASSCARD ARENA
+                    <svg class="ml-4 text-red-500 rotate-90 w-6 h-6"><use href="#icon-swords"></use></svg>
+                </h1>
+            </div>
+
+            <!-- Player 1 Card -->
+            <div id="p1-battle-area" class="w-1/2 flex justify-center h-full items-center z-10"></div>
+            
+            <!-- Center Overlay (Dice / Math / Result) -->
+            <div id="center-overlay"></div>
+            
+            <!-- Idle Center Icon -->
+            <div id="idle-center-icon" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-0 hidden md:block">
+                <svg id="zap-icon" class="w-12 h-12 rotate-[-20deg] text-blue-500 opacity-20 transition-all"><use href="#icon-zap"></use></svg>
+            </div>
+
+            <!-- Player 2 Card -->
+            <div id="p2-battle-area" class="w-1/2 flex justify-center h-full items-center z-10"></div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="w-full bg-slate-900 rounded-2xl border border-slate-700 flex flex-col md:flex-row overflow-hidden shadow-2xl z-10 shrink-0 h-36 md:h-32 mt-2">
+            <!-- Actions -->
+            <div class="w-full md:w-1/2 p-2 md:p-3 bg-slate-800 border-b md:border-b-0 md:border-r border-slate-700 flex flex-col h-1/2 md:h-full">
+                <div class="flex justify-between items-center mb-1.5">
+                    <h3 id="turn-indicator" class="text-xs md:text-sm font-bold text-white">Player's Turn</h3>
+                    <button id="btn-roll" onclick="handleRollAttack()" class="py-1 px-3 rounded-md font-black text-xs flex items-center transition-all bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg active:scale-95">
+                        <svg class="mr-1 w-3.5 h-3.5"><use href="#icon-dice"></use></svg> ROLL
+                    </button>
+                </div>
+                <div id="moves-container" class="grid grid-cols-2 gap-2 flex-grow min-h-0">
+                    <!-- Moves injected here -->
+                </div>
+            </div>
+
+            <!-- Action Log -->
+            <div class="w-full md:w-1/2 p-2 bg-black flex flex-col h-1/2 md:h-full">
+                <h3 class="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 border-b border-slate-800 pb-1 flex items-center shrink-0">
+                    <svg class="mr-1 w-3 h-3"><use href="#icon-target"></use></svg> Action Log
+                </h3>
+                <div id="combat-log" class="flex-grow overflow-y-auto font-mono text-[10px] md:text-xs space-y-0.5 pr-1 mt-0.5">
+                    <!-- Logs injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCREEN: GAME OVER -->
+    <div id="screen-gameover" class="hidden w-full max-w-lg bg-slate-900 rounded-2xl shadow-2xl p-6 border-2 border-yellow-500 text-center relative overflow-hidden mt-6 z-10">
+        <div class="absolute inset-0 pointer-events-none flex justify-around opacity-30" id="confetti-container"></div>
+        <svg class="mx-auto text-yellow-400 mb-3 w-10 h-10"><use href="#icon-swords"></use></svg>
+        <h2 class="text-3xl font-black text-white mb-2">VICTORY!</h2>
+        <p id="winner-text" class="text-lg text-yellow-400 font-bold mb-5">Champion!</p>
+        <button onclick="resetGame()" class="flex items-center justify-center mx-auto bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-5 rounded-xl transition-all hover:scale-105 text-sm">
+            <svg class="mr-2 w-4 h-4"><use href="#icon-refresh"></use></svg> Play Again
+        </button>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- DATA & STATE ---
+        let gameState = 'UPLOAD'; 
+        let p1 = null;
+        let p2 = null;
+        let turn = 1;
+        let combatLog = [];
+        let winner = null;
+        let animatingCard = null; // 'p1' or 'p2'
+
+        let attackPhase = 'IDLE'; 
+        let diceRoll = 6;
+        let diceText = '';
+        let selectedMoveIndex = null;
+
+        let mathQuestions = [];
+        let currentQuestionIndex = 0;
+        let mathCorrectCount = 0;
+        let timeLeft = 20;
+        let timerInterval = null;
+        let rollInterval = null;
+
+        // --- HELPER FUNCTIONS ---
+        const extractTextWithNewlines = (htmlString) => {
+            return htmlString
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<\/(div|p|h[1-6]|li|tr)>/gi, '\n')
+                .replace(/<[^>]+>/g, '') 
+                .replace(/\n+/g, '\n') 
+                .trim();
+        };
+
+        const shuffleArray = (array) => {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        };
+
+        const showError = (msg) => {
+            const el = document.getElementById('error-msg');
+            if(msg) {
+                document.getElementById('error-text').innerText = msg;
+                el.classList.remove('hidden');
+            } else {
+                el.classList.add('hidden');
+            }
+        };
+
+        const addLog = (msg, customClass = "text-slate-300") => {
+            combatLog.unshift({ id: Date.now() + Math.random(), text: msg, className: customClass });
+            renderLog();
+        };
+
+        // --- PARSER ---
+        const parseDeckFile = async (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const html = e.target.result;
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        
+                        let playerName = 'Player';
+                        const titleText = doc.querySelector('title')?.textContent;
+                        const stitleText = doc.querySelector('.stitle')?.textContent;
+                        
+                        if (stitleText) playerName = stitleText.replace("'s ClassCard Collection", "").trim();
+                        else if (titleText) playerName = titleText.replace("'s ClassCard Collection", "").trim();
+
+                        doc.querySelectorAll('.sheen, .glare').forEach(el => el.remove());
+                        doc.querySelectorAll('.holo').forEach(el => el.classList.add('arena-holo'));
+
+                        let styles = '';
+                        doc.querySelectorAll('style').forEach(tag => {
+                            let css = tag.innerHTML;
+                            css = css.replace(/body\s*{[^}]*}/gi, '');
+                            css = css.replace(/html\s*{[^}]*}/gi, '');
+                            css = css.replace(/\*,\s*\*::before,\s*\*::after\s*{[^}]*}/gi, '');
+                            css = css.replace(/\*\s*{[^}]*}/gi, '');
+                            styles += css + '\n';
+                        });
+
+                        const cardElements = Array.from(doc.querySelectorAll('.card'));
+                        if (cardElements.length === 0) throw new Error("No cards found in this file.");
+
+                        const deck = cardElements.map((card, index) => {
+                            const cnameEl = card.querySelector('.cname');
+                            let name = cnameEl ? cnameEl.textContent.trim() : `Card ${index + 1}`;
+                            
+                            const rawText = extractTextWithNewlines(card.innerHTML);
+                            const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+                            
+                            let hp = 100; 
+                            const hpMatch = rawText.match(/HP\s*(\d+)/i);
+                            if (hpMatch) hp = parseInt(hpMatch[1], 10);
+
+                            const moves = [];
+                            for (let i = lines.length - 1; i >= 0 && moves.length < 2; i--) {
+                                const line = lines[i];
+                                if (line.toLowerCase().includes('hp')) continue;
+                                const sameLineMatch = line.match(/^(.+?)\s+(\d{1,4})$/);
+                                if (sameLineMatch && sameLineMatch[1].trim().length > 0 && sameLineMatch[1].trim().length < 60) {
+                                    moves.unshift({ name: sameLineMatch[1].trim(), damage: parseInt(sameLineMatch[2], 10) });
+                                } else if (/^\d{1,4}$/.test(line) && i > 0) {
+                                    const prevLine = lines[i - 1];
+                                    if (prevLine.length < 60) { 
+                                        moves.unshift({ name: prevLine.trim(), damage: parseInt(line, 10) });
+                                        i--; 
+                                    }
+                                }
+                            }
+
+                            if (moves.length === 0) {
+                                moves.push({ name: 'Quick Strike', damage: 30 }, { name: 'Special Attack', damage: 60 });
+                            } else if (moves.length === 1) {
+                                moves.push({ name: 'Basic Attack', damage: 20 });
+                            }
+
+                            card.removeAttribute('onmousemove');
+                            card.removeAttribute('onmouseleave');
+                            card.style.margin = '0 auto';
+                            card.style.pointerEvents = 'none';
+
+                            return {
+                                id: `card-${Math.random().toString(36).substr(2, 9)}`,
+                                name, maxHp: hp, currentHp: hp, moves, cardHTML: card.outerHTML 
+                            };
+                        });
+
+                        resolve({ name: playerName, deck, styles });
+                    } catch (err) { reject(err.message); }
+                };
+                reader.onerror = () => reject("Failed to read file.");
+                reader.readAsText(file);
+            });
+        };
+
+        // --- DEMO DATA ---
+        const getDemoDeck1 = () => ({
+            name: "Bella Clark",
+            deck: [
+                { id: 'd1c1', name: "Bella Dust Sprite", maxHp: 150, currentHp: 150, moves: [{ name: "Sparkle Sprinkle", damage: 40 }, { name: "Epic Tale Weave", damage: 80 }] },
+                { id: 'd1c2', name: "Blazing Flamingo", maxHp: 120, currentHp: 120, moves: [{ name: "Fiery Kick", damage: 50 }, { name: "Determination Dive", damage: 90 }] },
+                { id: 'd1c3', name: "Crystal Golem", maxHp: 200, currentHp: 200, moves: [{ name: "Gem Crush", damage: 60 }, { name: "Diamond Shield", damage: 40 }] },
+                { id: 'd1c4', name: "Wind Dancer", maxHp: 110, currentHp: 110, moves: [{ name: "Breeze Strike", damage: 45 }, { name: "Tornado Spin", damage: 85 }] }
+            ]
+        });
+
+        const getDemoDeck2 = () => ({
+            name: "Benji Clark",
+            deck: [
+                { id: 'd2c1', name: "Shadow Wolf", maxHp: 140, currentHp: 140, moves: [{ name: "Sneaky Bite", damage: 45 }, { name: "Howl of Power", damage: 75 }] },
+                { id: 'd2c2', name: "Aqua Turtle", maxHp: 180, currentHp: 180, moves: [{ name: "Water Cannon", damage: 35 }, { name: "Shell Smash", damage: 60 }] },
+                { id: 'd2c3', name: "Earth Bear", maxHp: 220, currentHp: 220, moves: [{ name: "Ground Smash", damage: 55 }, { name: "Roar", damage: 30 }] },
+                { id: 'd2c4', name: "Fire Fox", maxHp: 130, currentHp: 130, moves: [{ name: "Ember", damage: 40 }, { name: "Flame Dash", damage: 70 }] }
+            ]
+        });
+
+        // --- RENDER FUNCTIONS ---
+        const updateUI = () => {
+            document.getElementById('screen-upload').classList.toggle('hidden', gameState !== 'UPLOAD');
+            document.getElementById('screen-battle').classList.toggle('hidden', gameState !== 'BATTLE');
+            document.getElementById('screen-gameover').classList.toggle('hidden', gameState !== 'GAMEOVER');
+
+            if (gameState === 'UPLOAD') renderUploadUI();
+            if (gameState === 'BATTLE') renderBattleUI();
+            if (gameState === 'GAMEOVER') renderGameoverUI();
+        };
+
+        const renderUploadUI = () => {
+            const renderPlayerArea = (player, num) => {
+                if(player) {
+                    return `
+                        <div class="space-y-3">
+                            <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mx-auto text-white">
+                                <svg class="w-5 h-5"><use href="#icon-shield"></use></svg>
+                            </div>
+                            <h3 class="text-base font-bold text-green-400">${player.name} Ready!</h3>
+                            <p class="text-slate-300 text-sm">${player.fullDeck.length} total cards loaded.</p>
+                            <button onclick="removePlayer(${num})" class="text-xs text-slate-400 hover:text-white underline">Remove</button>
+                        </div>`;
+                } else {
+                    return `
+                        <div class="space-y-3">
+                            <svg class="mx-auto text-slate-400 w-8 h-8"><use href="#icon-upload"></use></svg>
+                            <h3 class="text-base font-bold">Player ${num}</h3>
+                            <label class="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-5 rounded cursor-pointer transition-colors text-sm">
+                                Choose File
+                                <input type="file" accept=".html" class="hidden" onchange="handleFileUpload(${num}, event)" />
+                            </label>
+                        </div>`;
+                }
+            };
+
+            document.getElementById('p1-upload-area').innerHTML = renderPlayerArea(p1, 1);
+            document.getElementById('p1-upload-area').className = p1 ? 'border-2 border-dashed rounded-xl p-5 text-center transition-colors border-green-500 bg-green-500 bg-opacity-10' : 'border-2 border-dashed rounded-xl p-5 text-center transition-colors border-slate-600 hover:border-blue-400 bg-slate-800';
+            
+            document.getElementById('p2-upload-area').innerHTML = renderPlayerArea(p2, 2);
+            document.getElementById('p2-upload-area').className = p2 ? 'border-2 border-dashed rounded-xl p-5 text-center transition-colors border-green-500 bg-green-500 bg-opacity-10' : 'border-2 border-dashed rounded-xl p-5 text-center transition-colors border-slate-600 hover:border-red-400 bg-slate-800';
+
+            const btn = document.getElementById('btn-start-game');
+            if(p1 && p2) {
+                btn.disabled = false;
+                btn.className = "px-6 py-2 rounded-lg font-bold transition-all text-xs md:text-sm bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-400 hover:to-orange-500 text-white shadow-lg transform hover:scale-105";
+            } else {
+                btn.disabled = true;
+                btn.className = "px-6 py-2 rounded-lg font-bold transition-all text-xs md:text-sm bg-slate-800 text-slate-500 cursor-not-allowed";
+            }
+        };
+
+        const renderActiveCardHtml = (playerState, isP1) => {
+            const activeCard = playerState.deck[playerState.activeIndex];
+            const isTurn = (isP1 && turn === 1) || (!isP1 && turn === 2);
+            const isAnim = animatingCard === (isP1 ? 'p1' : 'p2');
+            const percent = Math.max(0, Math.min(100, (activeCard.currentHp / activeCard.maxHp) * 100));
+            const colorClass = percent < 20 ? 'bg-red-500' : percent < 50 ? 'bg-yellow-400' : 'bg-green-500';
+            
+            let indicators = playerState.deck.map(c => `<div class="w-2 h-2 rounded-full shadow-md ${c.currentHp > 0 ? 'bg-blue-400' : 'bg-gray-600'}" title="${c.name}"></div>`).join('');
+            
+            let cardVisual = activeCard.cardHTML ? `
+                <div class="w-full flex justify-center items-start mt-2 scale-[0.55] sm:scale-[0.7] md:scale-[0.8] origin-top h-[220px] sm:h-[280px] md:h-[330px]">
+                    ${activeCard.cardHTML}
+                </div>` : `
+                <div class="w-36 h-48 bg-gradient-to-br from-indigo-900 to-purple-900 rounded-xl p-3 flex flex-col justify-between shadow-lg border border-indigo-500 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-transparent via-white to-transparent opacity-10 rotate-45 transform translate-x-[-50%] animate-shine"></div>
+                    <div class="z-10"><h3 class="text-sm font-bold text-white leading-tight">${activeCard.name}</h3></div>
+                    <div class="z-10 flex-grow flex items-center justify-center text-4xl drop-shadow-lg">👾</div>
+                </div>`;
+
+            return `
+                <div class="relative flex flex-col items-center p-2 sm:p-3 bg-slate-800 rounded-2xl border-4 ${isTurn ? 'border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.5)]' : 'border-slate-600'} transition-all duration-300 ${isAnim ? 'animate-shake' : ''} w-full max-w-[280px] md:max-w-[320px]">
+                    <div class="absolute top-1.5 right-1.5 flex space-x-1 z-20">${indicators}</div>
+                    <h2 class="text-xs md:text-sm font-bold text-gray-300 mb-1 z-20">${playerState.name}'s</h2>
+                    <div class="w-full z-20 bg-slate-900 p-1.5 rounded-lg border border-slate-700 mb-3">
+                        <div class="flex items-center justify-between text-red-400 font-bold text-[10px] md:text-xs mb-0.5">
+                            <span class="flex items-center"><svg class="w-2.5 h-2.5 mr-1"><use href="#icon-heart"></use></svg> HP</span>
+                            <span>${activeCard.currentHp} / ${activeCard.maxHp}</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2.5 mt-1 border border-gray-600 overflow-hidden">
+                            <div class="${colorClass} h-2.5 rounded-full transition-all duration-500 ease-out" style="width: ${percent}%"></div>
+                        </div>
+                    </div>
+                    ${cardVisual}
+                </div>`;
+        };
+
+        const renderBattleUI = () => {
+            document.getElementById('p1-battle-area').innerHTML = renderActiveCardHtml(p1, true);
+            document.getElementById('p2-battle-area').innerHTML = renderActiveCardHtml(p2, false);
+
+            const activePlayer = turn === 1 ? p1 : p2;
+            document.getElementById('turn-indicator').innerText = `${activePlayer.name}'s Turn`;
+
+            const btnRoll = document.getElementById('btn-roll');
+            if(attackPhase === 'IDLE') {
+                btnRoll.disabled = false;
+                btnRoll.className = "py-1 px-3 rounded-md font-black text-xs flex items-center transition-all bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg active:scale-95";
+            } else {
+                btnRoll.disabled = true;
+                btnRoll.className = "py-1 px-3 rounded-md font-black text-xs flex items-center transition-all bg-slate-700 text-slate-500 cursor-not-allowed";
+            }
+
+            const zapIcon = document.getElementById('zap-icon');
+            zapIcon.className = `w-12 h-12 transition-all opacity-20 ${turn === 1 ? 'rotate-[-20deg] text-blue-500' : 'rotate-[20deg] text-red-500'}`;
+            document.getElementById('idle-center-icon').classList.toggle('hidden', attackPhase !== 'IDLE');
+
+            // Render Moves
+            let movesHtml = '';
+            const activeCard = activePlayer.deck[activePlayer.activeIndex];
+            activeCard.moves.forEach((move, i) => {
+                const isSelected = selectedMoveIndex === i;
+                const isDimmed = selectedMoveIndex !== null && !isSelected;
+                const wrapperClass = isSelected ? 'bg-indigo-900 border-indigo-400 shadow-[0_0_10px_rgba(129,140,248,0.5)]' : isDimmed ? 'bg-slate-800 border-slate-700 opacity-40' : 'bg-slate-700 border-slate-600';
+                const shine = isSelected ? `<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 animate-shine"></div>` : '';
+                movesHtml += `
+                    <div class="border rounded-lg p-1.5 text-left transition-all relative overflow-hidden flex flex-col justify-center ${wrapperClass}">
+                        ${shine}
+                        <div class="text-[9px] font-bold text-slate-400 leading-none mb-0.5">${i === 0 ? 'Evens' : 'Odds'}</div>
+                        <div class="font-bold text-[11px] md:text-xs text-white truncate">${move.name}</div>
+                        <div class="text-yellow-400 font-black text-[10px] flex items-center mt-auto pt-1">
+                            <svg class="w-2.5 h-2.5 mr-1"><use href="#icon-zap"></use></svg> ${move.damage} DMG
+                        </div>
+                    </div>`;
+            });
+            document.getElementById('moves-container').innerHTML = movesHtml;
+
+            renderCenterOverlay();
+        };
+
+        const renderCenterOverlay = () => {
+            const overlay = document.getElementById('center-overlay');
+            if (attackPhase === 'IDLE') {
+                overlay.innerHTML = '';
+                return;
+            }
+
+            if (attackPhase === 'ROLLING_MOVE' || attackPhase === 'MOVE_SELECTED') {
+                const isRolling = attackPhase === 'ROLLING_MOVE';
+                overlay.innerHTML = `
+                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-40 pointer-events-none flex flex-col items-center justify-center perspective-1000">
+                        <div class="bg-slate-900 bg-opacity-95 border-4 border-slate-700 rounded-2xl p-5 shadow-[0_0_60px_rgba(0,0,0,0.9)] flex flex-col items-center text-center min-w-[180px]">
+                            <div class="transform-style-3d mb-3">
+                                <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-800 border-4 rounded-xl transition-all duration-200 ${isRolling ? 'border-indigo-400 animate-tumble blur-[1px]' : 'border-yellow-400 shadow-[0_0_40px_rgba(250,204,21,0.6)] scale-110'}">
+                                    <span class="text-4xl font-black text-white drop-shadow-lg ${isRolling ? 'opacity-50' : 'opacity-100'}">${diceRoll}</span>
+                                </div>
+                            </div>
+                            <span class="text-sm font-black tracking-widest uppercase ${isRolling ? 'text-slate-300 animate-pulse' : 'text-white'}">${diceText}</span>
+                            <span class="text-[9px] text-slate-400 mt-1 tracking-widest uppercase font-bold">Move Selection Roll</span>
+                        </div>
+                    </div>`;
+                return;
+            }
+
+            if (attackPhase === 'MATH_CHALLENGE') {
+                const q = mathQuestions[currentQuestionIndex];
+                const timeColor = timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-yellow-400';
+                overlay.innerHTML = `
+                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-40 flex flex-col items-center justify-center">
+                        <div class="bg-slate-900 bg-opacity-95 border-4 border-indigo-500 rounded-2xl p-4 md:p-6 shadow-[0_0_60px_rgba(99,102,241,0.8)] flex flex-col items-center text-center w-[280px] md:w-[320px]">
+                            <div class="flex justify-between items-center w-full mb-3">
+                                <span class="text-xl font-black flex items-center ${timeColor}">
+                                    <svg class="w-6 h-6 mr-1"><use href="#icon-timer"></use></svg> ${timeLeft}s
+                                </span>
+                                <span class="text-lg font-bold text-green-400 bg-green-900 bg-opacity-30 px-3 py-1 rounded-lg">${mathCorrectCount} / 12</span>
+                            </div>
+                            <div class="text-xs text-slate-400 mb-1 uppercase tracking-widest font-bold">Multiplier Challenge</div>
+                            <div class="text-5xl font-black text-white drop-shadow-md mb-6">${q ? q.q : ''}</div>
+                            <form id="math-form" class="w-full flex gap-2">
+                                <input id="math-input" type="number" autocomplete="off" class="w-full text-center text-3xl font-black p-2 rounded-xl bg-slate-800 text-white border-2 border-slate-600 focus:outline-none focus:border-indigo-400 transition-all" placeholder="?" />
+                                <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 rounded-xl shadow-lg transition-transform active:scale-95">GO</button>
+                            </form>
+                            <p class="text-[10px] text-slate-500 mt-3">Hit "Enter" to submit answer!</p>
+                        </div>
+                    </div>`;
+                
+                // Attach listener dynamically
+                const form = document.getElementById('math-form');
+                if(form) form.addEventListener('submit', handleMathSubmit);
+                const input = document.getElementById('math-input');
+                if(input) input.focus();
+                return;
+            }
+
+            if (attackPhase === 'RESOLVING') {
+                const topText = mathCorrectCount === 12 ? 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]' : mathCorrectCount === 0 ? 'text-red-500' : 'text-white';
+                overlay.innerHTML = `
+                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-40 flex flex-col items-center justify-center">
+                        <div class="bg-slate-900 bg-opacity-95 border-4 border-yellow-500 rounded-2xl p-6 shadow-[0_0_60px_rgba(250,204,21,0.6)] flex flex-col items-center text-center min-w-[220px]">
+                            <h2 class="text-xs font-bold tracking-widest uppercase text-slate-400 mb-2">Power Multiplier</h2>
+                            <div class="text-6xl font-black text-yellow-400 drop-shadow-lg mb-3">${mathCorrectCount} / 12</div>
+                            <span class="text-lg font-black tracking-widest uppercase ${topText}">${diceText}</span>
+                        </div>
+                    </div>`;
+            }
+        };
+
+        const renderLog = () => {
+            let logHtml = '';
+            combatLog.forEach((log, i) => {
+                let defaultClass = 'text-slate-300';
+                if (log.text.includes('fainted')) defaultClass = 'text-red-400 font-bold';
+                else if (log.text.includes('wins')) defaultClass = 'text-yellow-400 font-bold';
+                
+                const isLatest = i === 0;
+                logHtml += `
+                    <div class="p-1 rounded transition-all duration-300 ${isLatest ? 'bg-slate-800 opacity-100 shadow-md border-l-2 border-slate-400' : 'bg-transparent opacity-40'} ${log.className || defaultClass}">
+                        ${log.text}
+                    </div>`;
+            });
+            const logContainer = document.getElementById('combat-log');
+            if(logContainer) logContainer.innerHTML = logHtml;
+        };
+
+        const renderGameoverUI = () => {
+            document.getElementById('winner-text').innerText = `${winner} is the Champion!`;
+            // Quick confetti
+            let confetti = '';
+            for(let i=0; i<20; i++){
+                confetti += `<div class="w-2 h-8 bg-yellow-400 rounded-full animate-bounce" style="animation-delay: ${Math.random()*2}s; animation-duration: ${1+Math.random()}s"></div>`;
+            }
+            document.getElementById('confetti-container').innerHTML = confetti;
+        };
+
+
+        // --- ACTIONS ---
+        window.removePlayer = (num) => {
+            if(num === 1) p1 = null;
+            if(num === 2) p2 = null;
+            updateUI();
+        };
+
+        window.handleFileUpload = async (playerNum, event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            showError('');
+            try {
+                const data = await parseDeckFile(file);
+                data.activeIndex = 0;
+                if (playerNum === 1) p1 = { ...data, fullDeck: data.deck };
+                if (playerNum === 2) p2 = { ...data, fullDeck: data.deck };
+                if (data.styles) {
+                    document.getElementById('shared-styles').innerHTML += '\n' + data.styles;
+                }
+                updateUI();
+            } catch (err) {
+                showError(`Error loading Player ${playerNum}'s file: ${err}`);
+            }
+        };
+
+        window.loadDemo = () => {
+            const demo1 = getDemoDeck1();
+            const demo2 = getDemoDeck2();
+            p1 = { ...demo1, fullDeck: demo1.deck, activeIndex: 0 };
+            p2 = { ...demo2, fullDeck: demo2.deck, activeIndex: 0 };
+            updateUI();
+        };
+
+        window.startGame = () => {
+            if (!p1 || !p2) return;
+            const battleDeck1 = shuffleArray(p1.fullDeck).slice(0, 3);
+            const battleDeck2 = shuffleArray(p2.fullDeck).slice(0, 3);
+            const resetHp = (deck) => deck.map(c => ({...c, currentHp: c.maxHp}));
+
+            p1.deck = resetHp(battleDeck1);
+            p1.activeIndex = 0;
+            p2.deck = resetHp(battleDeck2);
+            p2.activeIndex = 0;
+
+            gameState = 'BATTLE';
+            turn = 1;
+            winner = null;
+            attackPhase = 'IDLE';
+            combatLog = [];
+            addLog(`${p2.name} sends out ${battleDeck2[0].name}!`, "");
+            addLog(`${p1.name} sends out ${battleDeck1[0].name}!`, "");
+            addLog(`Battle Start! ${p1.name} vs ${p2.name}!`, "text-blue-400 font-bold");
+            
+            updateUI();
+        };
+
+        window.handleRollAttack = () => {
+            if (attackPhase !== 'IDLE') return;
+            const currentPlayer = turn === 1 ? p1 : p2;
+            const currentCard = currentPlayer.deck[currentPlayer.activeIndex];
+
+            attackPhase = 'ROLLING_MOVE';
+            diceText = 'Selecting Attack...';
+            updateUI();
+            
+            let rolls = 0;
+            rollInterval = setInterval(() => {
+                diceRoll = Math.floor(Math.random() * 6) + 1;
+                rolls++;
+                updateUI();
+                
+                if (rolls > 15) {
+                    clearInterval(rollInterval);
+                    const finalRoll = Math.floor(Math.random() * 6) + 1;
+                    diceRoll = finalRoll;
+                    
+                    const isEven = finalRoll % 2 === 0;
+                    let chosenIndex = isEven ? 0 : 1;
+                    if (!currentCard.moves[chosenIndex]) chosenIndex = 0;
+
+                    selectedMoveIndex = chosenIndex;
+                    attackPhase = 'MOVE_SELECTED';
+                    diceText = isEven ? "Evens! 1st Attack" : "Odds! 2nd Attack";
+
+                    addLog(`🎲 Rolled a ${finalRoll}. Selected ${currentCard.moves[chosenIndex].name}!`, "text-blue-300");
+                    updateUI();
+
+                    setTimeout(() => startMathChallenge(), 1500);
+                }
+            }, 50);
+        };
+
+        const startMathChallenge = () => {
+            const questions = [];
+            for(let i=0; i<12; i++) {
+                const a = Math.floor(Math.random() * 11) + 2;
+                const b = Math.floor(Math.random() * 11) + 2;
+                questions.push({ q: `${a} × ${b}`, a: a * b });
+            }
+            mathQuestions = questions;
+            currentQuestionIndex = 0;
+            mathCorrectCount = 0;
+            timeLeft = 20;
+            attackPhase = 'MATH_CHALLENGE';
+            updateUI();
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                if(timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    finishMathChallenge(mathCorrectCount);
+                } else {
+                    updateUI(); // Keep timer ticking
+                }
+            }, 1000);
+        };
+
+        const handleMathSubmit = (e) => {
+            e.preventDefault();
+            const inputEl = document.getElementById('math-input');
+            const val = inputEl.value.trim();
+            if (!val) return;
+
+            const isCorrect = parseInt(val, 10) === mathQuestions[currentQuestionIndex].a;
+            
+            if (isCorrect) {
+                mathCorrectCount += 1;
+            } else {
+                mathCorrectCount = Math.max(0, mathCorrectCount - 1);
+                // Shake effect
+                inputEl.classList.add('border-red-500', 'text-red-400', 'animate-shake');
+                inputEl.classList.remove('border-slate-600', 'focus:border-indigo-400');
+                setTimeout(() => {
+                    inputEl.classList.remove('border-red-500', 'text-red-400', 'animate-shake');
+                    inputEl.classList.add('border-slate-600', 'focus:border-indigo-400');
+                }, 400);
+            }
+
+            const nextIndex = currentQuestionIndex + 1;
+            if (nextIndex >= 12) {
+                clearInterval(timerInterval);
+                finishMathChallenge(mathCorrectCount);
+            } else {
+                currentQuestionIndex = nextIndex;
+                inputEl.value = '';
+                updateUI();
+            }
+        };
+
+        const finishMathChallenge = (finalScore) => {
+            const currentPlayer = turn === 1 ? p1 : p2;
+            const currentCard = currentPlayer.deck[currentPlayer.activeIndex];
+            const move = currentCard.moves[selectedMoveIndex];
+            resolveAttack(move, finalScore);
+        };
+
+        const resolveAttack = (move, correctAnswers) => {
+            attackPhase = 'RESOLVING';
+            const attackerState = turn === 1 ? p1 : p2;
+            const defenderState = turn === 1 ? p2 : p1;
+            const attackerCard = attackerState.deck[attackerState.activeIndex];
+            const defenderCard = defenderState.deck[defenderState.activeIndex];
+
+            let multiplier = 1;
+            let rollResultText = "Direct Hit!";
+            let logColor = "text-slate-300";
+
+            if (correctAnswers === 0) {
+                multiplier = 0; rollResultText = "CRITICAL MISS!"; logColor = "text-gray-500 font-bold";
+            } else if (correctAnswers >= 1 && correctAnswers <= 4) {
+                multiplier = 0.5; rollResultText = "Glancing Blow...";
+            } else if (correctAnswers >= 5 && correctAnswers <= 9) {
+                multiplier = 1; rollResultText = "Direct Hit!";
+            } else if (correctAnswers >= 10 && correctAnswers <= 11) {
+                multiplier = 1.5; rollResultText = "Heavy Strike!"; logColor = "text-orange-400 font-bold";
+            } else if (correctAnswers === 12) {
+                multiplier = 2; rollResultText = "CRITICAL HIT!"; logColor = "text-yellow-400 font-black";
+            }
+
+            diceText = rollResultText;
+            const finalDamage = Math.floor(move.damage * multiplier);
+
+            addLog(`🧮 ${attackerCard.name} got ${correctAnswers}/12! ${rollResultText}`, logColor);
+
+            if (multiplier === 0) {
+                addLog(`${attackerCard.name} missed completely! (0 damage)`);
+            } else {
+                addLog(`${attackerCard.name} used ${move.name}! It did ${finalDamage} damage.`);
+                animatingCard = turn === 1 ? 'p2' : 'p1';
+                setTimeout(() => { animatingCard = null; updateUI(); }, 500);
+            }
+
+            let newHp = Math.max(0, defenderCard.currentHp - finalDamage);
+            defenderCard.currentHp = newHp;
+            
+            updateUI();
+
+            setTimeout(() => {
+                attackPhase = 'IDLE';
+                selectedMoveIndex = null;
+                
+                if (newHp === 0) {
+                    addLog(`${defenderCard.name} fainted!`, "text-red-400 font-bold");
+                    const nextCardIndex = defenderState.deck.findIndex(c => c.currentHp > 0);
+                    
+                    if (nextCardIndex !== -1) {
+                        defenderState.activeIndex = nextCardIndex;
+                        addLog(`${defenderState.name} sends out ${defenderState.deck[nextCardIndex].name}!`);
+                        turn = turn === 1 ? 2 : 1;
+                        updateUI();
+                    } else {
+                        gameState = 'GAMEOVER';
+                        winner = attackerState.name;
+                        addLog(`${defenderState.name} has no more cards! ${attackerState.name} wins!`, "text-yellow-400 font-bold");
+                        updateUI();
+                    }
+                } else {
+                    turn = turn === 1 ? 2 : 1;
+                    updateUI();
+                }
+            }, 2800);
+        };
+
+        window.resetGame = () => {
+            p1 = null;
+            p2 = null;
+            document.getElementById('shared-styles').innerHTML = '';
+            gameState = 'UPLOAD';
+            combatLog = [];
+            showError('');
+            updateUI();
+        };
+
+        // Init
+        updateUI();
+
+    </script>
+</body>
+</html>
