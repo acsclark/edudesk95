@@ -190,9 +190,6 @@
     </div>
 
     <script>
-        // Initialize Icons
-        lucide.createIcons();
-
         // Application State Variables
         let appState = 'idle';
         let originalUrl = null;
@@ -205,6 +202,21 @@
         let audioChunks = [];
         let timerInterval = null;
         let streamRef = null;
+
+        // Initialize App once DOM is fully loaded (Fixes embed black screen crashes)
+        document.addEventListener('DOMContentLoaded', () => {
+            // Safely create icons 
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+            
+            // Check if microphone is strictly blocked by the embedded environment
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                handleError('Microphone API blocked by embed. Make sure the iframe has the allow="microphone" attribute.');
+            } else {
+                setAppState('idle');
+            }
+        });
 
         // UI State Management
         function setAppState(newState) {
@@ -313,13 +325,21 @@
         }
 
         function handleError(msg) {
-            document.getElementById('error-msg').innerText = msg;
-            setAppState('error');
+            if (document.getElementById('error-msg')) {
+                document.getElementById('error-msg').innerText = msg;
+                setAppState('error');
+            } else {
+                alert(msg);
+            }
             stopMediaStream();
         }
 
         async function startRecording(type) {
             try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error("Microphone API not available");
+                }
+
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 streamRef = stream;
                 
@@ -400,9 +420,6 @@
             reversedAttemptUrl = null;
             setAppState('idle');
         }
-
-        // Initialize state on load
-        setAppState('idle');
     </script>
 </body>
 </html>
