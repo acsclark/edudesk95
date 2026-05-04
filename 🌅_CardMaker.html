@@ -1,0 +1,716 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  Upload, RotateCcw, RotateCw, ZoomIn, ZoomOut, 
+  Flame, Droplet, Leaf, Zap, Hexagon, 
+  Sword, Shield, Wind, Download, Star, Code, ArrowLeft
+} from 'lucide-react';
+
+// --- Card Data Enums ---
+const RARITIES = {
+  COMMON: { id: 'common', label: 'Common', color: 'bg-gray-200 text-gray-700 border-gray-300' },
+  UNCOMMON: { id: 'uncommon', label: 'Uncommon', color: 'bg-green-100 text-green-700 border-green-300' },
+  RARE: { id: 'rare', label: 'Rare', color: 'bg-blue-100 text-blue-700 border-blue-300' },
+  EPIC: { id: 'epic', label: 'Epic', color: 'bg-purple-100 text-purple-700 border-purple-300' },
+  LEGENDARY: { id: 'legendary', label: 'Legendary', color: 'bg-orange-100 text-orange-700 border-orange-300' }
+};
+
+const TYPES = {
+  FIRE: { id: 'fire', label: 'Red', icon: Flame, color: '#ef4444', theme: 'from-red-900 to-red-800' },
+  WATER: { id: 'water', label: 'Blue', icon: Droplet, color: '#3b82f6', theme: 'from-blue-900 to-blue-800' },
+  NATURE: { id: 'nature', label: 'Green', icon: Leaf, color: '#22c55e', theme: 'from-green-900 to-green-800' },
+  ELECTRIC: { id: 'electric', label: 'Yellow', icon: Zap, color: '#eab308', theme: 'from-yellow-900 to-yellow-800' },
+  PSYCHIC: { id: 'psychic', label: 'Purple', icon: Hexagon, color: '#a855f7', theme: 'from-purple-900 to-purple-800' }
+};
+
+export default function App() {
+  // --- State ---
+  const [image, setImage] = useState(null);
+  const [scale, setScale] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ clientX: 0, clientY: 0, startX: 0, startY: 0 });
+  const [cardTilt, setCardTilt] = useState('perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)');
+  
+  const [cardData, setCardData] = useState({
+    name: 'Zorg the Space Monster',
+    rarity: RARITIES.EPIC,
+    type: TYPES.NATURE,
+    description: 'A quirky alien from planet Blorff. Loves collecting shiny things!',
+    stats: { attack: 75, defense: 60, speed: 50 }
+  });
+
+  const [isExporting, setIsExporting] = useState(false);
+  const fileInputRef = useRef(null);
+  const cardPreviewRef = useRef(null);
+  const cropContainerRef = useRef(null);
+
+  // --- Handlers ---
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => setImage(event.target.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const resetImageAdjustment = () => {
+    setScale(1);
+    setRotation(0);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setDragStart({ clientX: e.clientX, clientY: e.clientY, startX: position.x, startY: position.y });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || !cropContainerRef.current) return;
+    const rect = cropContainerRef.current.getBoundingClientRect();
+    const dxPercent = ((e.clientX - dragStart.clientX) / rect.width) * 100;
+    const dyPercent = ((e.clientY - dragStart.clientY) / rect.height) * 100;
+    setPosition({
+      x: dragStart.startX + dxPercent,
+      y: dragStart.startY + dyPercent
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchStart = (e) => {
+    setIsDragging(true);
+    setDragStart({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY, startX: position.x, startY: position.y });
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging || !cropContainerRef.current) return;
+    const rect = cropContainerRef.current.getBoundingClientRect();
+    const dxPercent = ((e.touches[0].clientX - dragStart.clientX) / rect.width) * 100;
+    const dyPercent = ((e.touches[0].clientY - dragStart.clientY) / rect.height) * 100;
+    setPosition({
+      x: dragStart.startX + dxPercent,
+      y: dragStart.startY + dyPercent
+    });
+  };
+
+  const handleCardMouseMove = (e) => {
+    if (!cardPreviewRef.current) return;
+    const rect = cardPreviewRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    // Calculate rotation (-15 to 15 degrees)
+    const rotateX = ((y - centerY) / centerY) * -15;
+    const rotateY = ((x - centerX) / centerX) * 15;
+    
+    setCardTilt(`perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`);
+  };
+
+  const handleCardMouseLeave = () => {
+    setCardTilt('perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)');
+  };
+
+  const updateCardData = (key, value) => {
+    setCardData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const updateStat = (stat, value) => {
+    setCardData(prev => ({
+      ...prev,
+      stats: { ...prev.stats, [stat]: Number(value) }
+    }));
+  };
+
+  // --- Export Logic ---
+  
+  // Extract the CSS needed for the HTML export so the holograms work standalone
+  const getHoloCSS = () => `
+    <style>
+      .card-export-wrapper { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; padding: 2rem; background: #1a1a2e; min-height: 100vh; align-items: center; }
+      .holo-overlay { position: absolute; inset: 0; pointer-events: none; opacity: 1; transition: opacity 0.3s; z-index: 10; border-radius: 12px; }
+      
+      .rarity-uncommon .holo-overlay { opacity: 0.6; background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.4) 25%, transparent 30%); background-size: 200% 200%; animation: shimmer 3s infinite linear; mix-blend-mode: overlay; }
+      
+      .rarity-rare .holo-overlay { opacity: 0.8; background: linear-gradient(105deg, transparent 20%, rgba(160,196,255,0.5) 25%, rgba(185,251,192,0.5) 30%, transparent 35%), url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='10' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2'/%3E%3Ccircle cx='28' cy='12' r='4' fill='rgba(255,255,255,0.4)'/%3E%3C/svg%3E"); background-size: 200% 200%, 40px 40px; animation: shimmer-rare 2.5s infinite linear; mix-blend-mode: color-dodge; }
+      
+      .rarity-epic .holo-overlay { opacity: 0.9; background: linear-gradient(105deg, transparent 20%, rgba(255,198,255,0.6) 25%, rgba(189,178,255,0.6) 30%, rgba(160,196,255,0.6) 35%, transparent 40%), url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 28.5L18.5 27.1C13.4 22.5 10 19.4 10 15.5C10 12.4 12.4 10 15.5 10C17.2 10 18.9 10.8 20 12.1C21.1 10.8 22.8 10 24.5 10C27.6 10 30 12.4 30 15.5C30 19.4 26.6 22.5 21.5 27.1L20 28.5Z' fill='rgba(255,255,255,0.4)'/%3E%3C/svg%3E"); background-size: 200% 200%, 50px 50px; animation: shimmer-epic 2s infinite linear; mix-blend-mode: color-dodge; }
+      
+      .rarity-legendary .holo-overlay { opacity: 1; background: linear-gradient(125deg, #ff000055, #ff7f0055, #ffff0055, #00ff0055, #0000ff55, #4b008255, #9400d355), url("data:image/svg+xml,%3Csvg width='50' height='50' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M25 8L31.2 18.5L43 20.8L35 29.5L36.5 41.5L25 36.5L13.5 41.5L15 29.5L7 20.8L18.8 18.5L25 8Z' fill='rgba(255,255,255,0.5)'/%3E%3C/svg%3E"); background-size: 400% 400%, 60px 60px; animation: rainbow-stars 5s ease infinite; mix-blend-mode: color-dodge; }
+      
+      @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+      @keyframes shimmer-rare { 0% { background-position: 200% 0, 0 0; } 100% { background-position: -200% 0, 40px 40px; } }
+      @keyframes shimmer-epic { 0% { background-position: 200% 0, 0 0; } 100% { background-position: -200% 0, 50px 50px; } }
+      @keyframes rainbow-stars { 0%{background-position:0% 50%, 0 0;} 50%{background-position:100% 50%, 30px 30px;} 100%{background-position:0% 50%, 60px 60px;} }
+      
+      /* Tailwind-like utilities for standalone HTML */
+      * { box-sizing: border-box; }
+      .card-container { width: 320px; aspect-ratio: 2.5/3.5; position: relative; overflow: hidden; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; border: 8px solid; transition: transform 0.1s ease-out, border-color 0.3s; transform: perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1); will-change: transform; }
+      .card-inner { background: #111; height: 100%; display: flex; flex-direction: column; position: relative; padding: 4px;}
+      .card-header { display: flex; justify-content: space-between; align-items: center; padding: 8px; z-index: 2; }
+      .card-name { font-weight: bold; color: white; font-size: 1.125rem; text-shadow: 1px 1px 2px black; }
+      .card-rarity-badge { font-size: 0.6rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+      .card-image-box { position: relative; width: calc(100% - 16px); margin: 0 8px; aspect-ratio: 4/3; background: #fff; border: 2px solid #333; overflow: hidden; border-radius: 4px; box-shadow: inset 0 0 10px rgba(0,0,0,0.2); }
+      .card-image { width: 100%; height: 100%; object-fit: cover; }
+      .card-type-bar { text-align: center; font-size: 0.75rem; font-weight: bold; color: white; letter-spacing: 1px; padding: 4px 0; background: rgba(0,0,0,0.4); margin-top: 4px; text-transform: uppercase;}
+      .card-desc-box { background: rgba(0,0,0,0.6); margin: 8px; padding: 8px; border-radius: 4px; flex-grow: 1; border: 1px solid rgba(255,255,255,0.1); }
+      .card-desc { color: #eee; font-size: 0.75rem; line-height: 1.4; }
+      .card-stats { display: flex; justify-content: space-around; padding: 8px; background: rgba(0,0,0,0.8); margin: 0 8px 8px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
+      .stat-item { display: flex; align-items: center; gap: 4px; color: white; font-weight: bold; font-size: 0.875rem; }
+      .stat-icon { width: 16px; height: 16px; display: inline-block; border-radius: 50%; }
+      .icon-atk { background: #ef4444; } .icon-def { background: #3b82f6; } .icon-spd { background: #eab308; }
+    </style>
+  `;
+
+  const exportHTML = () => {
+    // We recreate the card structure manually to ensure it's perfectly portable
+    // without relying on Tailwind classes being present in the user's environment.
+    const rarityColorStr = cardData.rarity.id === 'epic' ? 'background: #9333ea; color: white;' : 
+                           cardData.rarity.id === 'legendary' ? 'background: #eab308; color: black;' :
+                           cardData.rarity.id === 'rare' ? 'background: #3b82f6; color: white;' :
+                           cardData.rarity.id === 'uncommon' ? 'background: #22c55e; color: white;' :
+                           'background: #9ca3af; color: black;';
+
+    const borderColor = cardData.type.color;
+    const bgGradient = `background: linear-gradient(to bottom, ${cardData.type.color}40, #111)`;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${cardData.name} - Custom Card</title>
+        ${getHoloCSS()}
+      </head>
+      <body>
+        <div class="card-export-wrapper">
+          <div class="card-container rarity-${cardData.rarity.id}" style="border-color: ${borderColor};">
+            <div class="card-inner" style="${bgGradient}">
+              <div class="holo-overlay"></div>
+              
+              <div class="card-header">
+                <div class="card-name">${cardData.name}</div>
+                <div class="card-rarity-badge" style="${rarityColorStr}">${cardData.rarity.id}</div>
+              </div>
+
+              <div class="card-image-box">
+                ${image ? `<img src="${image}" class="card-image" style="transform: translate(${position.x}%, ${position.y}%) scale(${scale}) rotate(${rotation}deg);" />` : `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#999;">No Image</div>`}
+              </div>
+
+              <div class="card-type-bar" style="color: ${cardData.type.color}">${cardData.type.id}</div>
+
+              <div class="card-desc-box">
+                <div class="card-desc">${cardData.description}</div>
+              </div>
+
+              <div class="card-stats">
+                <div class="stat-item"><span class="stat-icon icon-atk"></span> ${cardData.stats.attack}</div>
+                <div class="stat-item"><span class="stat-icon icon-def"></span> ${cardData.stats.defense}</div>
+                <div class="stat-item"><span class="stat-icon icon-spd"></span> ${cardData.stats.speed}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <script>
+          const card = document.querySelector('.card-container');
+          card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const rotateX = ((y - centerY) / centerY) * -15;
+            const rotateY = ((x - centerX) / centerX) * 15;
+            card.style.transform = \`perspective(1000px) rotateX(\${rotateX}deg) rotateY(\${rotateY}deg) scale3d(1.02, 1.02, 1.02)\`;
+          });
+          card.addEventListener('mouseleave', () => {
+            card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+          });
+        </script>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${cardData.name.replace(/\s+/g, '_')}_card.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportPDF = () => {
+    setIsExporting(true);
+    // Dynamically load html2pdf
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.onload = () => {
+      const element = cardPreviewRef.current;
+      const opt = {
+        margin:       0.5,
+        filename:     `${cardData.name.replace(/\s+/g, '_')}_card.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+      
+      // Temporarily add a class to ensure good PDF rendering
+      element.classList.add('pdf-export-mode');
+      
+      window.html2pdf().set(opt).from(element).save().then(() => {
+        element.classList.remove('pdf-export-mode');
+        setIsExporting(false);
+      });
+    };
+    document.body.appendChild(script);
+  };
+
+  // --- Styled Components (Tailwind Classes) ---
+  const sidebarItemClass = "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer text-gray-400 hover:text-white hover:bg-gray-800";
+  const sidebarItemActiveClass = "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer bg-indigo-600 text-white shadow-lg shadow-indigo-500/20";
+  const labelClass = "block text-sm font-semibold text-gray-700 mb-1.5";
+
+  // We inject the holo CSS globally for the React preview
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .holo-overlay { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 10; border-radius: 8px;}
+      .card-preview-container:hover .holo-overlay { opacity: 1; }
+      
+      .rarity-uncommon .holo-overlay { background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.4) 25%, transparent 30%); background-size: 200% 200%; animation: shimmer 3s infinite linear; mix-blend-mode: overlay; }
+      
+      .rarity-rare .holo-overlay { background: linear-gradient(105deg, transparent 20%, rgba(160,196,255,0.5) 25%, rgba(185,251,192,0.5) 30%, transparent 35%), url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='10' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2'/%3E%3Ccircle cx='28' cy='12' r='4' fill='rgba(255,255,255,0.4)'/%3E%3C/svg%3E"); background-size: 200% 200%, 40px 40px; animation: shimmer-rare 2.5s infinite linear; mix-blend-mode: color-dodge; }
+      
+      .rarity-epic .holo-overlay { background: linear-gradient(105deg, transparent 20%, rgba(255,198,255,0.6) 25%, rgba(189,178,255,0.6) 30%, rgba(160,196,255,0.6) 35%, transparent 40%), url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 28.5L18.5 27.1C13.4 22.5 10 19.4 10 15.5C10 12.4 12.4 10 15.5 10C17.2 10 18.9 10.8 20 12.1C21.1 10.8 22.8 10 24.5 10C27.6 10 30 12.4 30 15.5C30 19.4 26.6 22.5 21.5 27.1L20 28.5Z' fill='rgba(255,255,255,0.4)'/%3E%3C/svg%3E"); background-size: 200% 200%, 50px 50px; animation: shimmer-epic 2s infinite linear; mix-blend-mode: color-dodge; }
+      
+      .rarity-legendary .holo-overlay { background: linear-gradient(125deg, #ff000055, #ff7f0055, #ffff0055, #00ff0055, #0000ff55, #4b008255, #9400d355), url("data:image/svg+xml,%3Csvg width='50' height='50' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M25 8L31.2 18.5L43 20.8L35 29.5L36.5 41.5L25 36.5L13.5 41.5L15 29.5L7 20.8L18.8 18.5L25 8Z' fill='rgba(255,255,255,0.5)'/%3E%3C/svg%3E"); background-size: 400% 400%, 60px 60px; animation: rainbow-stars 5s ease infinite; mix-blend-mode: color-dodge; }
+      
+      @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+      @keyframes shimmer-rare { 0% { background-position: 200% 0, 0 0; } 100% { background-position: -200% 0, 40px 40px; } }
+      @keyframes shimmer-epic { 0% { background-position: 200% 0, 0 0; } 100% { background-position: -200% 0, 50px 50px; } }
+      @keyframes rainbow-stars { 0%{background-position:0% 50%, 0 0;} 50%{background-position:100% 50%, 30px 30px;} 100%{background-position:0% 50%, 60px 60px;} }
+
+      /* PDF Export Specifics */
+      .pdf-export-mode .holo-overlay { display: none !important; } /* Disable animation for static PDF */
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex font-sans">
+      
+      {/* --- Sidebar --- */}
+      <aside className="w-64 bg-[#1e1e2e] text-gray-300 flex flex-col h-screen sticky top-0 border-r border-gray-800">
+        <div className="p-6 flex items-center gap-3">
+          <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-lg leading-none">D</span>
+          </div>
+          <h1 className="font-bold text-white tracking-wide">Teacher Portal</h1>
+        </div>
+        
+        <nav className="flex-1 px-4 space-y-1">
+          <div className={sidebarItemClass}>Dashboard</div>
+          <div className={sidebarItemClass}>Students</div>
+          <div className={sidebarItemClass}>Class Progress</div>
+          
+          <div className="pt-4 pb-2">
+            <div className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Cards</div>
+            <div className={sidebarItemActiveClass}>Create Card</div>
+            <div className={sidebarItemClass}>Card Library</div>
+          </div>
+          
+          <div className={sidebarItemClass}>Rewards</div>
+          <div className={sidebarItemClass}>Settings</div>
+        </nav>
+
+        <div className="p-4 border-t border-gray-800 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-500 to-yellow-500 flex items-center justify-center text-white font-bold border-2 border-gray-700">
+            MJ
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-white">Ms. Johnson</div>
+            <div className="text-xs text-gray-500">3rd Grade</div>
+          </div>
+        </div>
+      </aside>
+
+      {/* --- Main Content --- */}
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 px-8 py-5 flex justify-between items-center shrink-0">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Create Custom Card</h2>
+            <p className="text-sm text-gray-500 mt-1">Turn a student drawing into an awesome game card!</p>
+          </div>
+          <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm">
+            <ArrowLeft className="w-4 h-4" /> Back to Cards
+          </button>
+        </header>
+
+        {/* Content Area - Scrollable */}
+        <div className="flex-1 overflow-auto p-8">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 max-w-7xl mx-auto h-full">
+            
+            {/* Column 1: Choose Drawing */}
+            <div className="col-span-1 flex flex-col gap-4">
+              <div>
+                <h3 className="font-bold text-gray-900">1. Choose Drawing</h3>
+                <p className="text-xs text-gray-500">Select or upload a picture</p>
+              </div>
+              
+              <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-sm flex-1 flex flex-col">
+                {/* Mock Student List */}
+                <div className="space-y-3 mb-6 flex-1 overflow-y-auto pr-2">
+                  {[
+                    { name: 'Alex M.', date: 'May 12, 2026', selected: true },
+                    { name: 'Sophie L.', date: 'May 11, 2026', selected: false },
+                    { name: 'Ethan R.', date: 'May 10, 2026', selected: false }
+                  ].map((s, i) => (
+                    <div key={i} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${s.selected ? 'border-indigo-500 bg-indigo-50/50' : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'}`}>
+                      <div className="w-12 h-12 bg-gray-100 rounded-md border border-gray-200 flex items-center justify-center overflow-hidden">
+                        {i === 0 && image ? <img src={image} className="w-full h-full object-cover" alt="thumb" /> : <div className="text-xs text-gray-400">Img {i+1}</div>}
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-gray-800">{s.name}</div>
+                        <div className="text-xs text-gray-500">{s.date}</div>
+                      </div>
+                      {s.selected && <div className="w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xs">✓</div>}
+                    </div>
+                  ))}
+                </div>
+
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  ref={fileInputRef} 
+                  onChange={handleImageUpload} 
+                  className="hidden" 
+                />
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full py-3 flex items-center justify-center gap-2 text-indigo-600 bg-indigo-50 border border-indigo-200 border-dashed rounded-lg font-medium hover:bg-indigo-100 transition-colors"
+                >
+                  <Upload className="w-4 h-4" /> Upload New Drawing
+                </button>
+              </div>
+            </div>
+
+            {/* Column 2: Crop & Adjust */}
+            <div className="col-span-1 flex flex-col gap-4">
+               <div>
+                <h3 className="font-bold text-gray-900">2. Crop & Adjust</h3>
+                <p className="text-xs text-gray-500">Focus on the character</p>
+              </div>
+              
+              <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-sm flex flex-col gap-4">
+                <div 
+                  ref={cropContainerRef}
+                  className="aspect-[4/3] bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden relative flex items-center justify-center group"
+                >
+                  {image ? (
+                    <img 
+                      src={image} 
+                      alt="Upload preview" 
+                      draggable={false}
+                      onMouseDown={handleMouseDown}
+                      onMouseMove={handleMouseMove}
+                      onMouseUp={handleMouseUp}
+                      onMouseLeave={handleMouseUp}
+                      onTouchStart={handleTouchStart}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleMouseUp}
+                      style={{ 
+                        transform: `translate(${position.x}%, ${position.y}%) scale(${scale}) rotate(${rotation}deg)`,
+                        transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+                      }}
+                      className="w-full h-full object-cover cursor-move"
+                    />
+                  ) : (
+                    <div className="text-center text-gray-400 flex flex-col items-center">
+                      <Upload className="w-8 h-8 mb-2 opacity-50" />
+                      <span className="text-sm">Upload an image first</span>
+                    </div>
+                  )}
+                  {/* Center Crosshairs */}
+                  {image && (
+                    <div className="absolute inset-0 pointer-events-none z-10 flex items-center justify-center opacity-60">
+                      <div className="absolute top-0 bottom-0 w-px border-l-2 border-red-500 border-dotted"></div>
+                      <div className="absolute left-0 right-0 h-px border-t-2 border-red-500 border-dotted"></div>
+                      <div className="w-6 h-6 rounded-full border-2 border-red-500 relative z-20"></div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex justify-center gap-4">
+                    <button onClick={() => setRotation(r => r - 90)} className="text-xs font-medium text-gray-600 hover:text-indigo-600 flex items-center gap-1">
+                      <RotateCcw className="w-3 h-3" /> Left
+                    </button>
+                    <button onClick={() => setRotation(r => r + 90)} className="text-xs font-medium text-gray-600 hover:text-indigo-600 flex items-center gap-1">
+                      <RotateCw className="w-3 h-3" /> Right
+                    </button>
+                    <button onClick={resetImageAdjustment} className="text-xs font-medium text-gray-600 hover:text-red-600 flex items-center gap-1 ml-4">
+                      Reset
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setScale(s => Math.max(0.5, s - 0.1))} className="p-1 text-gray-500 hover:bg-gray-100 rounded">
+                      <ZoomOut className="w-4 h-4" />
+                    </button>
+                    <input 
+                      type="range" 
+                      min="0.5" max="5.0" step="0.1" 
+                      value={scale} 
+                      onChange={(e) => setScale(parseFloat(e.target.value))}
+                      className="flex-1 accent-indigo-600"
+                    />
+                    <button onClick={() => setScale(s => Math.min(5.0, s + 0.1))} className="p-1 text-gray-500 hover:bg-gray-100 rounded">
+                      <ZoomIn className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 3: Card Details */}
+            <div className="col-span-1 flex flex-col gap-4">
+              <div>
+                <h3 className="font-bold text-gray-900">3. Card Details</h3>
+                <p className="text-xs text-gray-500">Set the attributes</p>
+              </div>
+              
+              <div className="bg-white p-5 border border-gray-200 rounded-xl shadow-sm space-y-5 overflow-y-auto">
+                
+                {/* Name */}
+                <div>
+                  <label className={labelClass}>Card Name</label>
+                  <input 
+                    type="text" 
+                    value={cardData.name}
+                    onChange={(e) => updateCardData('name', e.target.value)}
+                    className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  />
+                </div>
+
+                {/* Rarity */}
+                <div>
+                  <label className={labelClass}>Rarity / Level</label>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.values(RARITIES).map(r => (
+                      <button
+                        key={r.id}
+                        onClick={() => updateCardData('rarity', r)}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-md border transition-all ${
+                          cardData.rarity.id === r.id 
+                            ? r.color + ' ring-2 ring-offset-1 ring-' + r.color.split('-')[1] + '-400 shadow-sm' 
+                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Color / Type */}
+                <div>
+                  <label className={labelClass}>Element / Type</label>
+                  <div className="flex gap-2">
+                    {Object.values(TYPES).map(t => {
+                      const Icon = t.icon;
+                      const isSelected = cardData.type.id === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => updateCardData('type', t)}
+                          title={t.label}
+                          className={`flex-1 aspect-square rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${
+                            isSelected ? 'border-gray-800 shadow-md transform scale-105' : 'border-gray-200 hover:bg-gray-50'
+                          }`}
+                          style={isSelected ? { backgroundColor: t.color + '15', borderColor: t.color } : {}}
+                        >
+                          <Icon className="w-5 h-5" style={{ color: t.color }} />
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className={labelClass}>Description (Optional)</label>
+                  <textarea 
+                    value={cardData.description}
+                    onChange={(e) => updateCardData('description', e.target.value)}
+                    rows={3}
+                    className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
+                  />
+                </div>
+
+                {/* Stats */}
+                <div>
+                  <label className={labelClass}>Power / Stats</label>
+                  <div className="space-y-2">
+                    {[
+                      { id: 'attack', icon: Sword, color: 'text-red-500' },
+                      { id: 'defense', icon: Shield, color: 'text-blue-500' },
+                      { id: 'speed', icon: Wind, color: 'text-yellow-500' }
+                    ].map(stat => (
+                      <div key={stat.id} className="flex items-center gap-3">
+                        <div className="w-8 flex justify-center"><stat.icon className={`w-4 h-4 ${stat.color}`} /></div>
+                        <div className="text-xs font-medium text-gray-600 capitalize w-16">{stat.id}</div>
+                        <input 
+                          type="number" 
+                          min="0" max="999"
+                          value={cardData.stats[stat.id]}
+                          onChange={(e) => updateStat(stat.id, e.target.value)}
+                          className="flex-1 p-1.5 border border-gray-300 rounded-md text-sm text-right focus:ring-2 focus:ring-indigo-500 outline-none"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Column 4: Live Preview & Export */}
+            <div className="col-span-1 flex flex-col gap-4">
+              <div>
+                <h3 className="font-bold text-gray-900">Live Preview</h3>
+                <p className="text-xs text-gray-500">This is how the card will look</p>
+              </div>
+              
+              <div className="flex-1 flex flex-col items-center">
+                
+                {/* --- THE CARD --- */}
+                <div 
+                  ref={cardPreviewRef}
+                  onMouseMove={handleCardMouseMove}
+                  onMouseLeave={handleCardMouseLeave}
+                  className={`card-preview-container w-full max-w-[300px] aspect-[2.5/3.5] relative rounded-xl shadow-2xl overflow-hidden flex flex-col rarity-${cardData.rarity.id} group`}
+                  style={{
+                    border: `8px solid ${cardData.type.color}`,
+                    backgroundColor: '#111827', // dark slate
+                    transform: cardTilt,
+                    transition: 'transform 0.1s ease-out, border-color 0.3s',
+                    willChange: 'transform'
+                  }}
+                >
+                  {/* Hologram Overlay (CSS driven) */}
+                  <div className="holo-overlay"></div>
+
+                  {/* Card Background Gradient */}
+                  <div 
+                    className={`absolute inset-0 bg-gradient-to-b opacity-60 z-0 pointer-events-none`}
+                    style={{ backgroundImage: `linear-gradient(to bottom, ${cardData.type.color}, transparent, #000)` }}
+                  ></div>
+
+                  {/* Card Header */}
+                  <div className="relative z-10 flex justify-between items-center p-3">
+                    <h3 className="font-bold text-white tracking-tight drop-shadow-md truncate pr-2">
+                      {cardData.name || 'Unnamed Card'}
+                    </h3>
+                    <div className={`text-[0.65rem] font-bold px-2 py-0.5 rounded shadow-sm shrink-0 uppercase
+                      ${cardData.rarity.id === 'epic' ? 'bg-purple-600 text-white' : 
+                        cardData.rarity.id === 'legendary' ? 'bg-yellow-400 text-black' :
+                        cardData.rarity.id === 'rare' ? 'bg-blue-500 text-white' :
+                        cardData.rarity.id === 'uncommon' ? 'bg-green-500 text-white' :
+                        'bg-gray-400 text-black'
+                      }`}>
+                      {cardData.rarity.label}
+                    </div>
+                  </div>
+
+                  {/* Card Image Area */}
+                  <div className="relative z-10 mx-3 aspect-[4/3] bg-white border-2 border-gray-800 rounded shadow-inner overflow-hidden flex items-center justify-center">
+                    {image ? (
+                      <img 
+                        src={image} 
+                        alt="Character" 
+                        style={{ 
+                          transform: `translate(${position.x}%, ${position.y}%) scale(${scale}) rotate(${rotation}deg)`,
+                        }}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-gray-300 flex flex-col items-center">
+                        <Upload className="w-8 h-8 mb-1" />
+                        <span className="text-[10px] uppercase font-bold tracking-wider">No Image</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card Type Bar */}
+                  <div 
+                    className="relative z-10 text-center py-1 mt-1 font-black text-[0.7rem] tracking-[0.2em] uppercase shadow-sm"
+                    style={{ color: cardData.type.color, backgroundColor: 'rgba(0,0,0,0.4)' }}
+                  >
+                    {cardData.type.id}
+                  </div>
+
+                  {/* Card Description */}
+                  <div className="relative z-10 flex-1 mx-3 mt-2 mb-2 p-2 bg-black/40 border border-white/10 rounded overflow-hidden">
+                    <p className="text-[0.75rem] leading-tight text-gray-200 italic">
+                      {cardData.description || 'No description provided.'}
+                    </p>
+                  </div>
+
+                  {/* Card Stats */}
+                  <div className="relative z-10 mx-3 mb-3 p-2 bg-black/60 border border-white/10 rounded flex justify-around">
+                    <div className="flex items-center gap-1.5 font-bold text-white text-sm">
+                      <div className="w-4 h-4 bg-red-500 rounded-sm flex items-center justify-center"><Sword className="w-3 h-3 text-white" /></div>
+                      {cardData.stats.attack}
+                    </div>
+                    <div className="flex items-center gap-1.5 font-bold text-white text-sm">
+                      <div className="w-4 h-4 bg-blue-500 rounded-sm flex items-center justify-center"><Shield className="w-3 h-3 text-white" /></div>
+                      {cardData.stats.defense}
+                    </div>
+                    <div className="flex items-center gap-1.5 font-bold text-white text-sm">
+                      <div className="w-4 h-4 bg-yellow-500 rounded-sm flex items-center justify-center"><Wind className="w-3 h-3 text-white" /></div>
+                      {cardData.stats.speed}
+                    </div>
+                  </div>
+                </div>
+                {/* --- END CARD --- */}
+
+                {/* Export Actions */}
+                <div className="w-full mt-6 space-y-2">
+                   <div className="p-3 bg-purple-50 text-purple-700 text-xs rounded-lg flex gap-2 items-start mb-4 border border-purple-100">
+                    <Star className="w-4 h-4 shrink-0 mt-0.5 text-purple-500" />
+                    <p>Tip: Higher rarities have special animated holographic overlays. Hover over the card to see the effect! Download as HTML to keep the animation.</p>
+                  </div>
+
+                  <button 
+                    onClick={exportHTML}
+                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm"
+                  >
+                    <Code className="w-4 h-4" /> Download as HTML (Animated)
+                  </button>
+                  <button 
+                    onClick={exportPDF}
+                    disabled={isExporting}
+                    className="w-full py-2.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50"
+                  >
+                    <Download className="w-4 h-4" /> {isExporting ? 'Generating PDF...' : 'Download as PDF (Static)'}
+                  </button>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
