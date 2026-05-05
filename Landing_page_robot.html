@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura-Bot Model 740 — Heroic Stance</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: 
+                radial-gradient(ellipse at 20% 30%, rgba(255,220,230,0.6) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(200,230,255,0.5) 0%, transparent 50%),
+                linear-gradient(170deg, #f0e4e8 0%, #e8dce4 30%, #dce8f0 70%, #f0ebe4 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: none; /* Hide real cursor to show custom one */
+        }
+
+        /* Large Pulsating Pointer Cursor */
+        #custom-cursor {
+            position: fixed;
+            width: 72px; /* 3x bigger than original 24px */
+            height: 72px;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(0, 0);
+            filter: drop-shadow(0 0 8px rgba(168, 230, 255, 0.6));
+        }
+
+        .cursor-arrow {
+            stroke: #0d1117;
+            stroke-width: 1.5;
+            animation: pulse-color 1.5s infinite alternate ease-in-out;
+        }
+
+        @keyframes pulse-color {
+            from {
+                fill: #a8e6ff; /* Standard Eye Color */
+            }
+            to {
+                fill: #3a86ff; /* Darker Robotic Blue */
+            }
+        }
+
+        .bg-texture {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            opacity: 0.15;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        .vignette {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 2;
+            background: radial-gradient(ellipse at center, transparent 60%, rgba(120,90,100,0.06) 100%);
+        }
+
+        #botCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0);
+            backdrop-filter: blur(0px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            pointer-events: none;
+            transition: all 0.8s ease;
+        }
+
+        .login-overlay.active {
+            background: rgba(13, 17, 23, 0.4); 
+            backdrop-filter: blur(12px);
+            pointer-events: all;
+        }
+
+        .login-card {
+            background: #0d1117; 
+            padding: 30px;
+            border-radius: 28px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4), 0 0 0 1px rgba(168, 230, 255, 0.2);
+            width: 380px;
+            text-align: center;
+            transform: scale(0.75) translateY(40px);
+            opacity: 0;
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            color: #a8e6ff; 
+        }
+
+        .login-overlay.active .login-card {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+
+        .role-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+
+        .role-btn {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid rgba(168, 230, 255, 0.2);
+            border-radius: 12px;
+            background: rgba(168, 230, 255, 0.05);
+            color: rgba(168, 230, 255, 0.6);
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: none;
+            transition: all 0.2s;
+        }
+
+        .role-btn.active {
+            border-color: #a8e6ff;
+            background: rgba(168, 230, 255, 0.15);
+            color: #a8e6ff;
+            box-shadow: 0 0 15px rgba(168, 230, 255, 0.2);
+        }
+
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 5px; color: rgba(168, 230, 255, 0.5); font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05rem; }
+        
+        .form-group input { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid rgba(168, 230, 255, 0.2); 
+            border-radius: 12px; 
+            font-size: 0.95rem; 
+            background: rgba(22, 27, 34, 0.8); 
+            color: #fff;
+            outline: none;
+            cursor: none;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus { border-color: #a8e6ff; }
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .key-btn {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(168, 230, 255, 0.1);
+            border-radius: 10px;
+            font-weight: bold;
+            color: #a8e6ff;
+            cursor: none;
+            transition: 0.2s;
+            font-size: 1.1rem;
+        }
+
+        .key-btn:hover { background: rgba(168, 230, 255, 0.1); }
+        .key-btn:active { background: #a8e6ff; color: #0d1117; }
+
+        .hidden { display: none !important; }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            background: #a8e6ff;
+            color: #0d1117;
+            border: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: none;
+            box-shadow: 0 4px 20px rgba(168, 230, 255, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 42px;
+            height: 42px;
+            background: #0d1117;
+            border: 1px solid rgba(168, 230, 255, 0.2);
+            border-radius: 50%;
+            font-size: 1.3rem;
+            color: #a8e6ff;
+            cursor: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hint {
+            position: absolute;
+            bottom: 35px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(120,100,110,0.55);
+            font-size: 0.88rem;
+            z-index: 50;
+            pointer-events: none;
+            font-weight: 500;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div id="custom-cursor">
+        <svg width="72" height="72" viewBox="0 0 24 24">
+            <path class="cursor-arrow" d="M3,3 L21,12 L13,13 L12,21 L3,3 Z" />
+        </svg>
+    </div>
+
+    <div class="bg-texture"></div>
+    <div class="vignette"></div>
+    <canvas id="botCanvas"></canvas>
+    <div class="hint" id="hint">Touch the chest screen to login</div>
+
+    <div class="login-overlay" id="loginOverlay">
+        <button class="close-btn" id="closeBtn">&times;</button>
+        <div class="login-card">
+            <div class="role-selector">
+                <button class="role-btn active" onclick="setRole('Admin')">ADMIN</button>
+                <button class="role-btn" onclick="setRole('Teacher')">TEACHER</button>
+                <button class="role-btn" onclick="setRole('Student')">STUDENT</button>
+            </div>
+
+            <div id="standardLogin">
+                <div class="form-group"><label>Username</label><input type="text" placeholder="Enter name"></div>
+                <div class="form-group"><label>Password</label><input type="password" placeholder="••••••••"></div>
+            </div>
+
+            <div id="studentLogin" class="hidden">
+                <div class="form-group"><label>Student Email</label><input type="email" placeholder="student@school.edu"></div>
+                <div class="form-group">
+                    <label>Student PIN</label>
+                    <input type="password" id="pinDisplay" readonly placeholder="Enter PIN on keypad">
+                </div>
+                <div class="keypad">
+                    <button class="key-btn" onclick="addPin('1')">1</button>
+                    <button class="key-btn" onclick="addPin('2')">2</button>
+                    <button class="key-btn" onclick="addPin('3')">3</button>
+                    <button class="key-btn" onclick="addPin('4')">4</button>
+                    <button class="key-btn" onclick="addPin('5')">5</button>
+                    <button class="key-btn" onclick="addPin('6')">6</button>
+                    <button class="key-btn" onclick="addPin('7')">7</button>
+                    <button class="key-btn" onclick="addPin('8')">8</button>
+                    <button class="key-btn" onclick="addPin('9')">9</button>
+                    <button class="key-btn" onclick="clearPin()">C</button>
+                    <button class="key-btn" onclick="addPin('0')">0</button>
+                    <button class="key-btn" onclick="addPin('0')">#</button>
+                </div>
+            </div>
+
+            <button class="login-btn">Secure Login</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('botCanvas');
+        const ctx = canvas.getContext('2d');
+        const loginOverlay = document.getElementById('loginOverlay');
+        const closeBtn = document.getElementById('closeBtn');
+        const hint = document.getElementById('hint');
+        const pinDisplay = document.getElementById('pinDisplay');
+        const cursor = document.getElementById('custom-cursor');
+
+        let width, height, time = 0;
+        let mouseX = 0, mouseY = 0, targetMouseX = 0, targetMouseY = 0;
+        let isZoomed = false, zoom = 1.6, targetZoom = 1.6, zoomOffsetY = 0, targetZoomOffsetY = 0;
+        let blinkScaleY = 1, rippleRadius = 0, rippleAlpha = 0, rippleX = 0, rippleY = 0;
+        
+        let currentRole = 'Admin';
+        let studentPin = '';
+
+        const theme = {
+            base: '#e8a0a0',
+            dark: '#c87878',
+            darker: '#a85858',
+            screenDark: '#0d1117',
+            accent: '#a8e6ff',
+            accentGlow: 'rgba(168,230,255,0.3)',
+        };
+
+        function setRole(role) {
+            currentRole = role;
+            document.querySelectorAll('.role-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText === role.toUpperCase());
+            });
+            document.getElementById('standardLogin').classList.toggle('hidden', role === 'Student');
+            document.getElementById('studentLogin').classList.toggle('hidden', role !== 'Student');
+        }
+
+        function addPin(num) {
+            if (studentPin.length < 4) {
+                studentPin += num;
+                pinDisplay.value = studentPin.replace(/./g, '•');
+            }
+        }
+
+        function clearPin() {
+            studentPin = '';
+            pinDisplay.value = '';
+        }
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * window.devicePixelRatio;
+            canvas.height = height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            if (!isZoomed) targetZoom = width < 600 ? 1.2 : 1.6;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        document.addEventListener('mousemove', (e) => {
+            // Update large custom pointer
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+
+            // Parallax effect for Bot
+            if (isZoomed) return;
+            targetMouseX = (e.clientX - width / 2) / (width / 2);
+            targetMouseY = (e.clientY - height / 2) / (height / 2);
+        });
+
+        canvas.addEventListener('click', (e) => {
+            if (isZoomed) return;
+            const dx = e.clientX - width / 2;
+            const dy = e.clientY - height / 2;
+            const chestCenterY = 40 * zoom; 
+            if (Math.abs(dx) < 60 * zoom && Math.abs(dy - chestCenterY) < 60 * zoom) {
+                isZoomed = true;
+                targetZoom = width < 600 ? 2.6 : 3.8;
+                targetZoomOffsetY = -30;
+                hint.classList.add('hidden');
+                rippleRadius = 1; rippleAlpha = 1; rippleX = dx; rippleY = dy;
+                setTimeout(() => loginOverlay.classList.add('active'), 500);
+            }
+        });
+
+        closeBtn.addEventListener('click', () => {
+            loginOverlay.classList.remove('active');
+            setTimeout(() => {
+                isZoomed = false;
+                targetZoom = width < 600 ? 1.2 : 1.6;
+                targetZoomOffsetY = 0;
+                hint.classList.remove('hidden');
+            }, 400);
+        });
+
+        function blink() {
+            blinkScaleY = 0.1;
+            setTimeout(() => blinkScaleY = 1, 150);
+            setTimeout(blink, Math.random() * 4000 + 2000);
+        }
+        blink();
+
+        function drawRoundRect(x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, r);
+            ctx.fill();
+        }
+
+        function render(timestamp) {
+            time = timestamp;
+            ctx.clearRect(0, 0, width, height);
+
+            mouseX += (targetMouseX - mouseX) * 0.1;
+            mouseY += (targetMouseY - mouseY) * 0.1;
+            zoom += (targetZoom - zoom) * 0.08;
+            zoomOffsetY += (targetZoomOffsetY - zoomOffsetY) * 0.08;
+
+            ctx.save();
+            ctx.translate(width / 2, height / 2 + zoomOffsetY);
+            ctx.scale(zoom, zoom);
+
+            const breatheY = Math.sin(time * 0.002) * -3;
+            const armSway = Math.sin(time * 0.0015) * 0.03;
+
+            // LEGS & ARMS
+            ctx.fillStyle = 'rgba(60,30,40,0.15)';
+            ctx.beginPath(); ctx.ellipse(0, 220, 110, 18, 0, 0, Math.PI * 2); ctx.fill();
+
+            [-1, 1].forEach(side => {
+                ctx.save();
+                ctx.translate(side * 45, 140);
+                ctx.fillStyle = theme.base;
+                drawRoundRect(-30, -50, 60, 100, 25);
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(side * 105, breatheY + 15);
+                ctx.rotate(side * 0.05 + armSway * side);
+                ctx.fillStyle = theme.dark;
+                ctx.beginPath(); ctx.arc(-side * 5, 0, 25, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = theme.base;
+                drawRoundRect(-20, 0, 40, 100, 20);
+                ctx.restore();
+            });
+
+            // TORSO
+            ctx.save();
+            ctx.translate(0, breatheY);
+            ctx.fillStyle = theme.dark; drawRoundRect(-25, -50, 50, 30, 10);
+            ctx.fillStyle = theme.base; drawRoundRect(-80, -35, 160, 145, 35);
+            
+            // CHEST SCREEN
+            ctx.save();
+            ctx.translate(0, 35);
+            ctx.fillStyle = theme.screenDark;
+            drawRoundRect(-50, -45, 100, 80, 14);
+            
+            ctx.save();
+            ctx.clip(); 
+            
+            if (isZoomed) {
+                ctx.textAlign = 'center';
+                ctx.fillStyle = theme.accent;
+                ctx.font = 'bold 8px monospace';
+                ctx.fillText(currentRole.toUpperCase() + " ACCESS", 0, -32);
+                
+                if (currentRole === 'Student') {
+                    ctx.fillStyle = 'rgba(168,230,255,0.2)';
+                    ctx.fillRect(-35, -24, 70, 8); 
+                    for(let i=0; i<3; i++) {
+                        for(let j=0; j<3; j++) {
+                            ctx.fillRect(-22 + i*16, -10 + j*12, 12, 8);
+                        }
+                    }
+                    ctx.fillStyle = theme.accent;
+                    ctx.font = 'bold 10px monospace';
+                    ctx.fillText(studentPin.replace(/./g, '*'), 0, 32);
+                } else {
+                    ctx.strokeStyle = theme.accent;
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(-35, -15, 70, 12);
+                    ctx.strokeRect(-35, 5, 70, 12);
+                    ctx.fillStyle = theme.accent;
+                    ctx.font = '6px monospace';
+                    ctx.fillText("PASSWORD REQ", 0, 28);
+                }
+            } else {
+                ctx.textAlign = 'center';
+                if (Math.random() > 0.05) {
+                    ctx.fillStyle = theme.accent;
+                    ctx.font = 'bold 12px monospace';
+                    ctx.fillText('ClassCard', 0, -10);
+                }
+                ctx.font = '8px monospace';
+                const off = (time * 0.03) % 150;
+                ctx.fillText('SECURE LOGIN PENDING', 75 - off, 15);
+            }
+            ctx.restore();
+            ctx.restore();
+            ctx.restore();
+
+            // HEAD
+            ctx.save();
+            ctx.translate(mouseX * 20, -132 + breatheY * 0.5 + mouseY * 10);
+            ctx.fillStyle = theme.base;
+            drawRoundRect(-95, -80, 190, 160, 40);
+            ctx.fillStyle = theme.screenDark;
+            drawRoundRect(-75, -50, 150, 100, 20);
+            [-1, 1].forEach(side => {
+                ctx.save();
+                ctx.translate(side * 30 + mouseX * 10, mouseY * 5);
+                ctx.scale(1, blinkScaleY);
+                ctx.fillStyle = theme.accent;
+                ctx.beginPath(); ctx.ellipse(0, 0, 12, 16, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            });
+            ctx.restore();
+
+            ctx.restore();
+
+            // RIPPLE
+            if (rippleAlpha > 0) {
+                ctx.beginPath();
+                ctx.arc(rippleX + width/2, rippleY + height/2, rippleRadius, 0, Math.PI*2);
+                ctx.fillStyle = `rgba(168,230,255,${rippleAlpha})`;
+                ctx.fill();
+                rippleRadius += 10; rippleAlpha -= 0.04;
+            }
+
+            requestAnimationFrame(render);
+        }
+        render(0);
+    </script>
+</body>
+</html>
