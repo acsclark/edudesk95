@@ -69,7 +69,7 @@
             border-radius: 12px; color: #fff; font-size: 1.1rem; outline: none; cursor: none; margin-bottom: 15px;
         }
 
-        .feedback { font-weight: bold; margin-bottom: 15px; min-height: 24px; }
+        .feedback { font-weight: bold; margin-bottom: 15px; min-height: 24px; font-size: 0.95rem; }
         .success { color: #4ade80; }
         .error { color: #f87171; }
         .hidden { display: none !important; }
@@ -106,7 +106,8 @@
         <div class="card hidden" id="spellingCard">
             <h2>Spelling Bee</h2>
             <p>Drop a word for me to spell!</p>
-            <input type="text" id="spellInput" placeholder="Enter word..." onkeydown="if(event.key === 'Enter') setupSpelling()">
+            <input type="text" id="spellInput" placeholder="Enter word..." autocomplete="off" onkeydown="if(event.key === 'Enter') setupSpelling()">
+            <div id="spellInputFeedback" class="feedback"></div>
             <button class="choice-btn" style="width:100%" onclick="setupSpelling()">Spell it, Gen AlphaBot!</button>
         </div>
 
@@ -304,6 +305,11 @@
         function showStep(id) {
             document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
+            // Clear any spelling feedback when switching steps
+            if(id === 'spellingCard') {
+                document.getElementById('spellInputFeedback').innerText = '';
+                document.getElementById('spellInput').value = '';
+            }
         }
 
         function closeAll() {
@@ -312,9 +318,46 @@
         }
 
         // --- Game Mechanics ---
-        function setupSpelling() {
-            const word = document.getElementById('spellInput').value.toLowerCase().trim();
+        async function setupSpelling() {
+            if (isProcessingSpelling) return;
+            
+            const wordInput = document.getElementById('spellInput');
+            const word = wordInput.value.toLowerCase().trim();
+            const feedback = document.getElementById('spellInputFeedback');
+            
             if(!word) return;
+
+            // 1. Basic validation (only letters)
+            if (!/^[a-z]+$/.test(word)) {
+                feedback.innerText = "Bruh, letters only! No spaces or numbers.";
+                feedback.className = "feedback error";
+                speak("Bruh, letters only! No spaces or numbers.", null, null);
+                return;
+            }
+
+            // 2. Dictionary validation API
+            isProcessingSpelling = true;
+            feedback.innerText = "Checking dictionary...";
+            feedback.className = "feedback";
+
+            try {
+                const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+                if (!res.ok) {
+                    // API returned 404 (word not found)
+                    feedback.innerText = "That spelling is kinda sus! Double check it.";
+                    feedback.className = "feedback error";
+                    // Using "suss" phonetically here so the AI pronounces it right!
+                    speak("Yo, that spelling is looking kinda suss. Double check it!", null, null);
+                    isProcessingSpelling = false;
+                    return;
+                }
+            } catch (e) {
+                // If the free dictionary API fails/is offline, just let them play
+                console.warn("Dictionary check skipped due to network error.");
+            }
+
+            // Valid! Set up the spelling bee.
+            feedback.innerText = "";
             currentMode = "spelling";
             let chars = word.split('');
             let idx = Math.floor(Math.random() * chars.length);
@@ -331,7 +374,9 @@
                 display: chars.join('-').toUpperCase(),
                 audio: `Bet. The word is ${word}. I spell it: ${chars.join(', ')}.`
             };
+            
             startPractice("Spelling Bee");
+            isProcessingSpelling = false;
         }
 
         // --- Math Quiz Logic ---
@@ -463,7 +508,7 @@
             if(w === solution.wrong && r === solution.right) {
                 feedback.innerText = "HUGE W! You cooked!";
                 feedback.className = "feedback success";
-                speak("Skibbidy Toilet! You literally cooked!");
+                speak("Sheesh! Huge W, you literally cooked!");
                 setTimeout(() => {
                     isProcessingSpelling = false;
                     showStep('menuCard');
@@ -567,21 +612,26 @@
             });
             ctx.restore();
 
-            // Arms (With Tickle/Shy logic to cover eyes & jitter)
+            // Arms (With Tickle/Shy logic to cover mouth & giggle)
             [-1, 1].forEach(side => {
                 ctx.save();
-                ctx.translate(side * 105, 15);
+                // Add a cute "shrug" by pulling shoulders inward and upward
+                const shrugX = -side * 15 * tickleFactor;
+                const shrugY = -15 * tickleFactor;
+                ctx.translate(side * 105 + shrugX, 15 + shrugY);
+                
                 const armSway = Math.sin(time * 0.0015) * 0.05;
                 const baseRot = side * 0.05 + armSway * side;
-                const shyRot = side * -1.8;
-                ctx.rotate(baseRot + (shyRot - baseRot) * tickleFactor);
+                
+                // Rotate inwards across the chest to cover the mouth
+                const giggleRot = side * 2.4; 
+                ctx.rotate(baseRot + (giggleRot - baseRot) * tickleFactor);
                 
                 ctx.fillStyle = theme.dark; ctx.beginPath(); ctx.arc(-side * 5, 0, 25, 0, Math.PI*2); ctx.fill();
                 ctx.fillStyle = theme.base;
                 
-                const armJitter = Math.sin(time * 0.1) * 3 * tickleFactor;
-                const scoot = 30 * tickleFactor * -side;
-                drawRoundRect(-20 + armJitter + scoot, 0, 40, 105, 20);
+                const armJitter = Math.sin(time * 0.05) * 3 * tickleFactor;
+                drawRoundRect(-20 + armJitter, 0, 40, 105, 20);
                 ctx.restore();
             });
 
