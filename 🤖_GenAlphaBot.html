@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aura-Bot Learning Edition</title>
+    <title>Gen AlphaBot Learning Edition</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -94,10 +94,10 @@
         <!-- Main Menu -->
         <div class="card" id="menuCard">
             <h2>System Ready</h2>
-            <p>I am AuraBot. What shall we study today?</p>
+            <p>Yo! I am Gen AlphaBot. What are we locking in on today?</p>
             <div class="btn-grid">
                 <button class="choice-btn" onclick="showStep('spellingCard')">Spelling</button>
-                <button class="choice-btn" onclick="showStep('mathCard')">Math</button>
+                <button class="choice-btn" onclick="startMathQuiz()">Math</button>
             </div>
             <button class="choice-btn" style="width:100%; margin-top:15px; background:transparent; border:none;" onclick="closeAll()">Go Back</button>
         </div>
@@ -105,16 +105,25 @@
         <!-- Spelling Mode -->
         <div class="card hidden" id="spellingCard">
             <h2>Spelling Bee</h2>
-            <p>Input a word for me to spell!</p>
-            <input type="text" id="spellInput" placeholder="Enter word...">
-            <button class="choice-btn" style="width:100%" onclick="setupSpelling()">Spell it, AuraBot!</button>
+            <p>Drop a word for me to spell!</p>
+            <input type="text" id="spellInput" placeholder="Enter word..." onkeydown="if(event.key === 'Enter') setupSpelling()">
+            <button class="choice-btn" style="width:100%" onclick="setupSpelling()">Spell it, Gen AlphaBot!</button>
         </div>
 
-        <!-- Math Mode -->
-        <div class="card hidden" id="mathCard">
-            <h2>Math Master</h2>
-            <p>I'll give you a problem, but I might make a mistake!</p>
-            <button class="choice-btn" style="width:100%" onclick="setupMath()">Generate Problem</button>
+        <!-- Math Quiz Mode -->
+        <div class="card hidden" id="mathQuizCard">
+            <h2 id="mathQuizTitle">Math Master</h2>
+            <div class="game-box" style="flex-direction: column;">
+                <span id="mathVisualContent"></span>
+                <div id="mathAudioStatus" class="hidden" style="margin-top: 15px; font-size: 1rem; color: rgba(168, 230, 255, 0.7);">
+                    <div class="spinner" style="width:16px; height:16px; border-width:2px; vertical-align: middle;"></div> 
+                    <span style="vertical-align: middle; margin-left: 5px;">Speaking...</span>
+                </div>
+            </div>
+            <input type="number" id="mathAnswerInput" placeholder="Your answer..." autocomplete="off" onkeydown="if(event.key === 'Enter') submitMathAnswer()">
+            <div id="mathFeedback" class="feedback"></div>
+            <button class="choice-btn" style="width:100%" onclick="submitMathAnswer()">Submit Answer</button>
+            <button class="choice-btn" style="width:100%; margin-top:10px; background:transparent; border:none;" onclick="showStep('menuCard')">Exit Quiz</button>
         </div>
 
         <!-- Game Active -->
@@ -124,17 +133,17 @@
                 <div id="audioStatus" class="hidden"><div class="spinner"></div></div>
                 <span id="visualContent"></span>
             </div>
-            <p id="instructionText">Find the mistake and fix it!</p>
+            <p id="instructionText">Find the cap and fix it!</p>
             <div class="btn-grid">
                 <button class="choice-btn" onclick="playAudio()">Listen Again</button>
                 <button class="choice-btn" id="toggleVisBtn" onclick="toggleVisibility()">Show Visual</button>
             </div>
             <div class="btn-grid" style="margin-top:10px;">
                 <input type="text" id="userInputWrong" placeholder="The Error" style="margin:0" autocomplete="off">
-                <input type="text" id="userInputRight" placeholder="The Correct" style="margin:0" autocomplete="off">
+                <input type="text" id="userInputRight" placeholder="The Correct" style="margin:0" autocomplete="off" onkeydown="if(event.key === 'Enter') submitAnswer()">
             </div>
             <div id="gameFeedback" class="feedback"></div>
-            <button class="choice-btn" style="width:100%" onclick="submitAnswer()">Fix AuraBot!</button>
+            <button class="choice-btn" style="width:100%" onclick="submitAnswer()">Fix Gen AlphaBot!</button>
         </div>
     </div>
 
@@ -150,9 +159,16 @@
         let zoom = 1.6, targetZoom = 1.6, isZoomed = false, zoomOffY = 0, targetZoomOffY = 0;
         let tickleFactor = 0, targetTickle = 0;
 
+        // Interaction Locks
+        let isProcessingMath = false;
+        let isProcessingSpelling = false;
+
         // Game State
         let currentMode = ""; // "spelling" or "math"
         let solution = { wrong: "", right: "", audio: "", word: "" };
+        let mathQuestionCount = 0;
+        let currentMathQ = { a: 0, b: 0, ans: 0, display: "", audio: "" };
+        let availablePraises = [];
 
         const theme = { 
             base: '#e8a0a0', 
@@ -198,10 +214,28 @@
             }
         };
 
-        // --- Audio Context & TTS (Fixed Model and Backoff) ---
-        async function speak(text) {
-            document.getElementById('audioStatus').classList.remove('hidden');
-            document.getElementById('visualContent').classList.add('hidden');
+        // --- Audio Context & TTS (Restored Cloud API for HTML Embed compatibility) ---
+        let globalSpeakId = 0;
+        let activeAudio = null;
+
+        async function speak(text, statusId = 'audioStatus', contentId = 'visualContent') {
+            const currentSpeakId = ++globalSpeakId;
+            const statusEl = statusId ? document.getElementById(statusId) : null;
+            const contentEl = contentId ? document.getElementById(contentId) : null;
+
+            // Stop any currently playing audio so it doesn't overlap
+            if (activeAudio) {
+                activeAudio.pause();
+                activeAudio.currentTime = 0;
+                activeAudio = null;
+            }
+
+            if(statusEl) {
+                statusEl.classList.remove('hidden');
+                // Deep reset of the spinner HTML in case a previous error overwrote it
+                statusEl.innerHTML = '<div class="spinner" style="width:16px; height:16px; border-width:2px; vertical-align: middle; display:inline-block;"></div><span style="vertical-align: middle; margin-left: 5px;">Speaking...</span>';
+            }
+            if(contentEl) contentEl.classList.add('hidden');
             
             const payload = {
                 contents: [{ parts: [{ text }] }],
@@ -209,22 +243,24 @@
                     responseModalities: ["AUDIO"],
                     speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } }
                 },
-                model: "gemini-2.5-flash-preview-tts" // Added strictly required model string
+                model: "gemini-2.5-flash-preview-tts" 
             };
 
             const delays = [1000, 2000, 4000, 8000, 16000];
             let base64 = null;
 
             for (let i = 0; i < 5; i++) {
+                if (globalSpeakId !== currentSpeakId) return; // Silent abort if a new speech was requested
+
                 try {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
                     const data = await response.json();
                     
-                    if (data.candidates && data.candidates[0].content.parts[0].inlineData) {
+                    if (data.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
                         base64 = data.candidates[0].content.parts[0].inlineData.data;
                         break;
                     } else if (data.error) {
@@ -233,24 +269,29 @@
                 } catch (e) {
                     if (i === 4) {
                         console.error("Audio API Error:", e);
-                        document.getElementById('audioStatus').innerHTML = "Audio Error";
+                        if(statusEl && globalSpeakId === currentSpeakId) statusEl.innerHTML = "Audio Error";
                         return;
                     }
                     await new Promise(r => setTimeout(r, delays[i]));
                 }
             }
 
-            if (base64) {
+            if (base64 && globalSpeakId === currentSpeakId) {
                 try {
-                    const audio = new Audio(URL.createObjectURL(pcmToWav(base64, 24000)));
-                    audio.onended = () => {
-                        document.getElementById('audioStatus').classList.add('hidden');
+                    activeAudio = new Audio(URL.createObjectURL(pcmToWav(base64, 24000)));
+                    activeAudio.onended = () => {
+                        // Only hide the spinner if this is still the active speech request
+                        if(statusEl && globalSpeakId === currentSpeakId) {
+                            statusEl.classList.add('hidden');
+                        }
                     };
-                    await audio.play();
+                    await activeAudio.play();
                 } catch(e) {
                     console.error("Playback error:", e);
-                    document.getElementById('audioStatus').innerHTML = "Audio Error";
+                    if(statusEl && globalSpeakId === currentSpeakId) statusEl.innerHTML = "Audio Error";
                 }
+            } else if (globalSpeakId === currentSpeakId && statusEl) {
+                statusEl.classList.add('hidden'); // Fallback cleanup
             }
         }
 
@@ -268,6 +309,7 @@
             return new Blob([view], { type: 'audio/wav' });
         }
 
+
         // --- Interaction Logic ---
         canvas.onclick = (e) => {
             if(isZoomed) return;
@@ -280,7 +322,9 @@
                 cursor.classList.remove('bouncy');
                 targetTickle = 0; // Reset tickle when zooming
                 overlay.classList.add('active');
-                speak("Hello! I am AuraBot. Ready to learn?");
+                
+                // Greeting (passing nulls so it doesn't mess with the game spinners)
+                speak("Yo chat! I am Gen AlphaBot. Ready to lock in?", null, null);
             }
         };
 
@@ -312,26 +356,101 @@
                 right: originalChar, 
                 word: word, 
                 display: chars.join('-').toUpperCase(),
-                audio: `The word is ${word}. I spell it: ${chars.join(', ')}.`
+                audio: `Bet. The word is ${word}. I spell it: ${chars.join(', ')}.`
             };
             startPractice("Spelling Bee");
         }
 
-        function setupMath() {
+        // --- Math Quiz Logic ---
+        function startMathQuiz() {
+            mathQuestionCount = 0;
             currentMode = "math";
-            let a = Math.floor(Math.random() * 10) + 1;
-            let b = Math.floor(Math.random() * 10) + 1;
-            let trueSum = a + b;
-            let error = (Math.random() > 0.5 ? 1 : -1);
-            let wrongSum = trueSum + error;
 
-            solution = {
-                wrong: wrongSum.toString(),
-                right: trueSum.toString(),
-                display: `${a} + ${b} = ${wrongSum}`,
-                audio: `Calculate: what is ${a} plus ${b}? I think it is ${wrongSum}.`
+            const allPraises = [
+                "Big W!", 
+                "You are literally goated!", 
+                "Sigma behavior!", 
+                "No cap, that's right!", 
+                "You ate that up, no crumbs!", 
+                "Common W!",
+                "You cooked with that one!",
+                "Valid answer, bet!",
+                "High key genius!",
+                "Main character energy right there!"
+            ];
+            // Shuffle the array so the 5 praises used in this round are guaranteed unique
+            availablePraises = allPraises.sort(() => Math.random() - 0.5);
+
+            showStep('mathQuizCard');
+            nextMathQuestion();
+        }
+
+        function nextMathQuestion() {
+            if (mathQuestionCount >= 5) {
+                document.getElementById('mathVisualContent').innerText = "Quiz Complete!";
+                speak("You ate that up, no crumbs! All five questions done, absolute sigma!", "mathAudioStatus", null);
+                setTimeout(() => showStep('menuCard'), 3000);
+                return;
+            }
+            
+            mathQuestionCount++;
+            let a = Math.floor(Math.random() * 11) + 2; // 2 to 12
+            let b = Math.floor(Math.random() * 11) + 2; // 2 to 12
+            currentMathQ = {
+                a: a,
+                b: b,
+                ans: a * b,
+                display: `${a} × ${b} = ?`,
+                audio: `${a} times ${b}?`
             };
-            startPractice("Math Master");
+
+            document.getElementById('mathQuizTitle').innerText = `Math Master (${mathQuestionCount}/5)`;
+            document.getElementById('mathVisualContent').innerText = currentMathQ.display;
+            document.getElementById('mathVisualContent').classList.remove('hidden'); // Ensure text remains visible
+            document.getElementById('mathFeedback').innerText = "";
+            document.getElementById('mathAnswerInput').value = "";
+            document.getElementById('mathAnswerInput').focus();
+
+            playMathAudio();
+        }
+
+        function playMathAudio() { 
+            // Passing `null` as the 3rd argument forces the text to remain visible
+            speak(currentMathQ.audio, "mathAudioStatus", null); 
+        }
+
+        function submitMathAnswer() {
+            if (isProcessingMath) return; // Prevent spamming 'Enter'
+            
+            const inputVal = document.getElementById('mathAnswerInput').value;
+            if(inputVal === "") return;
+            
+            isProcessingMath = true;
+            const input = parseInt(inputVal, 10);
+            const feedback = document.getElementById('mathFeedback');
+
+            if (input === currentMathQ.ans) {
+                // Pull a unique phrase from the shuffled deck
+                const randomPraise = availablePraises.pop() || "Correct!";
+
+                feedback.innerText = randomPraise;
+                feedback.className = "feedback success";
+                speak(randomPraise, "mathAudioStatus", null);
+                
+                setTimeout(() => {
+                    isProcessingMath = false;
+                    nextMathQuestion();
+                }, 2000);
+            } else {
+                feedback.innerText = "That's cap. Try again!";
+                feedback.className = "feedback error";
+                speak("Oof, that's cap. Try again, bro.", "mathAudioStatus", null);
+                document.getElementById('mathAnswerInput').value = ""; // Clear input for the retry
+                
+                setTimeout(() => {
+                    isProcessingMath = false; // Briefly unlock so they can retry
+                }, 1000); 
+            }
         }
 
         function startPractice(title) {
@@ -359,19 +478,33 @@
         }
 
         function submitAnswer() {
+            if (isProcessingSpelling) return;
+
             const w = document.getElementById('userInputWrong').value.toLowerCase().trim();
             const r = document.getElementById('userInputRight').value.toLowerCase().trim();
+            if(w === "" || r === "") return;
+
+            isProcessingSpelling = true;
             const feedback = document.getElementById('gameFeedback');
 
             if(w === solution.wrong && r === solution.right) {
-                feedback.innerText = "EXCELLENT! System restored!";
+                feedback.innerText = "HUGE W! You cooked!";
                 feedback.className = "feedback success";
-                speak("You fixed my circuits! Well done.");
-                setTimeout(() => showStep('menuCard'), 2000);
+                speak("Sheesh! Huge W, you literally cooked!");
+                setTimeout(() => {
+                    isProcessingSpelling = false;
+                    showStep('menuCard');
+                }, 2000);
             } else {
-                feedback.innerText = "ERROR: Try again.";
+                feedback.innerText = "MAJOR L: Try again.";
                 feedback.className = "feedback error";
-                speak("Oh no, that's not it. Try again.");
+                speak("Bruh, major L. That ain't it. Try again.");
+                document.getElementById('userInputWrong').value = "";
+                document.getElementById('userInputRight').value = "";
+                
+                setTimeout(() => {
+                    isProcessingSpelling = false;
+                }, 1000);
             }
         }
 
@@ -380,8 +513,16 @@
             ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill();
         }
 
-        function render() {
-            time += 0.05;
+        let blinkScaleY = 1;
+        function blink() {
+            blinkScaleY = 0.1;
+            setTimeout(() => blinkScaleY = 1, 150);
+            setTimeout(blink, Math.random() * 4000 + 2000);
+        }
+        blink();
+
+        function render(timestamp) {
+            time = timestamp || 0;
             ctx.clearRect(0, 0, width, height);
             
             mouseX += (targetMouseX - mouseX) * 0.1;
@@ -394,7 +535,8 @@
             ctx.translate(width/2, height/2 + zoomOffY);
             ctx.scale(zoom, zoom);
 
-            const breathe = Math.sin(time * 0.4) * 3;
+            // Breathing Animation 
+            const breathe = Math.sin(time * 0.002) * -3;
 
             // Legs
             [-1, 1].forEach(side => {
@@ -413,8 +555,8 @@
             
             // Chest Screen
             ctx.fillStyle = theme.screen; drawRoundRect(-50, -10, 100, 80, 14);
-            ctx.fillStyle = theme.accent; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
-            ctx.fillText('AURABOT v1', 0, 25);
+            ctx.fillStyle = theme.accent; ctx.font = 'bold 8px monospace'; ctx.textAlign = 'center';
+            ctx.fillText('GEN ALPHABOT', 0, 25);
             ctx.font = '6px monospace'; ctx.fillText(isZoomed ? 'LEARNING...' : 'SYSTEM IDLE', 0, 45);
 
             // Head (With Shake Jitter from Tickle)
@@ -423,23 +565,22 @@
             let jitterY = Math.cos(time * 0.04) * 2 * tickleFactor;
             ctx.translate(mouseX * 8 + jitterX, -135 + mouseY * 5 + jitterY);
             
-            ctx.fillStyle = theme.base; drawRoundRect(-95, -85, 190, 170, 40);
+            ctx.fillStyle = theme.base; drawRoundRect(-95, -85, 190, 170, 40); // Head Base
             
-            // Rosy Cheeks
+            ctx.fillStyle = theme.screen; drawRoundRect(-75, -55, 150, 110, 20); // Face Screen
+            
+            // Rosy Cheeks (Moved to render *after* the face screen so they show up)
             if (tickleFactor > 0.01) {
                 ctx.save(); ctx.globalAlpha = tickleFactor; ctx.fillStyle = theme.rosy;
                 ctx.beginPath(); ctx.arc(-55, 30, 15, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.arc(55, 30, 15, 0, Math.PI * 2); ctx.fill(); ctx.restore();
             }
-
-            ctx.fillStyle = theme.screen; drawRoundRect(-75, -55, 150, 110, 20);
             
             // Eyes
-            const blink = Math.sin(time * 0.1) > 0.97 ? 0.1 : 1;
             ctx.fillStyle = theme.accent;
             [-1, 1].forEach(side => {
                 ctx.save(); ctx.translate(side * 35 + mouseX*2, mouseY*2);
-                ctx.scale(1, blink);
+                ctx.scale(1, blinkScaleY);
                 
                 if (tickleFactor > 0.5) {
                     // Squinting eyes when tickled
@@ -453,11 +594,11 @@
             });
             ctx.restore();
 
-            // Arms (With Tickle/Shy logic to cover eyes)
+            // Arms (With Tickle/Shy logic to cover eyes & jitter)
             [-1, 1].forEach(side => {
                 ctx.save();
                 ctx.translate(side * 105, 15);
-                const armSway = Math.sin(time * 0.3) * 0.05;
+                const armSway = Math.sin(time * 0.0015) * 0.05;
                 const baseRot = side * 0.05 + armSway * side;
                 const shyRot = side * -1.8;
                 ctx.rotate(baseRot + (shyRot - baseRot) * tickleFactor);
@@ -465,15 +606,16 @@
                 ctx.fillStyle = theme.dark; ctx.beginPath(); ctx.arc(-side * 5, 0, 25, 0, Math.PI*2); ctx.fill();
                 ctx.fillStyle = theme.base;
                 
+                const armJitter = Math.sin(time * 0.1) * 3 * tickleFactor;
                 const scoot = 30 * tickleFactor * -side;
-                drawRoundRect(-20 + scoot, 0, 40, 105, 20);
+                drawRoundRect(-20 + armJitter + scoot, 0, 40, 105, 20);
                 ctx.restore();
             });
 
             ctx.restore(); ctx.restore();
             requestAnimationFrame(render);
         }
-        render();
+        requestAnimationFrame(render); // Start with timestamp injected
     </script>
 </body>
 </html>
