@@ -335,6 +335,20 @@
                 return;
             }
 
+            // Profanity Check
+            const naughtyWords = [
+                "poop", "shit", "fuck", "bitch", "ass", "crap", "dick", "cock",
+                "pussy", "cunt", "asshole", "bastard", "slut", "whore", "boob", "boobs",
+                "penis", "vagina", "sex", "porn", "nigger", "nigga", "fag", "faggot", "pee", "poo", "cum", "tit", "tits"
+            ];
+            
+            if (naughtyWords.includes(word)) {
+                feedback.innerText = "Ayo! Keep it family friendly!";
+                feedback.className = "feedback error";
+                speak("Ayo, hold up! Keep it family friendly, bro. That's a major L.", null, null);
+                return;
+            }
+
             // 2. Dictionary validation API
             isProcessingSpelling = true;
             feedback.innerText = "Checking dictionary...";
