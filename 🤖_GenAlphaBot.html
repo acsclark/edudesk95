@@ -148,7 +148,6 @@
     </div>
 
     <script>
-        const apiKey = ""; // API key populated by environment
         const canvas = document.getElementById('botCanvas');
         const ctx = canvas.getContext('2d');
         const cursor = document.getElementById('custom-cursor');
@@ -214,99 +213,68 @@
             }
         };
 
-        // --- Audio Context & TTS (Restored Cloud API for HTML Embed compatibility) ---
+        // --- Audio Context & TTS (Native Browser Speech for HTML Embeds) ---
         let globalSpeakId = 0;
-        let activeAudio = null;
+        let currentUtterance = null; // Prevent garbage collection bugs
 
-        async function speak(text, statusId = 'audioStatus', contentId = 'visualContent') {
-            const currentSpeakId = ++globalSpeakId;
-            const statusEl = statusId ? document.getElementById(statusId) : null;
-            const contentEl = contentId ? document.getElementById(contentId) : null;
-
-            // Stop any currently playing audio so it doesn't overlap
-            if (activeAudio) {
-                activeAudio.pause();
-                activeAudio.currentTime = 0;
-                activeAudio = null;
-            }
-
-            if(statusEl) {
-                statusEl.classList.remove('hidden');
-                // Deep reset of the spinner HTML in case a previous error overwrote it
-                statusEl.innerHTML = '<div class="spinner" style="width:16px; height:16px; border-width:2px; vertical-align: middle; display:inline-block;"></div><span style="vertical-align: middle; margin-left: 5px;">Speaking...</span>';
-            }
-            if(contentEl) contentEl.classList.add('hidden');
-            
-            const payload = {
-                contents: [{ parts: [{ text }] }],
-                generationConfig: {
-                    responseModalities: ["AUDIO"],
-                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } }
-                },
-                model: "gemini-2.5-flash-preview-tts" 
-            };
-
-            const delays = [1000, 2000, 4000, 8000, 16000];
-            let base64 = null;
-
-            for (let i = 0; i < 5; i++) {
-                if (globalSpeakId !== currentSpeakId) return; // Silent abort if a new speech was requested
-
-                try {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    const data = await response.json();
-                    
-                    if (data.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
-                        base64 = data.candidates[0].content.parts[0].inlineData.data;
-                        break;
-                    } else if (data.error) {
-                        throw new Error(data.error.message);
-                    }
-                } catch (e) {
-                    if (i === 4) {
-                        console.error("Audio API Error:", e);
-                        if(statusEl && globalSpeakId === currentSpeakId) statusEl.innerHTML = "Audio Error";
-                        return;
-                    }
-                    await new Promise(r => setTimeout(r, delays[i]));
-                }
-            }
-
-            if (base64 && globalSpeakId === currentSpeakId) {
-                try {
-                    activeAudio = new Audio(URL.createObjectURL(pcmToWav(base64, 24000)));
-                    activeAudio.onended = () => {
-                        // Only hide the spinner if this is still the active speech request
-                        if(statusEl && globalSpeakId === currentSpeakId) {
-                            statusEl.classList.add('hidden');
-                        }
-                    };
-                    await activeAudio.play();
-                } catch(e) {
-                    console.error("Playback error:", e);
-                    if(statusEl && globalSpeakId === currentSpeakId) statusEl.innerHTML = "Audio Error";
-                }
-            } else if (globalSpeakId === currentSpeakId && statusEl) {
-                statusEl.classList.add('hidden'); // Fallback cleanup
-            }
+        // Preload voices to fix the browser bug where the first speech defaults to a male voice
+        let cachedVoices = [];
+        function loadVoices() {
+            cachedVoices = window.speechSynthesis.getVoices();
         }
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+        loadVoices();
 
-        function pcmToWav(b64, rate) {
-            const buf = Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
-            const view = new DataView(new ArrayBuffer(44 + buf.byteLength));
-            const s = (o, str) => { for(let i=0; i<str.length; i++) view.setUint8(o+i, str.charCodeAt(i)); };
-            s(0, 'RIFF'); view.setUint32(4, 36 + buf.byteLength, true);
-            s(8, 'WAVE'); s(12, 'fmt '); view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true); view.setUint16(22, 1, true);
-            view.setUint32(24, rate, true); view.setUint32(28, rate*2, true);
-            view.setUint16(32, 2, true); view.setUint16(34, 16, true);
-            s(36, 'data'); view.setUint32(40, buf.byteLength, true);
-            new Uint8Array(view.buffer, 44).set(new Uint8Array(buf));
-            return new Blob([view], { type: 'audio/wav' });
+        function speak(text, statusId = 'audioStatus', contentId = 'visualContent') {
+            return new Promise((resolve) => {
+                const currentSpeakId = ++globalSpeakId;
+                const statusEl = statusId ? document.getElementById(statusId) : null;
+                const contentEl = contentId ? document.getElementById(contentId) : null;
+
+                // Stop any currently playing audio instantly
+                window.speechSynthesis.cancel();
+
+                if(statusEl) {
+                    statusEl.classList.remove('hidden');
+                    statusEl.innerHTML = '<div class="spinner" style="width:16px; height:16px; border-width:2px; vertical-align: middle; display:inline-block;"></div><span style="vertical-align: middle; margin-left: 5px;">Speaking...</span>';
+                }
+                if(contentEl) contentEl.classList.add('hidden');
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                currentUtterance = utterance; // Prevent garbage collection bug
+                utterance.pitch = 1.3; // Cute, slightly higher pitched robot voice
+                utterance.rate = 1.0;
+
+                // Try to use a nice female/friendly voice if available on the device
+                const voices = cachedVoices.length > 0 ? cachedVoices : window.speechSynthesis.getVoices();
+                const preferredVoice = voices.find(v => 
+                    v.name.includes('Female') || 
+                    v.name.includes('Samantha') ||
+                    v.name.includes('Zira') || // Default Windows Female
+                    v.name.includes('Karen') || // Mac/iOS Female fallback
+                    v.name.includes('Google UK English') || 
+                    v.name.includes('Google US English')
+                );
+                if (preferredVoice) utterance.voice = preferredVoice;
+
+                utterance.onend = () => {
+                    if(statusEl && globalSpeakId === currentSpeakId) {
+                        statusEl.classList.add('hidden');
+                    }
+                    resolve();
+                };
+
+                utterance.onerror = (e) => {
+                    console.error("Speech error:", e);
+                    if(statusEl && globalSpeakId === currentSpeakId) {
+                        statusEl.classList.add('hidden');
+                    }
+                    resolve();
+                };
+
+                // Speak
+                window.speechSynthesis.speak(utterance);
+            });
         }
 
 
@@ -322,6 +290,11 @@
                 cursor.classList.remove('bouncy');
                 targetTickle = 0; // Reset tickle when zooming
                 overlay.classList.add('active');
+
+                // Silent unlock for strict iframe autoplay policies
+                const unlock = new SpeechSynthesisUtterance('');
+                unlock.volume = 0;
+                window.speechSynthesis.speak(unlock);
                 
                 // Greeting (passing nulls so it doesn't mess with the game spinners)
                 speak("Yo chat! I am Gen AlphaBot. Ready to lock in?", null, null);
