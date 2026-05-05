@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura-Bot Learning Edition</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: 
+                radial-gradient(ellipse at 20% 30%, rgba(255,220,230,0.6) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(200,230,255,0.5) 0%, transparent 50%),
+                linear-gradient(170deg, #f0e4e8 0%, #e8dce4 30%, #dce8f0 70%, #f0ebe4 100%);
+            height: 100vh; display: flex; justify-content: center; align-items: center; cursor: none;
+        }
+
+        #custom-cursor {
+            position: fixed; width: 108px; height: 108px; pointer-events: none; z-index: 9999;
+            filter: drop-shadow(0 0 10px rgba(168, 230, 255, 0.5));
+            transform: translate(0, 0);
+        }
+
+        #custom-cursor.bouncy {
+            animation: cursor-bounce 0.6s infinite ease-in-out;
+        }
+
+        @keyframes cursor-bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .cursor-arrow { stroke: #0d1117; stroke-width: 2; fill: #a8e6ff; }
+        #botCanvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10; }
+
+        .overlay {
+            position: fixed; inset: 0; background: rgba(13, 17, 23, 0.4); backdrop-filter: blur(12px);
+            display: flex; justify-content: center; align-items: center; z-index: 100;
+            opacity: 0; pointer-events: none; transition: all 0.4s ease;
+        }
+        .overlay.active { opacity: 1; pointer-events: all; }
+
+        .card {
+            background: #0d1117; padding: 35px; border-radius: 32px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.4); width: 420px; text-align: center;
+            color: #a8e6ff; border: 1px solid rgba(168, 230, 255, 0.2);
+        }
+
+        h2 { font-size: 1.5rem; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+        p { color: rgba(168, 230, 255, 0.7); margin-bottom: 25px; line-height: 1.4; }
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+        .choice-btn {
+            padding: 15px; background: rgba(168, 230, 255, 0.08); border: 1px solid rgba(168, 230, 255, 0.2);
+            border-radius: 16px; color: #a8e6ff; font-weight: 700; cursor: none; transition: all 0.2s;
+        }
+        .choice-btn:hover { background: rgba(168, 230, 255, 0.2); transform: translateY(-2px); border-color: #a8e6ff; }
+
+        .game-box {
+            font-family: 'Courier New', Courier, monospace; font-size: 1.8rem;
+            background: rgba(255,255,255,0.03); padding: 25px; border-radius: 20px;
+            margin-bottom: 20px; min-height: 100px; display: flex; align-items: center; justify-content: center;
+            border: 2px dashed rgba(168,230,255,0.2);
+        }
+
+        input {
+            width: 100%; padding: 15px; background: #161b22; border: 1px solid rgba(168,230,255,0.2);
+            border-radius: 12px; color: #fff; font-size: 1.1rem; outline: none; cursor: none; margin-bottom: 15px;
+        }
+
+        .feedback { font-weight: bold; margin-bottom: 15px; min-height: 24px; }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        .hidden { display: none !important; }
+        .hint { position: absolute; bottom: 30px; color: rgba(0,0,0,0.2); font-weight: bold; pointer-events: none; z-index: 5; }
+
+        .spinner {
+            width: 30px; height: 30px; border: 3px solid rgba(168, 230, 255, 0.1);
+            border-top-color: #a8e6ff; border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="custom-cursor">
+        <svg width="108" height="108" viewBox="0 0 24 24"><path class="cursor-arrow" d="M4.5,4.5 L20,11.5 L12.5,12.5 L11.5,20 L4.5,4.5 Z" /></svg>
+    </div>
+
+    <canvas id="botCanvas"></canvas>
+    <div class="hint">CLICK MY CHEST SCREEN TO WAKE ME UP</div>
+
+    <div class="overlay" id="mainOverlay">
+        <!-- Main Menu -->
+        <div class="card" id="menuCard">
+            <h2>System Ready</h2>
+            <p>I am AuraBot. What shall we study today?</p>
+            <div class="btn-grid">
+                <button class="choice-btn" onclick="showStep('spellingCard')">Spelling</button>
+                <button class="choice-btn" onclick="showStep('mathCard')">Math</button>
+            </div>
+            <button class="choice-btn" style="width:100%; margin-top:15px; background:transparent; border:none;" onclick="closeAll()">Go Back</button>
+        </div>
+
+        <!-- Spelling Mode -->
+        <div class="card hidden" id="spellingCard">
+            <h2>Spelling Bee</h2>
+            <p>Input a word for me to spell!</p>
+            <input type="text" id="spellInput" placeholder="Enter word...">
+            <button class="choice-btn" style="width:100%" onclick="setupSpelling()">Spell it, AuraBot!</button>
+        </div>
+
+        <!-- Math Mode -->
+        <div class="card hidden" id="mathCard">
+            <h2>Math Master</h2>
+            <p>I'll give you a problem, but I might make a mistake!</p>
+            <button class="choice-btn" style="width:100%" onclick="setupMath()">Generate Problem</button>
+        </div>
+
+        <!-- Game Active -->
+        <div class="card hidden" id="activeCard">
+            <h2 id="modeTitle">Practice</h2>
+            <div class="game-box">
+                <div id="audioStatus" class="hidden"><div class="spinner"></div></div>
+                <span id="visualContent"></span>
+            </div>
+            <p id="instructionText">Find the mistake and fix it!</p>
+            <div class="btn-grid">
+                <button class="choice-btn" onclick="playAudio()">Listen Again</button>
+                <button class="choice-btn" id="toggleVisBtn" onclick="toggleVisibility()">Show Visual</button>
+            </div>
+            <div class="btn-grid" style="margin-top:10px;">
+                <input type="text" id="userInputWrong" placeholder="The Error" style="margin:0" autocomplete="off">
+                <input type="text" id="userInputRight" placeholder="The Correct" style="margin:0" autocomplete="off">
+            </div>
+            <div id="gameFeedback" class="feedback"></div>
+            <button class="choice-btn" style="width:100%" onclick="submitAnswer()">Fix AuraBot!</button>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = ""; // API key populated by environment
+        const canvas = document.getElementById('botCanvas');
+        const ctx = canvas.getContext('2d');
+        const cursor = document.getElementById('custom-cursor');
+        const overlay = document.getElementById('mainOverlay');
+
+        let width, height, time = 0;
+        let mouseX = 0, mouseY = 0, targetMouseX = 0, targetMouseY = 0;
+        let zoom = 1.6, targetZoom = 1.6, isZoomed = false, zoomOffY = 0, targetZoomOffY = 0;
+        let tickleFactor = 0, targetTickle = 0;
+
+        // Game State
+        let currentMode = ""; // "spelling" or "math"
+        let solution = { wrong: "", right: "", audio: "", word: "" };
+
+        const theme = { 
+            base: '#e8a0a0', 
+            dark: '#c87878', 
+            screen: '#0d1117', 
+            accent: '#a8e6ff',
+            rosy: 'rgba(255, 120, 150, 0.4)' 
+        };
+
+        function resize() {
+            width = window.innerWidth; height = window.innerHeight;
+            canvas.width = width * devicePixelRatio; canvas.height = height * devicePixelRatio;
+            ctx.scale(devicePixelRatio, devicePixelRatio);
+            if(!isZoomed) targetZoom = width < 600 ? 1.2 : 1.6;
+        }
+        window.onresize = resize; resize();
+
+        document.onmousemove = (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+            
+            const dx = e.clientX - width/2;
+            const dy = e.clientY - height/2;
+
+            if(!isZoomed) {
+                targetMouseX = dx / 50;
+                targetMouseY = dy / 50;
+                
+                // Bouncy effect over chest screen
+                if (Math.abs(dx) < 60 * zoom && Math.abs(dy - 30 * zoom) < 50 * zoom) {
+                    cursor.classList.add('bouncy');
+                } else {
+                    cursor.classList.remove('bouncy');
+                }
+
+                // Tickle/Hover over face
+                const headCenterY = -135 * zoom;
+                if (Math.abs(dx) < 95 * zoom && Math.abs(dy - headCenterY) < 100 * zoom) {
+                    targetTickle = 1;
+                } else {
+                    targetTickle = 0;
+                }
+            }
+        };
+
+        // --- Audio Context & TTS (Fixed Model and Backoff) ---
+        async function speak(text) {
+            document.getElementById('audioStatus').classList.remove('hidden');
+            document.getElementById('visualContent').classList.add('hidden');
+            
+            const payload = {
+                contents: [{ parts: [{ text }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } }
+                },
+                model: "gemini-2.5-flash-preview-tts" // Added strictly required model string
+            };
+
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            let base64 = null;
+
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
+                    
+                    if (data.candidates && data.candidates[0].content.parts[0].inlineData) {
+                        base64 = data.candidates[0].content.parts[0].inlineData.data;
+                        break;
+                    } else if (data.error) {
+                        throw new Error(data.error.message);
+                    }
+                } catch (e) {
+                    if (i === 4) {
+                        console.error("Audio API Error:", e);
+                        document.getElementById('audioStatus').innerHTML = "Audio Error";
+                        return;
+                    }
+                    await new Promise(r => setTimeout(r, delays[i]));
+                }
+            }
+
+            if (base64) {
+                try {
+                    const audio = new Audio(URL.createObjectURL(pcmToWav(base64, 24000)));
+                    audio.onended = () => {
+                        document.getElementById('audioStatus').classList.add('hidden');
+                    };
+                    await audio.play();
+                } catch(e) {
+                    console.error("Playback error:", e);
+                    document.getElementById('audioStatus').innerHTML = "Audio Error";
+                }
+            }
+        }
+
+        function pcmToWav(b64, rate) {
+            const buf = Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
+            const view = new DataView(new ArrayBuffer(44 + buf.byteLength));
+            const s = (o, str) => { for(let i=0; i<str.length; i++) view.setUint8(o+i, str.charCodeAt(i)); };
+            s(0, 'RIFF'); view.setUint32(4, 36 + buf.byteLength, true);
+            s(8, 'WAVE'); s(12, 'fmt '); view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+            view.setUint32(24, rate, true); view.setUint32(28, rate*2, true);
+            view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+            s(36, 'data'); view.setUint32(40, buf.byteLength, true);
+            new Uint8Array(view.buffer, 44).set(new Uint8Array(buf));
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        // --- Interaction Logic ---
+        canvas.onclick = (e) => {
+            if(isZoomed) return;
+            const dx = e.clientX - width/2;
+            const dy = e.clientY - height/2;
+            
+            // Chest Screen Check
+            if(Math.abs(dx) < 60 * zoom && Math.abs(dy - 30 * zoom) < 50 * zoom) {
+                isZoomed = true; targetZoom = 3.2; targetZoomOffY = -40;
+                cursor.classList.remove('bouncy');
+                targetTickle = 0; // Reset tickle when zooming
+                overlay.classList.add('active');
+                speak("Hello! I am AuraBot. Ready to learn?");
+            }
+        };
+
+        function showStep(id) {
+            document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeAll() {
+            overlay.classList.remove('active');
+            isZoomed = false; targetZoom = width < 600 ? 1.2 : 1.6; targetZoomOffY = 0;
+        }
+
+        // --- Game Mechanics ---
+        function setupSpelling() {
+            const word = document.getElementById('spellInput').value.toLowerCase().trim();
+            if(!word) return;
+            currentMode = "spelling";
+            let chars = word.split('');
+            let idx = Math.floor(Math.random() * chars.length);
+            let originalChar = chars[idx];
+            let alphabet = "abcdefghijklmnopqrstuvwxyz";
+            let wrongChar = alphabet[Math.floor(Math.random() * 26)];
+            while(wrongChar === originalChar) wrongChar = alphabet[Math.floor(Math.random() * 26)];
+            
+            chars[idx] = wrongChar;
+            solution = { 
+                wrong: wrongChar, 
+                right: originalChar, 
+                word: word, 
+                display: chars.join('-').toUpperCase(),
+                audio: `The word is ${word}. I spell it: ${chars.join(', ')}.`
+            };
+            startPractice("Spelling Bee");
+        }
+
+        function setupMath() {
+            currentMode = "math";
+            let a = Math.floor(Math.random() * 10) + 1;
+            let b = Math.floor(Math.random() * 10) + 1;
+            let trueSum = a + b;
+            let error = (Math.random() > 0.5 ? 1 : -1);
+            let wrongSum = trueSum + error;
+
+            solution = {
+                wrong: wrongSum.toString(),
+                right: trueSum.toString(),
+                display: `${a} + ${b} = ${wrongSum}`,
+                audio: `Calculate: what is ${a} plus ${b}? I think it is ${wrongSum}.`
+            };
+            startPractice("Math Master");
+        }
+
+        function startPractice(title) {
+            document.getElementById('modeTitle').innerText = title;
+            document.getElementById('visualContent').innerText = solution.display;
+            document.getElementById('visualContent').classList.add('hidden');
+            document.getElementById('toggleVisBtn').innerText = "Show Visual";
+            document.getElementById('gameFeedback').innerText = "";
+            document.getElementById('userInputWrong').value = "";
+            document.getElementById('userInputRight').value = "";
+            showStep('activeCard');
+            playAudio();
+        }
+
+        function playAudio() { speak(solution.audio); }
+
+        function toggleVisibility() {
+            const vc = document.getElementById('visualContent');
+            const btn = document.getElementById('toggleVisBtn');
+            if(vc.classList.contains('hidden')) {
+                vc.classList.remove('hidden'); btn.innerText = "Hide Visual";
+            } else {
+                vc.classList.add('hidden'); btn.innerText = "Show Visual";
+            }
+        }
+
+        function submitAnswer() {
+            const w = document.getElementById('userInputWrong').value.toLowerCase().trim();
+            const r = document.getElementById('userInputRight').value.toLowerCase().trim();
+            const feedback = document.getElementById('gameFeedback');
+
+            if(w === solution.wrong && r === solution.right) {
+                feedback.innerText = "EXCELLENT! System restored!";
+                feedback.className = "feedback success";
+                speak("You fixed my circuits! Well done.");
+                setTimeout(() => showStep('menuCard'), 2000);
+            } else {
+                feedback.innerText = "ERROR: Try again.";
+                feedback.className = "feedback error";
+                speak("Oh no, that's not it. Try again.");
+            }
+        }
+
+        // --- Render Loop ---
+        function drawRoundRect(x, y, w, h, r) {
+            ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill();
+        }
+
+        function render() {
+            time += 0.05;
+            ctx.clearRect(0, 0, width, height);
+            
+            mouseX += (targetMouseX - mouseX) * 0.1;
+            mouseY += (targetMouseY - mouseY) * 0.1;
+            zoom += (targetZoom - zoom) * 0.1;
+            zoomOffY += (targetZoomOffY - zoomOffY) * 0.1;
+            tickleFactor += (targetTickle - tickleFactor) * 0.15;
+
+            ctx.save();
+            ctx.translate(width/2, height/2 + zoomOffY);
+            ctx.scale(zoom, zoom);
+
+            const breathe = Math.sin(time * 0.4) * 3;
+
+            // Legs
+            [-1, 1].forEach(side => {
+                ctx.save();
+                ctx.translate(side * 45, 140);
+                ctx.fillStyle = theme.base;
+                drawRoundRect(-30, -50, 60, 100, 25);
+                ctx.restore();
+            });
+
+            // Body
+            ctx.save();
+            ctx.translate(0, breathe);
+            ctx.fillStyle = theme.dark; drawRoundRect(-25, -50, 50, 30, 10); // Neck
+            ctx.fillStyle = theme.base; drawRoundRect(-80, -35, 160, 145, 35); // Torso
+            
+            // Chest Screen
+            ctx.fillStyle = theme.screen; drawRoundRect(-50, -10, 100, 80, 14);
+            ctx.fillStyle = theme.accent; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
+            ctx.fillText('AURABOT v1', 0, 25);
+            ctx.font = '6px monospace'; ctx.fillText(isZoomed ? 'LEARNING...' : 'SYSTEM IDLE', 0, 45);
+
+            // Head (With Shake Jitter from Tickle)
+            ctx.save();
+            let jitterX = Math.sin(time * 0.05) * 3 * tickleFactor;
+            let jitterY = Math.cos(time * 0.04) * 2 * tickleFactor;
+            ctx.translate(mouseX * 8 + jitterX, -135 + mouseY * 5 + jitterY);
+            
+            ctx.fillStyle = theme.base; drawRoundRect(-95, -85, 190, 170, 40);
+            
+            // Rosy Cheeks
+            if (tickleFactor > 0.01) {
+                ctx.save(); ctx.globalAlpha = tickleFactor; ctx.fillStyle = theme.rosy;
+                ctx.beginPath(); ctx.arc(-55, 30, 15, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(55, 30, 15, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+            }
+
+            ctx.fillStyle = theme.screen; drawRoundRect(-75, -55, 150, 110, 20);
+            
+            // Eyes
+            const blink = Math.sin(time * 0.1) > 0.97 ? 0.1 : 1;
+            ctx.fillStyle = theme.accent;
+            [-1, 1].forEach(side => {
+                ctx.save(); ctx.translate(side * 35 + mouseX*2, mouseY*2);
+                ctx.scale(1, blink);
+                
+                if (tickleFactor > 0.5) {
+                    // Squinting eyes when tickled
+                    ctx.beginPath(); ctx.arc(0, 5, 14, Math.PI, 0, false);
+                    ctx.lineWidth = 5; ctx.strokeStyle = theme.accent; ctx.stroke();
+                } else {
+                    // Normal eyes
+                    ctx.beginPath(); ctx.ellipse(0, 0, 14, 18, 0, 0, Math.PI*2); ctx.fill();
+                }
+                ctx.restore();
+            });
+            ctx.restore();
+
+            // Arms (With Tickle/Shy logic to cover eyes)
+            [-1, 1].forEach(side => {
+                ctx.save();
+                ctx.translate(side * 105, 15);
+                const armSway = Math.sin(time * 0.3) * 0.05;
+                const baseRot = side * 0.05 + armSway * side;
+                const shyRot = side * -1.8;
+                ctx.rotate(baseRot + (shyRot - baseRot) * tickleFactor);
+                
+                ctx.fillStyle = theme.dark; ctx.beginPath(); ctx.arc(-side * 5, 0, 25, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = theme.base;
+                
+                const scoot = 30 * tickleFactor * -side;
+                drawRoundRect(-20 + scoot, 0, 40, 105, 20);
+                ctx.restore();
+            });
+
+            ctx.restore(); ctx.restore();
+            requestAnimationFrame(render);
+        }
+        render();
+    </script>
+</body>
+</html>
