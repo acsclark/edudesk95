@@ -70,6 +70,8 @@
     const UnlinkIcon = ({className}) => <Icon className={className} d={<><path d="m18.84 12.25 1.72-1.71h-.01a5.001 5.001 0 0 0-7.07-7.07l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5.001 5.001 0 0 0 7.07 7.07l1.71-1.71"/><line x1="8" x2="8" y1="2" y2="5"/><line x1="2" x2="5" y1="8" y2="8"/><line x1="16" x2="16" y1="19" y2="22"/><line x1="19" x2="22" y1="16" y2="16"/></>} />;
     const FlipHorizontalIcon = ({className}) => <Icon className={className} d={<><path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><path d="M12 20v2"/><path d="M12 14v2"/><path d="M12 8v2"/><path d="M12 2v2"/></>} />;
     const FlipVerticalIcon = ({className}) => <Icon className={className} d={<><path d="M21 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v3"/><path d="M21 16v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3"/><path d="M4 12H2"/><path d="M10 12H8"/><path d="M16 12h-2"/><path d="M22 12h-2"/></>} />;
+    const StickerIcon = ({className}) => <Icon className={className} d={<><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>} />;
+    const ChevronDownIcon = ({className}) => <Icon className={className} d={<path d="m6 9 6 6 6-6"/>} />;
 
     // --- INITIAL BOT DATA ---
     const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -99,13 +101,14 @@
       const [selectedId, setSelectedId] = useState(null);
       const [action, setAction] = useState(null); 
       const [zoom, setZoom] = useState(0.75);
-      const [pendingMergeId, setPendingMergeId] = useState(null); 
+      const [pendingMergeId, setPendingMergeId] = useState(null);
+      const [isStickerOpen, setIsStickerOpen] = useState(false); 
       
       const canvasRef = useRef(null);
       const lastTap = useRef({ id: null, time: 0 }); 
 
       // --- MERGE ENGINE LOGIC ---
-      const canMerge = (el) => ['rect', 'circle', 'group'].includes(el.type);
+      const canMerge = (el) => ['rect', 'circle', 'group', 'apple', 'smiley', 'heart', 'thumbsup', 'lips'].includes(el.type);
 
       const extractShapes = (el) => {
         if (el.type !== 'group') return [el];
@@ -301,16 +304,17 @@
       // --- TOOLBAR ACTIONS ---
       const addShape = (type) => {
         const currentBaseColor = elements.find(e => e.type !== 'face' && e.type !== 'chest')?.color || botColor;
+        const isSticker = type === 'apple' || type === 'smiley' || type === 'heart' || type === 'thumbsup' || type === 'lips';
 
         const newShape = {
           id: generateId(),
           type,
           cx: 370, cy: 400,
-          w: type === 'face' || type === 'chest' ? 240 : 150,
-          h: type === 'face' || type === 'chest' ? 140 : 150,
+          w: type === 'face' || type === 'chest' ? 240 : (isSticker ? 100 : 150),
+          h: type === 'face' || type === 'chest' ? 140 : (isSticker ? 100 : 150),
           rotation: 0,
           rx: type === 'circle' ? '50%' : 24,
-          color: (type === 'face' || type === 'chest') ? darkScreen : currentBaseColor
+          color: (type === 'face' || type === 'chest') ? darkScreen : (isSticker ? 'transparent' : currentBaseColor)
         };
         setElements([...elements, newShape]);
         setSelectedId(newShape.id);
@@ -380,7 +384,7 @@
 
       const updateColor = (color) => {
         setElements(elements.map(e => {
-          if (e.type === 'face' || e.type === 'chest') return e;
+          if (e.type === 'face' || e.type === 'chest' || e.type === 'apple' || e.type === 'smiley' || e.type === 'heart' || e.type === 'thumbsup' || e.type === 'lips') return e;
           if (e.type === 'group') {
             return {
               ...e,
@@ -415,6 +419,39 @@
                   <button onClick={() => addShape('rect')} className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 transition-colors border border-gray-100">
                     <SquareIcon className="w-6 h-6 mb-2" /> <span className="text-xs font-medium">Rounded</span>
                   </button>
+
+                  {/* Stickers Dropdown */}
+                  <div className="col-span-2 relative mt-1">
+                    <button 
+                      onClick={() => setIsStickerOpen(!isStickerOpen)} 
+                      className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 transition-colors border border-gray-100"
+                    >
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <StickerIcon className="w-5 h-5" /> <span className="text-xs font-medium">Add Sticker</span>
+                      </div>
+                      <ChevronDownIcon className={`w-4 h-4 text-gray-400 transition-transform ${isStickerOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {isStickerOpen && (
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-gray-100 rounded-xl shadow-lg z-20 flex flex-col overflow-hidden">
+                        <button onClick={() => { addShape('apple'); setIsStickerOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700">
+                          <span className="text-2xl drop-shadow-sm">🍎</span> Apple
+                        </button>
+                        <button onClick={() => { addShape('smiley'); setIsStickerOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700">
+                          <span className="text-2xl drop-shadow-sm">🙂</span> Smiley
+                        </button>
+                        <button onClick={() => { addShape('heart'); setIsStickerOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700">
+                          <span className="text-2xl drop-shadow-sm">❤️</span> Heart
+                        </button>
+                        <button onClick={() => { addShape('thumbsup'); setIsStickerOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700">
+                          <span className="text-2xl drop-shadow-sm">👍</span> Thumbs Up
+                        </button>
+                        <button onClick={() => { addShape('lips'); setIsStickerOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700">
+                          <span className="text-2xl drop-shadow-sm">👄</span> Lips
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -500,7 +537,7 @@
           {/* CANVAS CONTAINER */}
           <div 
             className="flex-1 overflow-auto bg-canvas-gradient relative flex items-center justify-center"
-            onPointerDown={() => { setSelectedId(null); setPendingMergeId(null); }}
+            onPointerDown={() => { setSelectedId(null); setPendingMergeId(null); setIsStickerOpen(false); }}
           >
             <div 
               ref={canvasRef}
@@ -534,10 +571,12 @@
       const isGroup = type === 'group';
       const isScreen = type === 'face' || type === 'chest';
       const isCircle = type === 'circle';
+      const isSticker = type === 'apple' || type === 'smiley' || type === 'heart' || type === 'thumbsup' || type === 'lips';
       
       let elementClass = 'neumorphic-part';
       if (isGroup) elementClass = 'neumorphic-group';
       if (isScreen) elementClass = 'screen-inner';
+      if (isSticker) elementClass = ''; // Stickers are flat and transparent
       
       const containerStyle = {
         position: 'absolute',
@@ -547,7 +586,7 @@
         height: isGroup ? baseH : h,
         transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${isGroup ? scale : 1})`,
         borderRadius: isCircle ? '50%' : rx,
-        backgroundColor: isGroup ? 'transparent' : color, 
+        backgroundColor: (isGroup || isSticker) ? 'transparent' : color, 
         cursor: isSelected ? 'grab' : 'pointer',
         touchAction: 'none',
         zIndex: isScreen ? 50 : 1
@@ -588,6 +627,36 @@
         </div>
       );
 
+      const AppleContent = () => (
+        <div className="w-full h-full flex items-center justify-center drop-shadow-md" style={{ containerType: 'inline-size' }}>
+          <div style={{ fontSize: '70cqw', lineHeight: 1 }}>🍎</div>
+        </div>
+      );
+
+      const SmileyContent = () => (
+        <div className="w-full h-full flex items-center justify-center drop-shadow-md" style={{ containerType: 'inline-size' }}>
+          <div style={{ fontSize: '70cqw', lineHeight: 1 }}>🙂</div>
+        </div>
+      );
+
+      const HeartContent = () => (
+        <div className="w-full h-full flex items-center justify-center drop-shadow-md" style={{ containerType: 'inline-size' }}>
+          <div style={{ fontSize: '70cqw', lineHeight: 1 }}>❤️</div>
+        </div>
+      );
+
+      const ThumbsUpContent = () => (
+        <div className="w-full h-full flex items-center justify-center drop-shadow-md" style={{ containerType: 'inline-size' }}>
+          <div style={{ fontSize: '70cqw', lineHeight: 1 }}>👍</div>
+        </div>
+      );
+
+      const LipsContent = () => (
+        <div className="w-full h-full flex items-center justify-center drop-shadow-md" style={{ containerType: 'inline-size' }}>
+          <div style={{ fontSize: '70cqw', lineHeight: 1 }}>👄</div>
+        </div>
+      );
+
       return (
         <div
           style={containerStyle}
@@ -605,17 +674,27 @@
                 marginLeft: child.cx,
                 marginTop: child.cy,
                 transform: `translate(-50%, -50%) rotate(${child.rotation}deg) scaleX(${child.flipX ? -1 : 1}) scaleY(${child.flipY ? -1 : 1})`,
-                backgroundColor: child.color || color,
+                backgroundColor: (child.type === 'apple' || child.type === 'smiley' || child.type === 'heart' || child.type === 'thumbsup' || child.type === 'lips') ? 'transparent' : (child.color || color),
                 borderRadius: child.type === 'circle' ? '50%' : child.rx,
                 boxShadow: child.type === 'face' || child.type === 'chest' ? 'inset 0px 0px 20px rgba(0,0,0,0.8)' : 'none'
               }}>
                 {child.type === 'face' && <FaceContent />}
                 {child.type === 'chest' && <ChestContent />}
+                {child.type === 'apple' && <AppleContent />}
+                {child.type === 'smiley' && <SmileyContent />}
+                {child.type === 'heart' && <HeartContent />}
+                {child.type === 'thumbsup' && <ThumbsUpContent />}
+                {child.type === 'lips' && <LipsContent />}
               </div>
             ))}
 
             {type === 'face' && <FaceContent />}
             {type === 'chest' && <ChestContent />}
+            {type === 'apple' && <AppleContent />}
+            {type === 'smiley' && <SmileyContent />}
+            {type === 'heart' && <HeartContent />}
+            {type === 'thumbsup' && <ThumbsUpContent />}
+            {type === 'lips' && <LipsContent />}
           </div>
 
           {isPendingMerge && (
