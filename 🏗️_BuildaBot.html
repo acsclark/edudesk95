@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bot Builder</title>
+  
+  <!-- Load Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Load React and ReactDOM (Development/Standalone versions) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Load Babel to compile JSX in the browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Custom Styles previously injected by React -->
+  <style>
+    body { margin: 0; padding: 0; font-family: sans-serif; }
+    
+    .neumorphic-part {
+      box-shadow: 
+        inset 8px 8px 16px rgba(255, 255, 255, 0.7), 
+        inset -8px -8px 16px rgba(0, 0, 0, 0.08), 
+        10px 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Merged shapes get a filter shadow instead of inset so their shared borders vanish */
+    .neumorphic-group {
+      filter: 
+        drop-shadow(10px 10px 15px rgba(0, 0, 0, 0.15)) 
+        drop-shadow(-8px -8px 15px rgba(255, 255, 255, 0.8));
+    }
+    
+    .screen-inner {
+      box-shadow: inset 0px 0px 20px rgba(0,0,0,0.8);
+    }
+    
+    .bg-canvas-gradient {
+      background: radial-gradient(circle at 50% 50%, #fff0f5 0%, #f4f0ff 100%);
+    }
+  </style>
+</head>
+<body>
+  <!-- This is where the React App will be injected -->
+  <div id="root"></div>
+
+  <!-- The actual React Code -->
+  <script type="text/babel">
+    const { useState, useRef, useEffect, useMemo } = React;
+
+    // --- STANDALONE SVG ICONS ---
+    const Icon = ({ d, className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        {d}
+      </svg>
+    );
+
+    const CircleIcon = ({className}) => <Icon className={className} d={<circle cx="12" cy="12" r="10"/>} />;
+    const SquareIcon = ({className}) => <Icon className={className} d={<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>} />;
+    const MonitorPlayIcon = ({className}) => <Icon className={className} d={<><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M10 7.5v5l3-2.5z"/><path d="M12 17v4"/><path d="M8 21h8"/></>} />;
+    const AlignEndHorizontalIcon = ({className}) => <Icon className={className} d={<><rect width="6" height="16" x="4" y="2" rx="2"/><rect width="6" height="9" x="14" y="9" rx="2"/><path d="M22 22H2"/></>} />;
+    const Trash2Icon = ({className}) => <Icon className={className} d={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
+    const MoveUpIcon = ({className}) => <Icon className={className} d={<><path d="M8 6L12 2L16 6"/><path d="M12 2V22"/></>} />;
+    const MoveDownIcon = ({className}) => <Icon className={className} d={<><path d="M8 18L12 22L16 18"/><path d="M12 2V22"/></>} />;
+    const RefreshCcwIcon = ({className}) => <Icon className={className} d={<><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></>} />;
+    const ZoomInIcon = ({className}) => <Icon className={className} d={<><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></>} />;
+    const ZoomOutIcon = ({className}) => <Icon className={className} d={<><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></>} />;
+    const CopyIcon = ({className}) => <Icon className={className} d={<><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></>} />;
+    const UnlinkIcon = ({className}) => <Icon className={className} d={<><path d="m18.84 12.25 1.72-1.71h-.01a5.001 5.001 0 0 0-7.07-7.07l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5.001 5.001 0 0 0 7.07 7.07l1.71-1.71"/><line x1="8" x2="8" y1="2" y2="5"/><line x1="2" x2="5" y1="8" y2="8"/><line x1="16" x2="16" y1="19" y2="22"/><line x1="19" x2="22" y1="16" y2="16"/></>} />;
+    const FlipHorizontalIcon = ({className}) => <Icon className={className} d={<><path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><path d="M12 20v2"/><path d="M12 14v2"/><path d="M12 8v2"/><path d="M12 2v2"/></>} />;
+    const FlipVerticalIcon = ({className}) => <Icon className={className} d={<><path d="M21 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v3"/><path d="M21 16v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3"/><path d="M4 12H2"/><path d="M10 12H8"/><path d="M16 12h-2"/><path d="M22 12h-2"/></>} />;
+
+    // --- INITIAL BOT DATA ---
+    const generateId = () => Math.random().toString(36).substr(2, 9);
+
+    const botColor = '#d6edb9';
+    const darkScreen = '#111827';
+
+    // Shifted all cx coordinates left by 30 pixels for better visual centering
+    const initialBotElements = [
+      { id: 'ant-line', type: 'rect', cx: 370, cy: 90, w: 10, h: 40, rotation: 0, rx: 5, color: botColor },
+      { id: 'ant-ball', type: 'circle', cx: 370, cy: 60, w: 30, h: 30, rotation: 0, color: botColor },
+      { id: 'ear-l', type: 'rect', cx: 210, cy: 220, w: 40, h: 90, rotation: 0, rx: 20, color: botColor },
+      { id: 'ear-r', type: 'rect', cx: 530, cy: 220, w: 40, h: 90, rotation: 0, rx: 20, color: botColor },
+      { id: 'head', type: 'rect', cx: 370, cy: 220, w: 340, h: 220, rotation: 0, rx: 60, color: botColor },
+      { id: 'face-screen', type: 'face', cx: 370, cy: 220, w: 260, h: 140, rotation: 0, rx: 30, color: darkScreen },
+      { id: 'neck', type: 'rect', cx: 370, cy: 350, w: 90, h: 40, rotation: 0, rx: 20, color: botColor },
+      { id: 'arm-l', type: 'rect', cx: 180, cy: 500, w: 70, h: 180, rotation: 0, rx: 35, color: botColor },
+      { id: 'arm-r', type: 'rect', cx: 560, cy: 500, w: 70, h: 180, rotation: 0, rx: 35, color: botColor },
+      { id: 'body', type: 'rect', cx: 370, cy: 510, w: 380, h: 300, rotation: 0, rx: 80, color: botColor },
+      { id: 'chest-screen', type: 'chest', cx: 370, cy: 510, w: 260, h: 170, rotation: 0, rx: 40, color: darkScreen },
+      { id: 'leg-l', type: 'rect', cx: 300, cy: 700, w: 80, h: 120, rotation: 0, rx: 40, color: botColor },
+      { id: 'leg-r', type: 'rect', cx: 440, cy: 700, w: 80, h: 120, rotation: 0, rx: 40, color: botColor },
+    ];
+
+    function BotBuilder() {
+      const [elements, setElements] = useState(initialBotElements);
+      const [selectedId, setSelectedId] = useState(null);
+      const [action, setAction] = useState(null); 
+      const [zoom, setZoom] = useState(0.75);
+      const [pendingMergeId, setPendingMergeId] = useState(null); 
+      
+      const canvasRef = useRef(null);
+      const lastTap = useRef({ id: null, time: 0 }); 
+
+      // --- MERGE ENGINE LOGIC ---
+      const canMerge = (el) => ['rect', 'circle', 'group'].includes(el.type);
+
+      const extractShapes = (el) => {
+        if (el.type !== 'group') return [el];
+        const angle = el.rotation * (Math.PI / 180);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        
+        return el.children.map(c => {
+          const scaledCx = c.cx * (el.scale || 1);
+          const scaledCy = c.cy * (el.scale || 1);
+          const absCx = el.cx + (scaledCx * cos - scaledCy * sin);
+          const absCy = el.cy + (scaledCx * sin + scaledCy * cos);
+          
+          return {
+            ...c,
+            id: generateId(),
+            cx: absCx,
+            cy: absCy,
+            rotation: c.rotation + el.rotation,
+            w: c.w * (el.scale || 1),
+            h: c.h * (el.scale || 1),
+            rx: typeof c.rx === 'number' ? c.rx * (el.scale || 1) : c.rx,
+            flipX: c.flipX || false,
+            flipY: c.flipY || false
+          };
+        });
+      };
+
+      const mergeElements = (el1, el2) => {
+        const allShapes = [...extractShapes(el1), ...extractShapes(el2)];
+        
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        allShapes.forEach(s => {
+          minX = Math.min(minX, s.cx - s.w / 2);
+          maxX = Math.max(maxX, s.cx + s.w / 2);
+          minY = Math.min(minY, s.cy - s.h / 2);
+          maxY = Math.max(maxY, s.cy + s.h / 2);
+        });
+        
+        const groupCx = (minX + maxX) / 2;
+        const groupCy = (minY + maxY) / 2;
+        const baseW = maxX - minX;
+        const baseH = maxY - minY;
+
+        const groupChildren = allShapes.map(s => ({
+          ...s,
+          cx: s.cx - groupCx,
+          cy: s.cy - groupCy
+        }));
+
+        const newGroup = {
+          id: generateId(),
+          type: 'group',
+          cx: groupCx,
+          cy: groupCy,
+          baseW,
+          baseH,
+          rotation: 0,
+          scale: 1,
+          children: groupChildren,
+          color: allShapes[0].color
+        };
+
+        setElements(prev => [...prev.filter(e => e.id !== el1.id && e.id !== el2.id), newGroup]);
+        setSelectedId(newGroup.id);
+      };
+
+      const unmergeSelected = () => {
+        const el = elements.find(e => e.id === selectedId);
+        if (!el || el.type !== 'group') return;
+
+        const newElements = extractShapes(el);
+        setElements(prev => [...prev.filter(e => e.id !== selectedId), ...newElements]);
+        setSelectedId(null);
+        setPendingMergeId(null);
+      };
+
+      // --- INTERACTION LOGIC ---
+      const handlePointerDown = (e, id, actionType) => {
+        e.stopPropagation();
+        
+        const targetEl = elements.find(el => el.id === id);
+        const selectedEl = elements.find(el => el.id === selectedId);
+
+        const now = Date.now();
+        const isDoubleTap = lastTap.current.id === id && (now - lastTap.current.time < 350);
+        lastTap.current = { id, time: now };
+
+        if (isDoubleTap && targetEl && canMerge(targetEl)) {
+          if (!pendingMergeId) {
+            setPendingMergeId(id);
+            setSelectedId(id);
+            return; 
+          } else if (pendingMergeId === id) {
+            setPendingMergeId(null); 
+            return;
+          } else {
+            const el1 = elements.find(el => el.id === pendingMergeId);
+            if (el1 && canMerge(el1)) {
+              mergeElements(el1, targetEl);
+              setPendingMergeId(null);
+              return;
+            }
+          }
+        }
+
+        if (e.shiftKey && selectedId && selectedId !== id) {
+          if (targetEl && selectedEl && canMerge(targetEl) && canMerge(selectedEl)) {
+            mergeElements(selectedEl, targetEl);
+            return;
+          }
+        }
+
+        setSelectedId(id);
+        if (!actionType || !targetEl) return; 
+
+        const rect = canvasRef.current.getBoundingClientRect();
+        setAction({
+          type: actionType,
+          id,
+          startCx: targetEl.cx,
+          startCy: targetEl.cy,
+          startW: targetEl.w,
+          startH: targetEl.h,
+          startRot: targetEl.rotation,
+          startScale: targetEl.scale || 1,
+          startMx: (e.clientX - rect.left) / zoom,
+          startMy: (e.clientY - rect.top) / zoom
+        });
+      };
+
+      useEffect(() => {
+        const handlePointerMove = (e) => {
+          if (!action) return;
+          
+          const rect = canvasRef.current.getBoundingClientRect();
+          const mx = (e.clientX - rect.left) / zoom;
+          const my = (e.clientY - rect.top) / zoom;
+
+          setElements(prev => prev.map(el => {
+            if (el.id !== action.id) return el;
+            let newEl = { ...el };
+
+            if (action.type === 'drag') {
+              newEl.cx = action.startCx + (mx - action.startMx);
+              newEl.cy = action.startCy + (my - action.startMy);
+            } 
+            else if (action.type === 'rotate') {
+              const angle = Math.atan2(my - el.cy, mx - el.cx) * (180 / Math.PI);
+              newEl.rotation = angle + 90;
+            } 
+            else if (action.type === 'resize') {
+              if (el.type === 'group') {
+                const startDistX = action.startMx - action.startCx;
+                const startDistY = action.startMy - action.startCy;
+                const startDist = Math.max(1, Math.sqrt(startDistX * startDistX + startDistY * startDistY));
+                
+                const currentDistX = mx - el.cx;
+                const currentDistY = my - el.cy;
+                const currentDist = Math.max(1, Math.sqrt(currentDistX * currentDistX + currentDistY * currentDistY));
+                
+                const scaleRatio = currentDist / startDist;
+                newEl.scale = Math.max(0.2, action.startScale * scaleRatio);
+              } else {
+                const angleRad = (el.rotation * Math.PI) / 180;
+                const cos = Math.cos(-angleRad);
+                const sin = Math.sin(-angleRad);
+                const vMx = mx - el.cx;
+                const vMy = my - el.cy;
+                const uMx = vMx * cos - vMy * sin;
+                const uMy = vMx * sin + vMy * cos;
+
+                newEl.w = Math.max(30, Math.abs(uMx) * 2);
+                newEl.h = Math.max(30, Math.abs(uMy) * 2);
+              }
+            }
+            return newEl;
+          }));
+        };
+
+        const handlePointerUp = () => setAction(null);
+
+        if (action) {
+          window.addEventListener('pointermove', handlePointerMove);
+          window.addEventListener('pointerup', handlePointerUp);
+        }
+        return () => {
+          window.removeEventListener('pointermove', handlePointerMove);
+          window.removeEventListener('pointerup', handlePointerUp);
+        };
+      }, [action, zoom]);
+
+      // --- TOOLBAR ACTIONS ---
+      const addShape = (type) => {
+        const currentBaseColor = elements.find(e => e.type !== 'face' && e.type !== 'chest')?.color || botColor;
+
+        const newShape = {
+          id: generateId(),
+          type,
+          cx: 370, cy: 400,
+          w: type === 'face' || type === 'chest' ? 240 : 150,
+          h: type === 'face' || type === 'chest' ? 140 : 150,
+          rotation: 0,
+          rx: type === 'circle' ? '50%' : 24,
+          color: (type === 'face' || type === 'chest') ? darkScreen : currentBaseColor
+        };
+        setElements([...elements, newShape]);
+        setSelectedId(newShape.id);
+      };
+
+      const deleteSelected = () => {
+        setElements(elements.filter(e => e.id !== selectedId));
+        setSelectedId(null);
+        setPendingMergeId(null);
+      };
+
+      const duplicateSelected = () => {
+        const selectedEl = elements.find(e => e.id === selectedId);
+        if (!selectedEl) return;
+
+        const newShape = {
+          ...selectedEl,
+          id: generateId(),
+          cx: selectedEl.cx + 30, 
+          cy: selectedEl.cy + 30,
+        };
+        setElements([...elements, newShape]);
+        setSelectedId(newShape.id);
+      };
+
+      const changeLayer = (direction) => {
+        const idx = elements.findIndex(e => e.id === selectedId);
+        if (idx < 0) return;
+        const newElements = [...elements];
+        if (direction === 'up' && idx < elements.length - 1) {
+          [newElements[idx], newElements[idx + 1]] = [newElements[idx + 1], newElements[idx]];
+        } else if (direction === 'down' && idx > 0) {
+          [newElements[idx - 1], newElements[idx]] = [newElements[idx], newElements[idx - 1]];
+        }
+        setElements(newElements);
+      };
+
+      const flipSelected = (axis) => {
+        setElements(elements.map(e => {
+          if (e.id === selectedId) {
+            const isH = axis === 'horizontal';
+            const newRotation = isH ? -e.rotation : (180 - e.rotation);
+
+            const updatedShape = { 
+              ...e, 
+              rotation: newRotation,
+              flipX: isH ? !(e.flipX || false) : (e.flipX || false),
+              flipY: !isH ? !(e.flipY || false) : (e.flipY || false)
+            };
+
+            if (e.type === 'group') {
+              updatedShape.children = e.children.map(c => ({
+                ...c,
+                cx: isH ? -c.cx : c.cx,
+                cy: !isH ? -c.cy : c.cy,
+                rotation: isH ? -c.rotation : (180 - c.rotation),
+                flipX: isH ? !c.flipX : c.flipX,
+                flipY: !isH ? !c.flipY : c.flipY
+              }));
+            }
+
+            return updatedShape;
+          }
+          return e;
+        }));
+      };
+
+      const updateColor = (color) => {
+        setElements(elements.map(e => {
+          if (e.type === 'face' || e.type === 'chest') return e;
+          if (e.type === 'group') {
+            return {
+              ...e,
+              color,
+              children: e.children.map(c => ({ ...c, color }))
+            };
+          }
+          return { ...e, color };
+        }));
+      };
+
+      const selectedEl = elements.find(e => e.id === selectedId);
+
+      return (
+        <div className="flex h-screen w-full bg-gray-50 overflow-hidden font-sans selection:bg-transparent">
+          
+          {/* SIDEBAR */}
+          <div className="w-72 bg-white border-r border-gray-200 shadow-xl z-10 flex flex-col p-6">
+            <h1 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+              <MonitorPlayIcon className="w-6 h-6 text-indigo-500"/> Bot Builder
+            </h1>
+            <p className="text-xs text-gray-400 mb-6 font-medium">Tip: Hold Shift + Click (or Double-Tap pieces) to merge!</p>
+
+            <div className="space-y-6 flex-1 overflow-y-auto">
+              {/* Add Elements Section */}
+              <div>
+                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Add Shapes</h2>
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => addShape('circle')} className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 transition-colors border border-gray-100">
+                    <CircleIcon className="w-6 h-6 mb-2" /> <span className="text-xs font-medium">Circle</span>
+                  </button>
+                  <button onClick={() => addShape('rect')} className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 transition-colors border border-gray-100">
+                    <SquareIcon className="w-6 h-6 mb-2" /> <span className="text-xs font-medium">Rounded</span>
+                  </button>
+                  <button onClick={() => addShape('face')} className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 transition-colors border border-gray-100">
+                    <AlignEndHorizontalIcon className="w-6 h-6 mb-2" /> <span className="text-xs font-medium">Face</span>
+                  </button>
+                  <button onClick={() => addShape('chest')} className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 transition-colors border border-gray-100">
+                    <MonitorPlayIcon className="w-6 h-6 mb-2" /> <span className="text-xs font-medium">Chest</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Zoom Controls */}
+              <div>
+                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">View Zoom</h2>
+                <div className="flex items-center justify-between bg-gray-50 p-2 rounded-xl border border-gray-100">
+                  <button onClick={() => setZoom(z => Math.max(0.3, z - 0.1))} className="p-2 hover:bg-white rounded-lg transition-colors text-gray-600 hover:text-indigo-600 shadow-sm">
+                    <ZoomOutIcon className="w-5 h-5" />
+                  </button>
+                  <span className="text-sm font-medium text-gray-700 w-16 text-center cursor-pointer hover:text-indigo-600" onClick={() => setZoom(0.75)} title="Reset Zoom">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                  <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="p-2 hover:bg-white rounded-lg transition-colors text-gray-600 hover:text-indigo-600 shadow-sm">
+                    <ZoomInIcon className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Edit Selection Section */}
+              <div className={`transition-opacity duration-300 ${selectedId ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
+                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Edit Selected</h2>
+                
+                {/* Color Picker */}
+                {(selectedEl?.type === 'rect' || selectedEl?.type === 'circle' || selectedEl?.type === 'group') && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-600 mb-2">Global Base Color</label>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="color" 
+                        value={selectedEl.color} 
+                        onChange={(e) => updateColor(e.target.value)}
+                        className="w-10 h-10 rounded cursor-pointer border-0 p-0"
+                      />
+                      <span className="text-xs font-mono text-gray-500">{selectedEl.color}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => changeLayer('up')} className="flex items-center justify-center gap-2 p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">
+                    <MoveUpIcon className="w-4 h-4" /> Forward
+                  </button>
+                  <button onClick={() => changeLayer('down')} className="flex items-center justify-center gap-2 p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">
+                    <MoveDownIcon className="w-4 h-4" /> Back
+                  </button>
+                  
+                  <button onClick={() => flipSelected('horizontal')} className="flex items-center justify-center gap-2 p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">
+                    <FlipHorizontalIcon className="w-4 h-4" /> Flip H
+                  </button>
+                  <button onClick={() => flipSelected('vertical')} className="flex items-center justify-center gap-2 p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">
+                    <FlipVerticalIcon className="w-4 h-4" /> Flip V
+                  </button>
+
+                  <button onClick={duplicateSelected} className="flex items-center justify-center gap-2 p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-sm font-medium transition-colors mt-2">
+                    <CopyIcon className="w-4 h-4" /> Duplicate
+                  </button>
+                  <button onClick={deleteSelected} className="flex items-center justify-center gap-2 p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-medium transition-colors mt-2">
+                    <Trash2Icon className="w-4 h-4" /> Delete
+                  </button>
+                  {selectedEl?.type === 'group' && (
+                    <button onClick={unmergeSelected} className="col-span-2 flex items-center justify-center gap-2 p-2 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-lg text-sm font-medium transition-colors mt-2">
+                      <UnlinkIcon className="w-4 h-4" /> Unmerge Shapes
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-auto pt-6 border-t border-gray-100">
+               <button onClick={() => { setElements(initialBotElements); setSelectedId(null); setPendingMergeId(null); }} className="w-full flex items-center justify-center gap-2 p-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-gray-200">
+                 <RefreshCcwIcon className="w-4 h-4" /> Reset Bot
+               </button>
+            </div>
+          </div>
+
+          {/* CANVAS CONTAINER */}
+          <div 
+            className="flex-1 overflow-auto bg-canvas-gradient relative flex items-center justify-center"
+            onPointerDown={() => { setSelectedId(null); setPendingMergeId(null); }}
+          >
+            <div 
+              ref={canvasRef}
+              className="relative"
+              style={{ 
+                width: 800, 
+                height: 850,
+                transform: `scale(${zoom})`,
+                transformOrigin: 'center center'
+              }}
+            >
+              {elements.map((el) => (
+                <BotElement
+                  key={el.id}
+                  element={el}
+                  isSelected={el.id === selectedId}
+                  isPendingMerge={el.id === pendingMergeId}
+                  onPointerDown={(e, actionType) => handlePointerDown(e, el.id, actionType)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- INDIVIDUAL ELEMENT COMPONENT ---
+    function BotElement({ element, isSelected, isPendingMerge, onPointerDown }) {
+      const { type, cx, cy, w, h, rotation, rx, color, scale, baseW, baseH, children, flipX, flipY } = element;
+
+      const isGroup = type === 'group';
+      const isScreen = type === 'face' || type === 'chest';
+      const isCircle = type === 'circle';
+      
+      let elementClass = 'neumorphic-part';
+      if (isGroup) elementClass = 'neumorphic-group';
+      if (isScreen) elementClass = 'screen-inner';
+      
+      const containerStyle = {
+        position: 'absolute',
+        left: cx,
+        top: cy,
+        width: isGroup ? baseW : w,
+        height: isGroup ? baseH : h,
+        transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${isGroup ? scale : 1})`,
+        borderRadius: isCircle ? '50%' : rx,
+        backgroundColor: isGroup ? 'transparent' : color, 
+        cursor: isSelected ? 'grab' : 'pointer',
+        touchAction: 'none',
+        zIndex: isScreen ? 50 : 1
+      };
+
+      const visualStyle = {
+        width: '100%',
+        height: '100%',
+        transform: isGroup ? 'none' : `scaleX(${flipX ? -1 : 1}) scaleY(${flipY ? -1 : 1})`,
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        borderRadius: 'inherit',
+        pointerEvents: 'none' 
+      };
+
+      const FaceContent = () => (
+        <div className="w-full h-full flex items-center justify-center gap-[15%]">
+          <div className="w-[22%] aspect-square rounded-full bg-[#8be9fd] shadow-[0_0_20px_#8be9fd,inset_0_0_12px_white]" />
+          <div className="w-[22%] aspect-square rounded-full bg-[#8be9fd] shadow-[0_0_20px_#8be9fd,inset_0_0_12px_white]" />
+        </div>
+      );
+
+      const ChestContent = () => (
+        <div 
+          className="w-full h-full flex flex-col items-center justify-center" 
+          style={{ containerType: 'inline-size' }}
+        >
+          <div className="font-bold tracking-widest text-[#8be9fd]" style={{ fontSize: '15cqw', textShadow: '0 0 10px rgba(139,233,253,0.5)' }}>
+            LVL 5
+          </div>
+          <div className="text-gray-400 font-medium mb-[5cqw]" style={{ fontSize: '7cqw' }}>
+            400 XP
+          </div>
+          <div className="w-[75cqw] h-[4cqw] bg-gray-800 rounded-full overflow-hidden shadow-inner">
+            <div className="w-2/3 h-full rounded-full bg-gradient-to-r from-blue-400 to-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]"></div>
+          </div>
+        </div>
+      );
+
+      return (
+        <div
+          style={containerStyle}
+          className={`${elementClass} transition-shadow hover:brightness-105`}
+          onPointerDown={(e) => onPointerDown(e, 'drag')}
+        >
+          <div style={visualStyle}>
+            {isGroup && children.map(child => (
+              <div key={child.id} style={{
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                width: child.w,
+                height: child.h,
+                marginLeft: child.cx,
+                marginTop: child.cy,
+                transform: `translate(-50%, -50%) rotate(${child.rotation}deg) scaleX(${child.flipX ? -1 : 1}) scaleY(${child.flipY ? -1 : 1})`,
+                backgroundColor: child.color || color,
+                borderRadius: child.type === 'circle' ? '50%' : child.rx,
+                boxShadow: child.type === 'face' || child.type === 'chest' ? 'inset 0px 0px 20px rgba(0,0,0,0.8)' : 'none'
+              }}>
+                {child.type === 'face' && <FaceContent />}
+                {child.type === 'chest' && <ChestContent />}
+              </div>
+            ))}
+
+            {type === 'face' && <FaceContent />}
+            {type === 'chest' && <ChestContent />}
+          </div>
+
+          {isPendingMerge && (
+            <div className="absolute inset-0 pointer-events-none rounded-[inherit] border-[4px] border-dashed border-orange-500 animate-pulse z-50"></div>
+          )}
+
+          {isSelected && (
+            <div className="absolute inset-0 pointer-events-none rounded-[inherit] border-2 border-indigo-500/50">
+              <div 
+                className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[35px] pointer-events-auto cursor-crosshair group flex flex-col items-center justify-end h-[35px]"
+                onPointerDown={(e) => onPointerDown(e, 'rotate')}
+              >
+                 <div className="w-[2px] h-[20px] bg-indigo-500" />
+                 <div className="w-4 h-4 bg-white border-2 border-indigo-500 rounded-full group-hover:scale-125 transition-transform shadow-md" />
+              </div>
+
+              {!isScreen && (
+                <div 
+                  className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 w-6 h-6 bg-white border-2 border-indigo-500 rounded-full pointer-events-auto cursor-nwse-resize hover:scale-110 transition-transform shadow-md flex items-center justify-center"
+                  onPointerDown={(e) => onPointerDown(e, 'resize')}
+                >
+                  <div className="w-2 h-2 rounded-full bg-indigo-500/50" />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // --- RENDER APP ---
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<BotBuilder />);
+  </script>
+</body>
+</html>
