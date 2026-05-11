@@ -1,323 +1,319 @@
-import React, { useState, useEffect, useRef } from 'react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocab Jeopardy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617; /* blue-950 */
+        }
+        .jeopardy-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+        }
+        .modal-enter {
+            animation: modalEnter 0.2s ease-out forwards;
+        }
+        @keyframes modalEnter {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen flex flex-col">
 
-/**
- * VocabJeopardy.jsx
- * A Jeopardy-style vocabulary game for 10-12 year olds.
- * Supports 2 players, alternating turns, and score tracking.
- * Features strict "answer in the form of a question" validation.
- */
-
-const apiKey = ""; // Environment provided at runtime
-
-// --- Game Data for Ages 10-12 ---
-const GAME_DATA = [
-  {
-    category: "Geography & Earth",
-    clues: [
-      { id: "g_100", value: 100, text: "A very large body of salt water.", keywords: ["ocean", "sea"], displayAnswer: "What is an ocean?" },
-      { id: "g_200", value: 200, text: "A raised part of the earth's surface, much larger than a hill.", keywords: ["mountain", "mountains"], displayAnswer: "What is a mountain?" },
-      { id: "g_300", value: 300, text: "A large area of flat land with few trees.", keywords: ["plain", "prairie", "plains"], displayAnswer: "What is a plain?" },
-      { id: "g_400", value: 400, text: "A piece of land completely surrounded by water.", keywords: ["island"], displayAnswer: "What is an island?" },
-      { id: "g_500", value: 500, text: "A piece of land surrounded by water on three sides.", keywords: ["peninsula"], displayAnswer: "What is a peninsula?" },
-    ]
-  },
-  {
-    category: "Math Terms",
-    clues: [
-      { id: "m_100", value: 100, text: "A math problem where you take one number away from another.", keywords: ["subtraction", "subtract"], displayAnswer: "What is subtraction?" },
-      { id: "m_200", value: 200, text: "The answer you get when you add numbers together.", keywords: ["sum"], displayAnswer: "What is the sum?" },
-      { id: "m_300", value: 300, text: "A shape with exactly three straight sides and three angles.", keywords: ["triangle"], displayAnswer: "What is a triangle?" },
-      { id: "m_400", value: 400, text: "The amount of space inside a flat, two-dimensional shape.", keywords: ["area"], displayAnswer: "What is the area?" },
-      { id: "m_500", value: 500, text: "The total distance around the outside edge of a shape.", keywords: ["perimeter"], displayAnswer: "What is the perimeter?" },
-    ]
-  },
-  {
-    category: "Emotions",
-    clues: [
-      { id: "e_100", value: 100, text: "Feeling unhappy or wanting to cry.", keywords: ["sad", "upset", "unhappy"], displayAnswer: "What is sad?" },
-      { id: "e_200", value: 200, text: "Feeling very mad because someone was mean or unfair.", keywords: ["angry", "mad", "furious"], displayAnswer: "What is angry?" },
-      { id: "e_300", value: 300, text: "Feeling worried, nervous, or uneasy about something that might happen.", keywords: ["anxious", "nervous", "worried"], displayAnswer: "What is anxious?" },
-      { id: "e_400", value: 400, text: "Feeling very happy and pleased about something you did well.", keywords: ["proud"], displayAnswer: "What is proud?" },
-      { id: "e_500", value: 500, text: "Feeling annoyed or upset because you can't do or change something.", keywords: ["frustrated"], displayAnswer: "What is frustrated?" },
-    ]
-  },
-  {
-    category: "Animal Kingdom",
-    clues: [
-      { id: "ak_100", value: 100, text: "An animal that has scales, breathes through gills, and swims in the water.", keywords: ["fish"], displayAnswer: "What is a fish?" },
-      { id: "ak_200", value: 200, text: "An animal that has feathers, wings, and lays eggs.", keywords: ["bird"], displayAnswer: "What is a bird?" },
-      { id: "ak_300", value: 300, text: "A warm-blooded animal that has hair or fur and feeds its babies milk.", keywords: ["mammal"], displayAnswer: "What is a mammal?" },
-      { id: "ak_400", value: 400, text: "An animal's natural ability to blend in with its surroundings.", keywords: ["camouflage"], displayAnswer: "What is camouflage?" },
-      { id: "ak_500", value: 500, text: "An animal that can live both in water and on land, like a frog.", keywords: ["amphibian"], displayAnswer: "What is an amphibian?" },
-    ]
-  },
-  {
-    category: "Story Elements",
-    clues: [
-      { id: "se_100", value: 100, text: "The name of a book, usually found on the front cover.", keywords: ["title"], displayAnswer: "What is the title?" },
-      { id: "se_200", value: 200, text: "The person who wrote the story or book.", keywords: ["author"], displayAnswer: "Who is the author?" },
-      { id: "se_300", value: 300, text: "The people, animals, or creatures in a story.", keywords: ["character", "characters"], displayAnswer: "What are characters?" },
-      { id: "se_400", value: 400, text: "The time and place where a story happens.", keywords: ["setting"], displayAnswer: "What is the setting?" },
-      { id: "se_500", value: 500, text: "The main problem or struggle that the characters face.", keywords: ["conflict", "problem"], displayAnswer: "What is the conflict?" },
-    ]
-  }
-];
-
-// Helper for API retries with exponential backoff
-const fetchWithRetry = async (url, options, retries = 5, backoff = 1000) => {
-  try {
-    const response = await fetch(url, options);
-    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-    return await response.json();
-  } catch (error) {
-    if (retries > 0) {
-      await new Promise(resolve => setTimeout(resolve, backoff));
-      return fetchWithRetry(url, options, retries - 1, backoff * 2);
-    }
-    throw error;
-  }
-};
-
-export default function App() {
-  const [scores, setScores] = useState({ p1: 0, p2: 0 });
-  const [activePlayer, setActivePlayer] = useState(1);
-  const [completedClues, setCompletedClues] = useState(new Set());
-  const [activeClue, setActiveClue] = useState(null);
-  const [userAnswer, setUserAnswer] = useState("");
-  const [feedback, setFeedback] = useState(null);
-  const inputRef = useRef(null);
-
-  // Auto-focus input when modal opens
-  useEffect(() => {
-    if (activeClue && !feedback && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [activeClue, feedback]);
-
-  const handleClueClick = (clue) => {
-    if (!completedClues.has(clue.id)) {
-      setActiveClue(clue);
-      setUserAnswer("");
-      setFeedback(null);
-    }
-  };
-
-  const handleCloseModal = () => {
-    setActiveClue(null);
-    setFeedback(null);
-    setActivePlayer(prev => (prev === 1 ? 2 : 1));
-  };
-
-  const processAnswer = (e) => {
-    e.preventDefault();
-    if (!userAnswer.trim()) return;
-
-    const lowerInput = userAnswer.trim().toLowerCase();
-    const validPrefixes = ["what is", "what are", "who is", "who are", "what's", "who's", "whats", "whos", "what was", "who was"];
-    
-    let hasPrefix = false;
-    let strippedInput = lowerInput;
-
-    for (const prefix of validPrefixes) {
-      if (lowerInput.startsWith(prefix)) {
-        hasPrefix = true;
-        strippedInput = lowerInput.slice(prefix.length).replace(/[?!.]/g, '').trim();
-        break;
-      }
-    }
-
-    if (!hasPrefix) {
-      setFeedback({
-        type: "warning",
-        message: "Oops! Remember to answer in the form of a question! (e.g., 'What is...', 'Who is...')",
-      });
-      return;
-    }
-
-    const isCorrect = activeClue.keywords.some(kw => strippedInput.includes(kw.toLowerCase()));
-
-    if (isCorrect) {
-      setScores(prev => ({
-        ...prev,
-        [`p${activePlayer}`]: prev[`p${activePlayer}`] + activeClue.value
-      }));
-      setFeedback({
-        type: "correct",
-        message: "Correct!",
-        points: `+${activeClue.value}`,
-        actualAnswer: activeClue.displayAnswer
-      });
-      setCompletedClues(prev => new Set(prev).add(activeClue.id));
-    } else {
-      setScores(prev => ({
-        ...prev,
-        [`p${activePlayer}`]: prev[`p${activePlayer}`] - activeClue.value
-      }));
-      setFeedback({
-        type: "incorrect",
-        message: "Incorrect.",
-        points: `-${activeClue.value}`,
-        actualAnswer: activeClue.displayAnswer
-      });
-      setCompletedClues(prev => new Set(prev).add(activeClue.id));
-    }
-  };
-
-  const handlePass = () => {
-    setFeedback({
-      type: "passed",
-      message: "You passed.",
-      points: "0",
-      actualAnswer: activeClue.displayAnswer
-    });
-    setCompletedClues(prev => new Set(prev).add(activeClue.id));
-  };
-
-  const resetGame = () => {
-    setScores({ p1: 0, p2: 0 });
-    setCompletedClues(new Set());
-    setActiveClue(null);
-    setActivePlayer(1);
-  };
-
-  return (
-    <div className="min-h-screen bg-blue-950 font-sans text-white selection:bg-yellow-400 selection:text-blue-900 flex flex-col">
-      <header className="bg-blue-900 shadow-md p-4 flex flex-col md:flex-row justify-between items-center border-b-4 border-blue-800 gap-4">
-        <h1 className="text-3xl md:text-4xl font-black uppercase tracking-widest text-yellow-400 drop-shadow-sm text-center">
-          Vocab Jeopardy
-        </h1>
-        
-        <div className="flex gap-4">
-          {[1, 2].map(p => (
-            <div key={p} className={`flex flex-col items-center px-6 py-2 rounded-lg border-2 transition-all duration-300 ${
-              activePlayer === p 
-              ? "border-yellow-400 bg-blue-800 shadow-[0_0_15px_rgba(250,204,21,0.3)] scale-105" 
-              : "border-blue-700 bg-blue-950 opacity-70"
-            }`}>
-              <span className="text-sm font-bold uppercase tracking-wider text-blue-200">Player {p}</span>
-              <span className={`text-2xl font-bold ${scores[`p${p}`] < 0 ? "text-red-400" : "text-yellow-400"}`}>
-                ${scores[`p${p}`]}
-              </span>
+    <div id="app" class="flex flex-col min-h-screen">
+        <!-- Header -->
+        <header class="bg-blue-900 shadow-md p-4 flex flex-col md:flex-row justify-between items-center border-b-4 border-blue-800 gap-4">
+            <h1 class="text-3xl md:text-4xl font-black uppercase tracking-widest text-yellow-400 drop-shadow-sm text-center">
+                Vocab Jeopardy
+            </h1>
+            
+            <div class="flex gap-4" id="score-container">
+                <!-- Scores injected here -->
             </div>
-          ))}
-        </div>
-      </header>
+        </header>
 
-      <main className="p-4 md:p-8 flex-grow flex items-center justify-center overflow-x-auto">
-        <div className="min-w-[800px] w-full max-w-7xl">
-          <div className="grid grid-cols-5 gap-2 mb-2">
-            {GAME_DATA.map((col, i) => (
-              <div key={i} className="bg-blue-800 p-4 text-center border-4 border-blue-900 rounded-sm shadow-md flex items-center justify-center h-20">
-                <h2 className="font-bold text-lg md:text-xl uppercase tracking-wide text-white drop-shadow-md leading-tight">
-                  {col.category}
-                </h2>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-5 gap-2">
-            {[0, 1, 2, 3, 4].map(rowIndex => (
-              <React.Fragment key={rowIndex}>
-                {GAME_DATA.map((col) => {
-                  const clue = col.clues[rowIndex];
-                  const isCompleted = completedClues.has(clue.id);
-                  return (
-                    <button
-                      key={clue.id}
-                      onClick={() => handleClueClick(clue)}
-                      disabled={isCompleted}
-                      className={`h-24 md:h-32 text-center rounded-sm transition-all duration-300 ${
-                        isCompleted 
-                        ? 'bg-blue-900/50 border-2 border-blue-900 cursor-not-allowed opacity-50' 
-                        : 'bg-blue-600 border-4 border-blue-700 hover:bg-blue-500 hover:scale-[1.02] shadow-lg cursor-pointer'
-                      } flex items-center justify-center`}
-                    >
-                      {!isCompleted && (
-                        <span className="text-3xl md:text-4xl font-black text-yellow-400 drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)]">
-                          ${clue.value}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-      </main>
-
-      {activeClue && (
-        <div className="fixed inset-0 bg-blue-950/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-blue-800 border-4 border-yellow-400 rounded-xl shadow-2xl max-w-3xl w-full flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="bg-blue-900 px-6 py-4 flex justify-between items-center border-b-2 border-yellow-400/30">
-              <span className="text-yellow-400 font-bold uppercase tracking-widest text-lg">For ${activeClue.value}</span>
-              <span className="bg-yellow-400 text-blue-900 font-black px-4 py-1 rounded-full text-sm uppercase tracking-wider">
-                Player {activePlayer}'s Turn
-              </span>
-            </div>
-
-            <div className="p-8 md:p-12 flex-grow flex flex-col items-center justify-center text-center">
-              <h2 className="text-3xl md:text-5xl font-bold mb-10 text-white drop-shadow-md">
-                {activeClue.text}
-              </h2>
-
-              {!feedback ? (
-                <form onSubmit={processAnswer} className="w-full max-w-xl">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={userAnswer}
-                    onChange={(e) => setUserAnswer(e.target.value)}
-                    placeholder={`Player ${activePlayer}, type your answer...`}
-                    className="w-full bg-blue-950 border-b-4 border-yellow-400 px-6 py-4 text-xl md:text-2xl text-white placeholder-blue-400/50 focus:outline-none focus:bg-blue-900 transition-colors rounded-t-lg"
-                    autoComplete="off"
-                  />
-                  <div className="mt-8 flex gap-4 justify-center">
-                    <button type="submit" className="bg-yellow-400 text-blue-950 font-black text-xl px-8 py-3 rounded-lg hover:bg-yellow-300 transition-all shadow-lg active:scale-95">Submit</button>
-                    <button type="button" onClick={handlePass} className="bg-blue-700 text-white font-bold text-xl px-8 py-3 rounded-lg hover:bg-blue-600 transition-all shadow-lg active:scale-95 border border-blue-500">Pass</button>
-                  </div>
-                </form>
-              ) : (
-                <div className="w-full flex flex-col items-center animate-in slide-in-from-bottom-4 duration-300">
-                  {feedback.type === 'warning' ? (
-                    <div className="bg-orange-500/20 border-2 border-orange-400 p-6 rounded-lg w-full max-w-xl">
-                      <p className="text-xl text-orange-300 font-bold mb-6">{feedback.message}</p>
-                      <button onClick={() => setFeedback(null)} className="bg-orange-500 text-white font-bold px-6 py-2 rounded hover:bg-orange-400 transition-colors">Try Again</button>
-                    </div>
-                  ) : (
-                    <div className={`p-8 rounded-xl w-full max-w-xl border-4 ${
-                      feedback.type === 'correct' ? 'bg-green-900/40 border-green-500' : 'bg-red-900/40 border-red-500'
-                    }`}>
-                      <h3 className={`text-4xl font-black mb-2 ${feedback.type === 'correct' ? 'text-green-400' : 'text-red-400'}`}>
-                        {feedback.message} {feedback.points !== "0" && `(${feedback.points})`}
-                      </h3>
-                      <p className="text-blue-200 mt-6 text-lg">Correct response:</p>
-                      <p className="text-2xl md:text-3xl font-bold text-yellow-400 mt-2">{feedback.actualAnswer}</p>
-                      <button onClick={handleCloseModal} className="mt-8 bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 font-bold px-8 py-3 rounded-lg transition-colors">Next Turn</button>
-                    </div>
-                  )}
+        <!-- Main Board -->
+        <main class="p-4 md:p-8 flex-grow flex items-center justify-center overflow-x-auto">
+            <div class="min-w-[800px] w-full max-w-7xl">
+                <div class="jeopardy-grid mb-2" id="category-headers">
+                    <!-- Categories injected here -->
                 </div>
-              )}
+                <div class="jeopardy-grid" id="clue-grid">
+                    <!-- Clues injected here -->
+                </div>
             </div>
-          </div>
+        </main>
+
+        <!-- Modal Backdrop -->
+        <div id="modal-backdrop" class="fixed inset-0 bg-blue-950/90 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+            <div id="modal-content" class="bg-blue-800 border-4 border-yellow-400 rounded-xl shadow-2xl max-w-3xl w-full flex flex-col overflow-hidden modal-enter">
+                <div class="bg-blue-900 px-6 py-4 flex justify-between items-center border-b-2 border-yellow-400/30">
+                    <span id="modal-value" class="text-yellow-400 font-bold uppercase tracking-widest text-lg"></span>
+                    <span id="modal-turn" class="bg-yellow-400 text-blue-900 font-black px-4 py-1 rounded-full text-sm uppercase tracking-wider"></span>
+                </div>
+
+                <div class="p-8 md:p-12 flex-grow flex flex-col items-center justify-center text-center">
+                    <h2 id="modal-text" class="text-3xl md:text-5xl font-bold mb-10 text-white drop-shadow-md"></h2>
+
+                    <div id="input-section" class="w-full max-w-xl">
+                        <form id="answer-form">
+                            <input
+                                id="answer-input"
+                                type="text"
+                                placeholder="Type your answer..."
+                                class="w-full bg-blue-950 border-b-4 border-yellow-400 px-6 py-4 text-xl md:text-2xl text-white placeholder-blue-400/50 focus:outline-none focus:bg-blue-900 transition-colors rounded-t-lg"
+                                autocomplete="off"
+                            />
+                            <div class="mt-8 flex gap-4 justify-center">
+                                <button type="submit" class="bg-yellow-400 text-blue-950 font-black text-xl px-8 py-3 rounded-lg hover:bg-yellow-300 transition-all shadow-lg active:scale-95">Submit</button>
+                                <button type="button" id="pass-btn" class="bg-blue-700 text-white font-bold text-xl px-8 py-3 rounded-lg hover:bg-blue-600 transition-all shadow-lg active:scale-95 border border-blue-500">Pass</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div id="feedback-section" class="hidden w-full max-w-xl animate-in slide-in-from-bottom-4">
+                        <!-- Feedback content injected here -->
+                    </div>
+                </div>
+            </div>
         </div>
-      )}
-      
-      {completedClues.size === 25 && (
-        <div className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-[100] p-4 text-center">
-          <h2 className="text-6xl md:text-8xl font-black text-yellow-400 mb-6 drop-shadow-lg">GAME OVER!</h2>
-          <div className="flex gap-8 mb-10">
-            {[1, 2].map(p => (
-              <div key={p} className={`p-6 rounded-2xl border-4 ${scores[`p${p}`] === Math.max(scores.p1, scores.p2) ? "bg-yellow-400/20 border-yellow-400" : "bg-blue-900 border-blue-700"}`}>
-                <h3 className="text-2xl text-blue-200 uppercase tracking-widest mb-2">Player {p}</h3>
-                <p className={`text-5xl font-black ${scores[`p${p}`] < 0 ? "text-red-400" : "text-white"}`}>${scores[`p${p}`]}</p>
-                {scores[`p${p}`] === Math.max(scores.p1, scores.p2) && scores.p1 !== scores.p2 && <div className="text-yellow-400 font-bold mt-2 uppercase tracking-widest">Winner!</div>}
-              </div>
-            ))}
-          </div>
-          <button onClick={resetGame} className="bg-yellow-400 text-blue-950 font-black text-2xl px-10 py-4 rounded-xl hover:bg-yellow-300 transition-transform hover:scale-105 shadow-[0_0_20px_rgba(250,204,21,0.4)]">Play Again</button>
+
+        <!-- Game Over Screen -->
+        <div id="game-over" class="fixed inset-0 bg-black/95 hidden flex-col items-center justify-center z-[100] p-4 text-center">
+            <h2 class="text-6xl md:text-8xl font-black text-yellow-400 mb-6 drop-shadow-lg">GAME OVER!</h2>
+            <div id="final-results" class="flex gap-8 mb-10"></div>
+            <button onclick="location.reload()" class="bg-yellow-400 text-blue-950 font-black text-2xl px-10 py-4 rounded-xl hover:bg-yellow-300 transition-transform hover:scale-105">Play Again</button>
         </div>
-      )}
     </div>
-  );
-}
+
+    <script>
+        const GAME_DATA = [
+            {
+                category: "Geography & Earth",
+                clues: [
+                    { id: "g_100", value: 100, text: "A very large body of salt water.", keywords: ["ocean", "sea"], displayAnswer: "What is an ocean?" },
+                    { id: "g_200", value: 200, text: "A raised part of the earth's surface, much larger than a hill.", keywords: ["mountain", "mountains"], displayAnswer: "What is a mountain?" },
+                    { id: "g_300", value: 300, text: "A large area of flat land with few trees.", keywords: ["plain", "prairie", "plains"], displayAnswer: "What is a plain?" },
+                    { id: "g_400", value: 400, text: "A piece of land completely surrounded by water.", keywords: ["island"], displayAnswer: "What is an island?" },
+                    { id: "g_500", value: 500, text: "A piece of land surrounded by water on three sides.", keywords: ["peninsula"], displayAnswer: "What is a peninsula?" },
+                ]
+            },
+            {
+                category: "Math Terms",
+                clues: [
+                    { id: "m_100", value: 100, text: "A math problem where you take one number away from another.", keywords: ["subtraction", "subtract"], displayAnswer: "What is subtraction?" },
+                    { id: "m_200", value: 200, text: "The answer you get when you add numbers together.", keywords: ["sum"], displayAnswer: "What is the sum?" },
+                    { id: "m_300", value: 300, text: "A shape with exactly three straight sides and three angles.", keywords: ["triangle"], displayAnswer: "What is a triangle?" },
+                    { id: "m_400", value: 400, text: "The amount of space inside a flat, two-dimensional shape.", keywords: ["area"], displayAnswer: "What is the area?" },
+                    { id: "m_500", value: 500, text: "The total distance around the outside edge of a shape.", keywords: ["perimeter"], displayAnswer: "What is the perimeter?" },
+                ]
+            },
+            {
+                category: "Emotions",
+                clues: [
+                    { id: "e_100", value: 100, text: "Feeling unhappy or wanting to cry.", keywords: ["sad", "upset", "unhappy"], displayAnswer: "What is sad?" },
+                    { id: "e_200", value: 200, text: "Feeling very mad because someone was mean or unfair.", keywords: ["angry", "mad", "furious"], displayAnswer: "What is angry?" },
+                    { id: "e_300", value: 300, text: "Feeling worried, nervous, or uneasy about something that might happen.", keywords: ["anxious", "nervous", "worried"], displayAnswer: "What is anxious?" },
+                    { id: "e_400", value: 400, text: "Feeling very happy and pleased about something you did well.", keywords: ["proud"], displayAnswer: "What is proud?" },
+                    { id: "e_500", value: 500, text: "Feeling annoyed or upset because you can't do or change something.", keywords: ["frustrated"], displayAnswer: "What is frustrated?" },
+                ]
+            },
+            {
+                category: "Animal Kingdom",
+                clues: [
+                    { id: "ak_100", value: 100, text: "An animal that has scales, breathes through gills, and swims in the water.", keywords: ["fish"], displayAnswer: "What is a fish?" },
+                    { id: "ak_200", value: 200, text: "An animal that has feathers, wings, and lays eggs.", keywords: ["bird"], displayAnswer: "What is a bird?" },
+                    { id: "ak_300", value: 300, text: "A warm-blooded animal that has hair or fur and feeds its babies milk.", keywords: ["mammal"], displayAnswer: "What is a mammal?" },
+                    { id: "ak_400", value: 400, text: "An animal's natural ability to blend in with its surroundings.", keywords: ["camouflage"], displayAnswer: "What is camouflage?" },
+                    { id: "ak_500", value: 500, text: "An animal that can live both in water and on land, like a frog.", keywords: ["amphibian"], displayAnswer: "What is an amphibian?" },
+                ]
+            },
+            {
+                category: "Story Elements",
+                clues: [
+                    { id: "se_100", value: 100, text: "The name of a book, usually found on the front cover.", keywords: ["title"], displayAnswer: "What is the title?" },
+                    { id: "se_200", value: 200, text: "The person who wrote the story or book.", keywords: ["author"], displayAnswer: "Who is the author?" },
+                    { id: "se_300", value: 300, text: "The people, animals, or creatures in a story.", keywords: ["character", "characters"], displayAnswer: "What are characters?" },
+                    { id: "se_400", value: 400, text: "The time and place where a story happens.", keywords: ["setting"], displayAnswer: "What is the setting?" },
+                    { id: "se_500", value: 500, text: "The main problem or struggle that the characters face.", keywords: ["conflict", "problem"], displayAnswer: "What is the conflict?" },
+                ]
+            }
+        ];
+
+        let state = {
+            scores: { p1: 0, p2: 0 },
+            activePlayer: 1,
+            completedClues: new Set(),
+            activeClue: null
+        };
+
+        function renderScores() {
+            const container = document.getElementById('score-container');
+            container.innerHTML = [1, 2].map(p => `
+                <div class="flex flex-col items-center px-6 py-2 rounded-lg border-2 transition-all duration-300 ${
+                    state.activePlayer === p 
+                    ? "border-yellow-400 bg-blue-800 shadow-[0_0_15px_rgba(250,204,21,0.3)] scale-105" 
+                    : "border-blue-700 bg-blue-950 opacity-70"
+                }">
+                    <span class="text-sm font-bold uppercase tracking-wider text-blue-200">Player ${p}</span>
+                    <span class="text-2xl font-bold ${state.scores[`p${p}`] < 0 ? "text-red-400" : "text-yellow-400"}">
+                        $${state.scores[`p${p}`]}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function initBoard() {
+            const headerContainer = document.getElementById('category-headers');
+            const clueContainer = document.getElementById('clue-grid');
+
+            headerContainer.innerHTML = GAME_DATA.map(col => `
+                <div class="bg-blue-800 p-4 text-center border-4 border-blue-900 rounded-sm shadow-md flex items-center justify-center h-20">
+                    <h2 class="font-bold text-base md:text-lg uppercase tracking-wide text-white drop-shadow-md leading-tight">
+                        ${col.category}
+                    </h2>
+                </div>
+            `).join('');
+
+            clueContainer.innerHTML = '';
+            for (let rowIndex = 0; rowIndex < 5; rowIndex++) {
+                GAME_DATA.forEach(col => {
+                    const clue = col.clues[rowIndex];
+                    const btn = document.createElement('button');
+                    btn.id = `btn-${clue.id}`;
+                    btn.className = `h-24 md:h-32 text-center rounded-sm transition-all duration-300 bg-blue-600 border-4 border-blue-700 hover:bg-blue-500 hover:scale-[1.02] shadow-lg flex items-center justify-center`;
+                    btn.innerHTML = `<span class="text-3xl md:text-4xl font-black text-yellow-400 drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)]">$${clue.value}</span>`;
+                    btn.onclick = () => openClue(clue);
+                    clueContainer.appendChild(btn);
+                });
+            }
+        }
+
+        function openClue(clue) {
+            state.activeClue = clue;
+            document.getElementById('modal-value').innerText = `For $${clue.value}`;
+            document.getElementById('modal-turn').innerText = `Player ${state.activePlayer}'s Turn`;
+            document.getElementById('modal-text').innerText = clue.text;
+            document.getElementById('answer-input').value = '';
+            
+            document.getElementById('input-section').classList.remove('hidden');
+            document.getElementById('feedback-section').classList.add('hidden');
+            document.getElementById('modal-backdrop').classList.replace('hidden', 'flex');
+            document.getElementById('answer-input').focus();
+        }
+
+        function showFeedback(type, message, points, actualAnswer) {
+            const section = document.getElementById('feedback-section');
+            document.getElementById('input-section').classList.add('hidden');
+            section.classList.remove('hidden');
+
+            if (type === 'warning') {
+                section.innerHTML = `
+                    <div class="bg-orange-500/20 border-2 border-orange-400 p-6 rounded-lg w-full">
+                        <p class="text-xl text-orange-300 font-bold mb-6">${message}</p>
+                        <button onclick="retry()" class="bg-orange-500 text-white font-bold px-6 py-2 rounded hover:bg-orange-400">Try Again</button>
+                    </div>
+                `;
+            } else {
+                section.innerHTML = `
+                    <div class="p-8 rounded-xl w-full border-4 ${type === 'correct' ? 'bg-green-900/40 border-green-500' : 'bg-red-900/40 border-red-500'}">
+                        <h3 class="text-4xl font-black mb-2 ${type === 'correct' ? 'text-green-400' : 'text-red-400'}">
+                            ${message} ${points !== "0" ? `(${points})` : ''}
+                        </h3>
+                        <p class="text-blue-200 mt-6 text-lg">Correct response:</p>
+                        <p class="text-2xl md:text-3xl font-bold text-yellow-400 mt-2">${actualAnswer}</p>
+                        <button onclick="closeModal()" class="mt-8 bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 font-bold px-8 py-3 rounded-lg">Next Turn</button>
+                    </div>
+                `;
+            }
+        }
+
+        function retry() {
+            document.getElementById('feedback-section').classList.add('hidden');
+            document.getElementById('input-section').classList.remove('hidden');
+            document.getElementById('answer-input').focus();
+        }
+
+        function closeModal() {
+            const btn = document.getElementById(`btn-${state.activeClue.id}`);
+            btn.disabled = true;
+            btn.classList.replace('bg-blue-600', 'bg-blue-900/50');
+            btn.classList.replace('border-blue-700', 'border-blue-900');
+            btn.style.opacity = "0.5";
+            btn.innerHTML = '';
+
+            state.completedClues.add(state.activeClue.id);
+            state.activeClue = null;
+            state.activePlayer = state.activePlayer === 1 ? 2 : 1;
+
+            document.getElementById('modal-backdrop').classList.replace('flex', 'hidden');
+            renderScores();
+            checkGameOver();
+        }
+
+        function checkGameOver() {
+            if (state.completedClues.size === 25) {
+                const max = Math.max(state.scores.p1, state.scores.p2);
+                document.getElementById('final-results').innerHTML = [1, 2].map(p => `
+                    <div class="p-6 rounded-2xl border-4 ${state.scores[`p${p}`] === max && state.scores.p1 !== state.scores.p2 ? "bg-yellow-400/20 border-yellow-400" : "bg-blue-900 border-blue-700"}">
+                        <h3 class="text-2xl text-blue-200 uppercase tracking-widest mb-2">Player ${p}</h3>
+                        <p class="text-5xl font-black ${state.scores[`p${p}`] < 0 ? "text-red-400" : "text-white"}">$${state.scores[`p${p}`]}</p>
+                        ${state.scores[`p${p}`] === max && state.scores.p1 !== state.scores.p2 ? '<div class="text-yellow-400 font-bold mt-2 uppercase">Winner!</div>' : ''}
+                    </div>
+                `).join('');
+                document.getElementById('game-over').classList.replace('hidden', 'flex');
+            }
+        }
+
+        document.getElementById('answer-form').onsubmit = (e) => {
+            e.preventDefault();
+            const input = document.getElementById('answer-input').value.trim().toLowerCase();
+            if (!input) return;
+
+            const prefixes = ["what is", "what are", "who is", "who are", "what's", "who's", "whats", "whos", "what was", "who was"];
+            let hasPrefix = false;
+            let stripped = input;
+
+            for (const p of prefixes) {
+                if (input.startsWith(p)) {
+                    hasPrefix = true;
+                    stripped = input.slice(p.length).replace(/[?!.]/g, '').trim();
+                    break;
+                }
+            }
+
+            if (!hasPrefix) {
+                showFeedback('warning', "Oops! Remember to answer in the form of a question! (e.g., 'What is...')");
+                return;
+            }
+
+            const isCorrect = state.activeClue.keywords.some(kw => stripped.includes(kw.toLowerCase()));
+            const val = state.activeClue.value;
+
+            if (isCorrect) {
+                state.scores[`p${state.activePlayer}`] += val;
+                showFeedback('correct', 'Correct!', `+${val}`, state.activeClue.displayAnswer);
+            } else {
+                state.scores[`p${state.activePlayer}`] -= val;
+                showFeedback('incorrect', 'Incorrect.', `-${val}`, state.activeClue.displayAnswer);
+            }
+        };
+
+        document.getElementById('pass-btn').onclick = () => {
+            showFeedback('passed', 'You passed.', '0', state.activeClue.displayAnswer);
+        };
+
+        // Initialize
+        renderScores();
+        initBoard();
+
+    </script>
+</body>
+</html>
