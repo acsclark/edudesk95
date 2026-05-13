@@ -478,9 +478,49 @@
 
   .hidden { display: none !important; }
 
+  /* ── PREVIEW ── */
+  .preview-area {
+    margin-top: 28px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .preview-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .preview-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    justify-content: center;
+  }
+
+  .preview-chip {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
   @media (max-width: 480px) {
     .q-equation { font-size: 42px; }
     .summary-cards { grid-template-columns: 1fr 1fr; }
+    .preview-chip { font-size: 12px; padding: 4px 8px; }
   }
 </style>
 </head>
@@ -505,6 +545,8 @@
     <button class="start-btn" id="startBtn" onclick="startQuiz()" disabled>Start Quiz ▶</button>
   </div>
   <p class="pick-prompt" id="pickPrompt">Select a term to begin</p>
+
+  <div id="previewArea"></div>
 </div>
 
 <!-- ══ QUIZ SCREEN ══ -->
@@ -666,6 +708,7 @@ function selectTerm(t) {
   document.querySelector(`.term-btn[data-term="${t}"]`).classList.add('active');
   document.getElementById('startBtn').disabled = true;
   document.getElementById('pickPrompt').textContent = 'Now select a week';
+  document.getElementById('previewArea').innerHTML = '';
   renderWeeks();
 
   // update accent color
@@ -691,9 +734,20 @@ function selectWeek(w, btn) {
   currentWeek = w;
   document.querySelectorAll('.week-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  const count = data[currentTerm][w].length;
+  const qs = data[currentTerm][w];
   document.getElementById('startBtn').disabled = false;
-  document.getElementById('pickPrompt').textContent = `${count} questions — ready when you are!`;
+  document.getElementById('pickPrompt').textContent = `${qs.length} questions — ready when you are!`;
+  renderPreview(qs);
+}
+
+function renderPreview(qs) {
+  const area = document.getElementById('previewArea');
+  const chips = qs.map(q => `<span class="preview-chip">${q} =</span>`).join('');
+  area.innerHTML = `
+    <div class="preview-area">
+      <p class="preview-label">Questions preview</p>
+      <div class="preview-grid">${chips}</div>
+    </div>`;
 }
 
 /* ════════════════════════════════════════
