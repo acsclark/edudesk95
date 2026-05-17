@@ -402,6 +402,7 @@
   #potatoCanvas {
     display: block;
     border-radius: 20px;
+    touch-action: none;
   }
 
   .custom-cursor {
@@ -778,6 +779,7 @@
     display: block;
     border-radius: 16px;
     box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    touch-action: none;
   }
 
   .cut-panel {
@@ -1893,19 +1895,21 @@ function onPeelEnd() {
 
 function onPeelTouchStart(e) {
   e.preventDefault();
-  onPeelStart(e.touches[0]);
+  onPeelStart(e);
 }
 function onPeelTouchMove(e) {
   e.preventDefault();
-  onPeelMove(e.touches[0]);
+  onPeelMove(e);
 }
 
 function getCanvasPos(e) {
   const rect = peelState.canvas.getBoundingClientRect();
   const scaleX = peelState.w / rect.width;
   const scaleY = peelState.h / rect.height;
-  const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
-  const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+  // Support MouseEvent, TouchEvent, or a raw Touch object
+  const touch = e.touches?.[0] ?? e.changedTouches?.[0];
+  const clientX = touch ? touch.clientX : (e.clientX ?? 0);
+  const clientY = touch ? touch.clientY : (e.clientY ?? 0);
   return {
     x: (clientX - rect.left) * scaleX,
     y: (clientY - rect.top) * scaleY
@@ -2314,8 +2318,11 @@ function getCutCanvasPos(e) {
   const rect = canvas.getBoundingClientRect();
   const sx = 420 / rect.width;
   const sy = 320 / rect.height;
-  const cx = (e.clientX ?? e.touches?.[0]?.clientX ?? 0) - rect.left;
-  const cy = (e.clientY ?? e.touches?.[0]?.clientY ?? 0) - rect.top;
+  const touch = e.touches?.[0] ?? e.changedTouches?.[0];
+  const clientX = touch ? touch.clientX : (e.clientX ?? 0);
+  const clientY = touch ? touch.clientY : (e.clientY ?? 0);
+  const cx = clientX - rect.left;
+  const cy = clientY - rect.top;
   return { x: cx * sx, y: cy * sy };
 }
 
@@ -2378,9 +2385,9 @@ function onCutMouseLeave() {
   }
 }
 
-function onCutTouchStart(e) { e.preventDefault(); onCutMouseDown(e.touches[0]); }
-function onCutTouchMove(e)  { e.preventDefault(); onCutMouseMove(e.touches[0]); }
-function onCutTouchEnd(e)   { onCutMouseUp(e.changedTouches[0]); }
+function onCutTouchStart(e) { e.preventDefault(); onCutMouseDown(e); }
+function onCutTouchMove(e)  { e.preventDefault(); onCutMouseMove(e); }
+function onCutTouchEnd(e)   { onCutMouseUp(e); }
 
 // ---- cut logic ----
 function finaliseCutGesture(start, end) {
