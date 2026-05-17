@@ -1294,11 +1294,14 @@ function startHostListeners() {
   dbListen(playersPath(), 'value', snap => {
     const data = snap.val() || {};
     const maxP = parseInt(document.getElementById('max-players-select')?.value || 4);
+    
+    console.log('PMB Host: Players data received:', data);
 
     Object.entries(data).forEach(([pid, pdata]) => {
       if (pid === gameState.myId) return; // that's me
       const exists = gameState.players.find(p => p.id === pid);
       if (!exists && gameState.players.length < maxP) {
+        console.log('PMB Host: New player detected:', pid, pdata.name);
         const newPlayer = {
           id: pid,
           name: pdata.name,
@@ -1334,9 +1337,11 @@ function startPlayerListeners() {
   // Listen to meta for lobby state + game start
   dbListen(metaPath(), 'value', snap => {
     const meta = snap.val();
+    console.log('PMB Player: Meta update received:', meta);
     if (!meta) return;
 
     if (meta.status === 'waiting' && meta.players) {
+      console.log('PMB Player: Updating player list:', meta.players);
       gameState.players = meta.players;
       updatePlayerLobbyUI();
     }
@@ -1425,9 +1430,15 @@ function hostGame(btn) {
   setupNetwork(() => {
     btn.textContent = origText;
     btn.disabled = false;
-    dbSet(myPlayerPath(), { id: gameState.myId, name, avatar: AVATARS[0], isHost: true, color: PLAYER_COLORS[0], progress: 0, step: 0, ts: Date.now() });
-    dbSet(metaPath(), { status: 'waiting', players: gameState.players });
+    console.log('PMB Host: Setting up room', gameState.roomCode, 'with path', myPlayerPath());
+    dbSet(myPlayerPath(), { id: gameState.myId, name, avatar: AVATARS[0], isHost: true, color: PLAYER_COLORS[0], progress: 0, step: 0, ts: Date.now() })
+      .then(() => console.log('PMB Host: Player data written'))
+      .catch(err => console.error('PMB Host: Error writing player data:', err));
+    dbSet(metaPath(), { status: 'waiting', players: gameState.players })
+      .then(() => console.log('PMB Host: Meta written with players:', gameState.players))
+      .catch(err => console.error('PMB Host: Error writing meta:', err));
     startHostListeners();
+    console.log('PMB Host: Listening on', playersPath());
     document.getElementById('room-code-display').textContent = gameState.roomCode;
     updateLobbyUI();
     showScreen('screen-lobby-host');
@@ -1458,17 +1469,27 @@ function joinGame(btn) {
         btn.textContent = origText;
         btn.disabled = false;
         document.getElementById('join-error').textContent = 'Room not found! Check the code.';
+        console.log('PMB: Room', code, 'not found');
         return;
       }
+      
+      console.log('PMB: Room found, joining as player', gameState.myId);
       
       // Room exists, now join it
       btn.textContent = origText;
       btn.disabled = false;
+      
+      // Write player data to database
       dbSet(myPlayerPath(), {
         id: gameState.myId, name,
         avatar: AVATARS[1], isHost: false,
         color: PLAYER_COLORS[1], progress: 0, step: 0, ts: Date.now()
+      }).then(() => {
+        console.log('PMB: Player data written to', myPlayerPath());
+      }).catch(err => {
+        console.error('PMB: Failed to write player data:', err);
       });
+      
       startPlayerListeners();
       document.getElementById('player-room-code-display').textContent = code;
       showScreen('screen-lobby-player');
@@ -1477,6 +1498,7 @@ function joinGame(btn) {
       btn.textContent = origText;
       btn.disabled = false;
       document.getElementById('join-error').textContent = 'Failed to join room: ' + err.message;
+      console.error('PMB: Join error:', err);
     });
   });
 }
