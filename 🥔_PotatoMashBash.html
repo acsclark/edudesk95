@@ -983,7 +983,7 @@
       </select>
     </div>
     <div class="error-msg" id="host-error"></div>
-    <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="hostGame()">🥔 Create Room</button>
+    <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="hostGame(this)">🥔 Create Room</button>
   </div>
 </div>
 
@@ -1018,7 +1018,7 @@
       <input type="text" id="join-code-input" placeholder="ABCD" maxlength="4" style="text-transform:uppercase;letter-spacing:4px;font-size:1.5rem;text-align:center;">
     </div>
     <div class="error-msg" id="join-error"></div>
-    <button class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="joinGame()">🥔 Join Room</button>
+    <button class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="joinGame(this)">🥔 Join Room</button>
   </div>
 </div>
 
@@ -1156,28 +1156,50 @@ let fbListeners = [];  // [{ref, type, fn}] — so we can detach on leave
 // ---- Firebase SDK (loaded dynamically) ----
 let fbLoaded = false;
 let fbLoadCallbacks = [];
+let fbLoadError = false;
 
-function ensureFirebase(cb) {
+function ensureFirebase(cb, onError) {
+  if (fbLoadError) { if (onError) onError('Firebase SDK failed to load. Check your internet connection.'); return; }
   if (fbLoaded) { cb(); return; }
-  fbLoadCallbacks.push(cb);
+  fbLoadCallbacks.push({ cb, onError });
   if (document.getElementById('fb-sdk')) return; // already loading
 
   const s = document.createElement('script');
   s.id = 'fb-sdk';
   s.type = 'module';
-  // We use the compat CDN so we can keep imperative-style code
   s.textContent = `
-    import { initializeApp }        from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-    import { getDatabase, ref, set, push, onValue, onChildAdded, remove, serverTimestamp }
-      from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-    window._fb = { initializeApp, getDatabase, ref, set, push, onValue, onChildAdded, remove, serverTimestamp };
-    window.dispatchEvent(new Event('fb-ready'));
+    try {
+      const { initializeApp }   = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+      const { getDatabase, ref, set, push, onValue, onChildAdded, remove, serverTimestamp }
+        = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
+      window._fb = { initializeApp, getDatabase, ref, set, push, onValue, onChildAdded, remove, serverTimestamp };
+      window.dispatchEvent(new Event('fb-ready'));
+    } catch(e) {
+      window.dispatchEvent(new CustomEvent('fb-error', { detail: e.message }));
+    }
   `;
   document.head.appendChild(s);
 
+  // Timeout fallback — if nothing fires in 10s, treat as error
+  const timeout = setTimeout(() => {
+    if (!fbLoaded) {
+      fbLoadError = true;
+      fbLoadCallbacks.forEach(({ onError: oe }) => { if (oe) oe('Firebase SDK timed out. Check your internet connection.'); });
+      fbLoadCallbacks = [];
+    }
+  }, 10000);
+
   window.addEventListener('fb-ready', () => {
+    clearTimeout(timeout);
     fbLoaded = true;
-    fbLoadCallbacks.forEach(fn => fn());
+    fbLoadCallbacks.forEach(({ cb: fn }) => fn());
+    fbLoadCallbacks = [];
+  }, { once: true });
+
+  window.addEventListener('fb-error', (e) => {
+    clearTimeout(timeout);
+    fbLoadError = true;
+    fbLoadCallbacks.forEach(({ onError: oe }) => { if (oe) oe('Firebase SDK error: ' + e.detail); });
     fbLoadCallbacks = [];
   }, { once: true });
 }
@@ -1232,8 +1254,35 @@ function myPlayerPath()          { return `${playersPath()}/${gameState.myId}`; 
 function eventsPath()            { return `${roomPath()}/events`; }
 
 // ---- Network init — called before any host/join action ----
-function setupNetwork(onReady) {
-  ensureFirebase(() => { initFirebase(); onReady(); });
+function setupNetwork(onReady, _btn) {
+  if (FIREBASE_CONFIG.apiKey.startsWith('PASTE') || FIREBASE_CONFIG.databaseURL.startsWith('PASTE')) {
+    showConfigError('Firebase config not set up! Open the HTML and fill in your API key, Database URL, and Project ID.');
+    return;
+  }
+  ensureFirebase(() => {
+    try {
+      initFirebase();
+      onReady();
+    } catch(e) {
+      showConfigError('Firebase connection failed: ' + e.message);
+    }
+  }, (errMsg) => {
+    showConfigError(errMsg);
+  });
+}
+
+function showConfigError(msg) {
+  const ids = ['host-error', 'join-error'];
+  let shown = false;
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el && el.closest('.screen') && !el.closest('.screen').classList.contains('hidden')) {
+      el.textContent = msg;
+      shown = true;
+    }
+  }
+  if (!shown) toast('⚠️ ' + msg.slice(0, 80));
+  console.error('PMB Firebase error:', msg);
 }
 
 // ============================================================
@@ -1355,7 +1404,7 @@ function broadcastMyProgress(progress, step) {
 // ============================================================
 //  LOBBY
 // ============================================================
-function hostGame() {
+function hostGame(btn) {
   const name = document.getElementById('host-name-input').value.trim();
   if (!name) { document.getElementById('host-error').textContent = 'Please enter your name!'; return; }
   document.getElementById('host-error').textContent = '';
@@ -1369,8 +1418,13 @@ function hostGame() {
     isHost: true, color: PLAYER_COLORS[0], progress: 0, step: 0
   }];
 
+  const origText = btn.textContent;
+  btn.textContent = '⏳ Connecting...';
+  btn.disabled = true;
+
   setupNetwork(() => {
-    // Write host player + initial meta
+    btn.textContent = origText;
+    btn.disabled = false;
     dbSet(myPlayerPath(), { id: gameState.myId, name, avatar: AVATARS[0], isHost: true, color: PLAYER_COLORS[0], progress: 0, step: 0, ts: Date.now() });
     dbSet(metaPath(), { status: 'waiting', players: gameState.players });
     startHostListeners();
@@ -1380,7 +1434,7 @@ function hostGame() {
   });
 }
 
-function joinGame() {
+function joinGame(btn) {
   const name = document.getElementById('join-name-input').value.trim();
   const code = document.getElementById('join-code-input').value.trim().toUpperCase();
   if (!name) { document.getElementById('join-error').textContent = 'Please enter your name!'; return; }
@@ -1393,8 +1447,13 @@ function joinGame() {
   gameState.roomCode = code;
   gameState.players = [];
 
+  const origText = btn.textContent;
+  btn.textContent = '⏳ Connecting...';
+  btn.disabled = true;
+
   setupNetwork(() => {
-    // Write my player record — host's listener will pick it up
+    btn.textContent = origText;
+    btn.disabled = false;
     dbSet(myPlayerPath(), {
       id: gameState.myId, name,
       avatar: AVATARS[1], isHost: false,
