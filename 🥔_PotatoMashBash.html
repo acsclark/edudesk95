@@ -1079,6 +1079,188 @@
     .panel { padding: 20px; }
     .race-sidebar { display: none; }
   }
+
+  /* ========== BOILING STEP ========== */
+  .boil-workspace {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    width: 100%;
+    max-width: 560px;
+    user-select: none;
+  }
+  .boil-scene {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    position: relative;
+  }
+  .boil-pot-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .stove-body {
+    position: relative;
+    width: 280px;
+    height: 80px;
+    background: linear-gradient(180deg, #2e2e2e 0%, #1a1a1a 100%);
+    border-radius: 0 0 18px 18px;
+    border: 2px solid #3a3a3a;
+    border-top: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .stove-display {
+    background: #080808;
+    border: 2px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #ff4400;
+    text-shadow: 0 0 8px rgba(255,68,0,0.9), 0 0 18px rgba(255,68,0,0.5);
+    letter-spacing: 3px;
+    min-width: 46px;
+    text-align: center;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.9);
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .stove-dial-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .stove-dial {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #606060, #1e1e1e);
+    border: 3px solid #484848;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.8), inset 0 1px 3px rgba(255,255,255,0.07);
+    position: relative;
+    touch-action: none;
+    cursor: grab;
+  }
+  .stove-dial:active { cursor: grabbing; }
+  .stove-dial-marker {
+    width: 3px;
+    height: 18px;
+    background: rgba(255,255,255,0.88);
+    border-radius: 2px;
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    transform-origin: bottom center;
+    pointer-events: none;
+  }
+  .stove-dial-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: rgba(255,243,208,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .boil-status {
+    font-family: var(--display-font);
+    font-size: 1.1rem;
+    color: var(--potato-light);
+    text-align: center;
+    min-height: 1.6em;
+    transition: color 0.3s;
+    padding: 0 12px;
+  }
+  .boil-status.ok      { color: #a8e6a0; }
+  .boil-status.warning { color: #f39c12; }
+  .boil-status.danger  { color: #e74c3c; }
+  .boil-status.info    { color: #87ceeb; }
+  .boil-phase-bar-wrap { width: 100%; max-width: 300px; }
+  .boil-phase-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: rgba(255,243,208,0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 5px;
+  }
+  .boil-phase-bar-track {
+    height: 14px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 99px;
+    border: 1px solid rgba(255,255,255,0.06);
+    overflow: hidden;
+  }
+  .boil-phase-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.12s linear, background 0.6s;
+    background: linear-gradient(90deg, #e74c3c, #f39c12);
+  }
+  .simmer-timer-wrap { width: 100%; max-width: 300px; display: none; }
+  .simmer-timer-wrap.visible { display: block; }
+  .simmer-timer-track {
+    height: 14px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 99px;
+    border: 1px solid rgba(255,255,255,0.06);
+    overflow: hidden;
+  }
+  .simmer-timer-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #3498db, #87ceeb);
+    transition: width 0.1s linear;
+  }
+  .simmer-overcook-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #e74c3c, #ff6b6b);
+    transition: width 0.1s linear;
+  }
+  @keyframes bubbleRise {
+    0%   { transform: translateY(0)    scale(1);   opacity: 0.85; }
+    80%  { opacity: 0.55; }
+    100% { transform: translateY(-55px) scale(1.5); opacity: 0; }
+  }
+  .boil-bubble {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(160,220,255,0.55);
+    border: 1px solid rgba(255,255,255,0.4);
+    pointer-events: none;
+    animation: bubbleRise linear forwards;
+  }
+  @keyframes steamRise {
+    0%   { transform: translateY(0) scaleX(1);    opacity: 0.5; }
+    50%  { transform: translateY(-22px) scaleX(1.3); opacity: 0.3; }
+    100% { transform: translateY(-48px) scaleX(0.8); opacity: 0; }
+  }
+  .boil-steam {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(200,230,255,0.4);
+    filter: blur(5px);
+    pointer-events: none;
+    animation: steamRise ease-out forwards;
+  }
 </style>
 </head>
 <body>
@@ -1148,11 +1330,11 @@
         <span class="ps-arrow">›</span>
       </button>
 
-      <button class="practice-step-btn disabled" onclick="comingSoon('Boiling')">
+      <button class="practice-step-btn" onclick="startPractice('boil')">
         <span class="ps-icon">♨️</span>
         <div class="ps-text">
-          <div class="ps-title">Boiling <span class="ps-soon">Coming Soon</span></div>
-          <div class="ps-desc">Turn the stove to 9 and wait for the boil. Don't burn it!</div>
+          <div class="ps-title">Boiling</div>
+          <div class="ps-desc">Turn the stove to 5–9 to boil, then simmer on 4–5, then turn it off!</div>
         </div>
         <span class="ps-arrow">›</span>
       </button>
@@ -1834,13 +2016,18 @@ function startPractice(step) {
     document.getElementById('hud-timer').style.fontSize = '1rem';
     document.getElementById('hud-timer').style.color = '#a8e6a0';
     loadFillStep();
+  } else if (step === 'boil') {
+    document.getElementById('hud-timer').textContent = 'PRACTICE';
+    document.getElementById('hud-timer').style.fontSize = '1rem';
+    document.getElementById('hud-timer').style.color = '#a8e6a0';
+    loadBoilStep();
   }
 }
 
 function injectPracticeBanner(step) {
   // Remove any existing
   document.querySelectorAll('.practice-banner').forEach(e=>e.remove());
-  const stepNames = { peel: 'Peeling', cut: 'Cubing', fill: 'Filling the Pot' };
+  const stepNames = { peel: 'Peeling', cut: 'Cubing', fill: 'Filling the Pot', boil: 'Boiling' };
   const banner = document.createElement('div');
   banner.className = 'practice-banner';
   banner.innerHTML = `
@@ -1856,7 +2043,9 @@ function exitPractice() {
   if (peelState.animRAF) { cancelAnimationFrame(peelState.animRAF); peelState.animRAF = null; }
   if (cutState.animRAF)  { cancelAnimationFrame(cutState.animRAF);  cutState.animRAF = null; }
   if (fillState.animRAF) { cancelAnimationFrame(fillState.animRAF); fillState.animRAF = null; }
+  if (boilState.animRAF) { cancelAnimationFrame(boilState.animRAF); boilState.animRAF = null; }
   fillState.knobActive = false;
+  boilState.dialActive = false;
   document.querySelectorAll('.practice-banner').forEach(e=>e.remove());
   // Reset HUD timer style
   const timer = document.getElementById('hud-timer');
@@ -2036,6 +2225,8 @@ let peelState = {
 
 // fillState declared here so exitPractice can reference it before loadFillStep runs
 let fillState = { animRAF: null, knobActive: false, done: false, draining: false };
+// boilState declared here so exitPractice can reference it before loadBoilStep runs
+let boilState = { animRAF: null, dialActive: false, done: false, phase: 'heating', chunks: [] };
 
 function initPeelPotato() {
   peelState.peelMap = Array.from({length:PEEL_ROWS}, ()=>new Array(PEEL_SECTIONS).fill(false));
@@ -3715,11 +3906,564 @@ function onPotFilled() {
       toast('Great filling! Starting again... 🫕');
       loadFillStep();
     } else {
-      toast('Pot filled! 🎉 More steps coming soon...');
-      broadcastMyProgress(0.833, 3);
-      onRaceFinished(); // placeholder until next steps
+      toast('Pot filled! 🔥 Time to boil!');
+      broadcastMyProgress(0.5, 3);
+      loadBoilStep();
     }
   }, 800);
+}
+
+// ============================================================
+//  STEP: BOIL THE POT
+// ============================================================
+// Phase 1 — HEATING: dial 5-9 heats, higher = faster. Boil triggers automatically.
+// Phase 2 — BOILING: must turn down within 3s or it fails (restart phase).
+// Phase 3 — SIMMERING: dial 4-5 to simmer-cook. Bar fills. Overcook = restart.
+// Phase 4 — DONE: turn dial to 0 to complete.
+
+const BOIL_HEAT_THRESH   = 5;    // minimum dial setting to heat
+const SIMMER_MIN         = 4;    // lowest acceptable simmer setting
+const SIMMER_MAX         = 5;    // highest acceptable simmer setting
+const BOIL_WINDOW_MS     = 3000; // ms to turn down before fail
+const SIMMER_COOK_MS     = 7000; // ms of simmer needed to be cooked
+const SIMMER_OVERCOOK_MS = 5000; // ms of extra time before overcooked
+
+boilState = {
+  animRAF: null,
+  phase: 'heating',    // 'heating' | 'boiling' | 'simmering' | 'done'
+  dialValue: 0,        // 0-9 continuous
+  dialAngle: 0,        // visual angle in radians
+  dialActive: false,
+  lastPtrAngle: 0,
+  heatLevel: 0,        // 0-1 smooth heat
+  temperature: 0,      // 0-1 (0=cold, 1=boiling)
+  boilStartTime: null,
+  boilFailed: false,
+  simmerCookTime: 0,   // ms spent simmering in range
+  simmerOverTime: 0,   // ms over-simmering
+  done: false,
+  // element refs
+  statusEl: null,
+  dialEl: null,
+  dialMarkerEl: null,
+  displayEl: null,
+  elementEl: null,
+  phaseBarFillEl: null,
+  phaseBarLabelLeftEl: null,
+  phaseBarLabelRightEl: null,
+  simmerWrapEl: null,
+  simmerFillEl: null,
+  potSvgEl: null,
+  bubbleContainerEl: null,
+  steamContainerEl: null,
+  lastBubble: 0,
+  lastSteam: 0,
+  lastTs: null,
+};
+
+function loadBoilStep() {
+  document.getElementById('hud-step-label').textContent = 'Step 4/6';
+  document.getElementById('hud-step-name').textContent = 'Boil the Pot';
+
+  const area = document.getElementById('game-area');
+  area.innerHTML = `
+    <div class="boil-workspace">
+      <div class="boil-status" id="boil-status">Turn the dial to heat 5 or higher!</div>
+
+      <div class="boil-scene">
+        <!-- POT SVG sitting above stove -->
+        <div class="boil-pot-wrap">
+          <div style="position:relative;display:inline-block;">
+            <svg id="boil-pot-svg" viewBox="0 0 160 220" width="220" height="300" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <clipPath id="boil-pot-clip">
+                  <path d="M 20 40 L 10 185 Q 10 195 20 195 L 140 195 Q 150 195 150 185 L 140 40 Z"/>
+                </clipPath>
+                <linearGradient id="boil-water-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#70d0f8" stop-opacity="0.9"/>
+                  <stop offset="100%" stop-color="#1a78a8" stop-opacity="1"/>
+                </linearGradient>
+                <linearGradient id="boil-pot-grad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#555"/>
+                  <stop offset="40%" stop-color="#aaa"/>
+                  <stop offset="100%" stop-color="#666"/>
+                </linearGradient>
+              </defs>
+              <!-- water fill -->
+              <g clip-path="url(#boil-pot-clip)">
+                <rect id="boil-water-rect" x="11" y="120" width="138" height="75" fill="url(#boil-water-grad)"/>
+                <!-- chunks -->
+                <g id="boil-chunks"></g>
+                <!-- shimmer -->
+                <rect id="boil-water-shimmer" x="11" y="120" width="138" height="6" fill="rgba(255,255,255,0.18)" rx="2"/>
+              </g>
+              <!-- pot outline -->
+              <path d="M 20 40 L 10 185 Q 10 195 20 195 L 140 195 Q 150 195 150 185 L 140 40 Z"
+                    fill="none" stroke="url(#boil-pot-grad)" stroke-width="4" stroke-linejoin="round"/>
+              <!-- rim -->
+              <rect x="12" y="34" width="136" height="14" rx="5" fill="#888" stroke="#aaa" stroke-width="1.5"/>
+              <!-- handles -->
+              <rect x="0" y="50" width="14" height="30" rx="5" fill="#777" stroke="#aaa" stroke-width="1"/>
+              <rect x="146" y="50" width="14" height="30" rx="5" fill="#777" stroke="#aaa" stroke-width="1"/>
+              <!-- lid -->
+              <ellipse cx="80" cy="36" rx="72" ry="9" fill="#999" stroke="#bbb" stroke-width="1.5"/>
+              <ellipse cx="80" cy="30" rx="16" ry="8" fill="#888" stroke="#aaa" stroke-width="1.5"/>
+              <ellipse cx="80" cy="28" rx="10" ry="5" fill="#aaa"/>
+            </svg>
+            <!-- bubble / steam container overlaid on pot opening -->
+            <div id="boil-bubbles" style="position:absolute;top:36px;left:12px;width:196px;height:90px;pointer-events:none;overflow:hidden;"></div>
+            <div id="boil-steams" style="position:absolute;top:0px;left:20px;width:180px;height:60px;pointer-events:none;overflow:visible;"></div>
+          </div>
+        </div>
+
+        <!-- STOVE BODY -->
+        <div class="stove-body" style="width:240px;">
+          <!-- Element glow under the pot area (sits in CSS behind pot via z-index) -->
+          <svg id="boil-element-svg" viewBox="0 0 120 40" width="120" height="40"
+               style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);z-index:-1;">
+            <ellipse id="boil-element" cx="60" cy="20" rx="54" ry="14"
+                     fill="none" stroke="#333" stroke-width="6"
+                     stroke-linecap="round"/>
+            <ellipse cx="60" cy="20" rx="36" ry="8"
+                     fill="none" stroke="#2a2a2a" stroke-width="4" id="boil-element-inner"/>
+          </svg>
+
+          <!-- Digital display -->
+          <div class="stove-display" id="boil-display">0</div>
+
+          <!-- Dial -->
+          <div class="stove-dial-area">
+            <div class="stove-dial" id="boil-dial">
+              <div class="stove-dial-marker" id="boil-dial-marker"></div>
+            </div>
+            <div class="stove-dial-label">HEAT</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Heating progress bar -->
+      <div class="boil-phase-bar-wrap">
+        <div class="boil-phase-label">
+          <span id="boil-phase-left">Temperature</span>
+          <span id="boil-phase-right">Cold</span>
+        </div>
+        <div class="boil-phase-bar-track">
+          <div class="boil-phase-bar-fill" id="boil-phase-bar" style="width:0%;"></div>
+        </div>
+      </div>
+
+      <!-- Simmer cook timer (hidden until simmering) -->
+      <div class="simmer-timer-wrap" id="simmer-timer-wrap">
+        <div class="boil-phase-label">
+          <span>Cooking...</span>
+          <span id="simmer-pct-label">0%</span>
+        </div>
+        <div class="simmer-timer-track">
+          <div class="simmer-timer-fill" id="simmer-timer-fill" style="width:0%;"></div>
+        </div>
+      </div>
+
+    </div>
+  `;
+
+  // Cache refs
+  boilState.statusEl            = document.getElementById('boil-status');
+  boilState.dialEl              = document.getElementById('boil-dial');
+  boilState.dialMarkerEl        = document.getElementById('boil-dial-marker');
+  boilState.displayEl           = document.getElementById('boil-display');
+  boilState.elementEl           = document.getElementById('boil-element');
+  boilState.elementInnerEl      = document.getElementById('boil-element-inner');
+  boilState.phaseBarFillEl      = document.getElementById('boil-phase-bar');
+  boilState.phaseBarLabelLeftEl = document.getElementById('boil-phase-left');
+  boilState.phaseBarLabelRightEl= document.getElementById('boil-phase-right');
+  boilState.simmerWrapEl        = document.getElementById('simmer-timer-wrap');
+  boilState.simmerFillEl        = document.getElementById('simmer-timer-fill');
+  boilState.simmerPctEl         = document.getElementById('simmer-pct-label');
+  boilState.waterRectEl         = document.getElementById('boil-water-rect');
+  boilState.shimmerEl           = document.getElementById('boil-water-shimmer');
+  boilState.bubbleContainerEl   = document.getElementById('boil-bubbles');
+  boilState.steamContainerEl    = document.getElementById('boil-steams');
+  boilState.chunksEl            = document.getElementById('boil-chunks');
+
+  // Reset state
+  boilState.phase           = 'heating';
+  boilState.dialValue       = 0;
+  boilState.dialAngle       = 0;
+  boilState.dialActive      = false;
+  boilState.heatLevel       = 0;
+  boilState.temperature     = 0;
+  boilState.boilStartTime   = null;
+  boilState.boilFailed      = false;
+  boilState.simmerCookTime  = 0;
+  boilState.simmerOverTime  = 0;
+  boilState.done            = false;
+  boilState.lastBubble      = 0;
+  boilState.lastSteam       = 0;
+  boilState.lastTs          = null;
+
+  // Build potato chunks in the pot SVG
+  buildBoilChunks();
+
+  // Dial events
+  const dial = boilState.dialEl;
+  dial.addEventListener('mousedown',  onBoilDialDown);
+  dial.addEventListener('touchstart', onBoilDialDown, {passive:false});
+  document.addEventListener('mousemove', onBoilDialMove);
+  document.addEventListener('touchmove', onBoilDialMove, {passive:false});
+  document.addEventListener('mouseup',   onBoilDialUp);
+  document.addEventListener('touchend',  onBoilDialUp);
+
+  if (boilState.animRAF) cancelAnimationFrame(boilState.animRAF);
+  boilAnimLoop();
+}
+
+function buildBoilChunks() {
+  const ns = 'http://www.w3.org/2000/svg';
+  boilState.chunksEl.innerHTML = '';
+  boilState.chunks = [];
+  // Place a 4x3 grid of potato chunks sitting in the water
+  const cols = 4, rows = 3;
+  const left = 18, right = 142, bottom = 188;
+  const cw = (right - left) / cols;
+  const ch = 18;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const baseX = left + c * cw + cw * 0.08;
+      const baseY = bottom - (r + 1) * (ch + 3);
+      const ck = {
+        baseX, baseY,
+        w: cw * 0.84, h: ch * 0.88,
+        bobPhase:  Math.random() * Math.PI * 2,
+        bobAmp:    1 + Math.random() * 1.2,
+        bobSpeed:  0.016 + Math.random() * 0.01,
+        driftPhase: Math.random() * Math.PI * 2,
+        driftAmp:   0.5 + Math.random() * 0.8,
+        y: baseY,
+      };
+      const shadow = document.createElementNS(ns, 'rect');
+      shadow.setAttribute('rx', '2');
+      shadow.setAttribute('fill', 'rgba(0,0,0,0.18)');
+      const body = document.createElementNS(ns, 'rect');
+      body.setAttribute('rx', '2');
+      body.setAttribute('fill', '#e8c878');
+      body.setAttribute('stroke', 'rgba(160,120,40,0.5)');
+      body.setAttribute('stroke-width', '0.8');
+      const shine = document.createElementNS(ns, 'rect');
+      shine.setAttribute('rx', '1');
+      shine.setAttribute('fill', 'rgba(255,255,255,0.28)');
+      const g = document.createElementNS(ns, 'g');
+      g.appendChild(shadow); g.appendChild(body); g.appendChild(shine);
+      boilState.chunksEl.appendChild(g);
+      ck.shadowEl = shadow; ck.bodyEl = body; ck.shineEl = shine;
+      boilState.chunks.push(ck);
+    }
+  }
+}
+
+// ---- Dial interaction ----
+function getBoilDialCenter() {
+  const r = boilState.dialEl.getBoundingClientRect();
+  return { x: r.left + r.width/2, y: r.top + r.height/2 };
+}
+
+function onBoilDialDown(e) {
+  e.preventDefault();
+  if (boilState.done) return;
+  boilState.dialActive = true;
+  const c = getBoilDialCenter();
+  const t = e.touches ? e.touches[0] : e;
+  boilState.lastPtrAngle = Math.atan2(t.clientY - c.y, t.clientX - c.x);
+}
+
+function onBoilDialMove(e) {
+  if (!boilState.dialActive || boilState.done) return;
+  e.preventDefault();
+  const c = getBoilDialCenter();
+  const t = e.touches ? e.touches[0] : e;
+  const newAngle = Math.atan2(t.clientY - c.y, t.clientX - c.x);
+  let delta = newAngle - boilState.lastPtrAngle;
+  if (delta >  Math.PI) delta -= Math.PI * 2;
+  if (delta < -Math.PI) delta += Math.PI * 2;
+  boilState.lastPtrAngle = newAngle;
+  boilState.dialAngle += delta;
+
+  // Map dial angle to 0-9. Full range is ~270 deg (1.5π).
+  // Clockwise from bottom = increase.
+  const RAW_RANGE = Math.PI * 1.5;
+  // clamp total angle to [0, RAW_RANGE]
+  boilState.dialAngle = Math.max(0, Math.min(RAW_RANGE, boilState.dialAngle));
+  boilState.dialValue = (boilState.dialAngle / RAW_RANGE) * 9;
+
+  // Visual
+  boilState.dialMarkerEl.style.transform =
+    `translateX(-50%) rotate(${boilState.dialAngle}rad)`;
+  boilState.dialMarkerEl.style.transformOrigin = 'bottom center';
+
+  // Update display
+  updateBoilDisplay();
+}
+
+function onBoilDialUp() {
+  boilState.dialActive = false;
+}
+
+function updateBoilDisplay() {
+  const v = boilState.dialValue;
+  const rounded = Math.round(v);
+  // "H" when turning down from a previously hot state (dial back to 0 while element is hot)
+  if (rounded === 0 && boilState.heatLevel > 0.05) {
+    boilState.displayEl.textContent = 'H';
+  } else {
+    boilState.displayEl.textContent = String(rounded);
+  }
+}
+
+// ---- Animation loop ----
+function boilAnimLoop(ts) {
+  boilState.animRAF = requestAnimationFrame(boilAnimLoop);
+  const now = ts || performance.now();
+  const dt = boilState.lastTs ? Math.min(now - boilState.lastTs, 100) : 16;
+  boilState.lastTs = now;
+
+  if (boilState.done) return;
+
+  const dialV = boilState.dialValue;  // 0-9 continuous
+  const rounded = Math.round(dialV);
+
+  // Smooth heat level
+  const targetHeat = dialV >= BOIL_HEAT_THRESH ? dialV / 9 : 0;
+  boilState.heatLevel += (targetHeat - boilState.heatLevel) * 0.04;
+
+  // Update element colour
+  const h = boilState.heatLevel;
+  const r = Math.round(40 + h * 215);
+  const g2 = Math.round(h > 0.5 ? (h - 0.5) * 2 * 60 : 0);
+  const elementColor = h < 0.05 ? '#333' : `rgb(${r},${g2},0)`;
+  const glowColor    = h < 0.05 ? 'none' : `0 0 ${Math.round(h*24)}px rgba(${r},${g2},0,0.8)`;
+  boilState.elementEl.setAttribute('stroke', elementColor);
+  boilState.elementInnerEl.setAttribute('stroke', h < 0.05 ? '#2a2a2a' : elementColor);
+  boilState.elementEl.style.filter = h > 0.05 ? `drop-shadow(${glowColor})` : 'none';
+
+  // Update display (H logic)
+  if (rounded === 0 && boilState.heatLevel > 0.08) {
+    boilState.displayEl.textContent = 'H';
+  } else {
+    boilState.displayEl.textContent = String(rounded);
+  }
+
+  // Heat up temperature
+  if (boilState.phase === 'heating') {
+    // Rate depends on dial setting: dial 5 → slow, dial 9 → fast
+    const heatRate = dialV >= BOIL_HEAT_THRESH
+      ? ((dialV - BOIL_HEAT_THRESH) / (9 - BOIL_HEAT_THRESH)) * 0.00018 + 0.00005
+      : 0;
+    boilState.temperature = Math.min(1, boilState.temperature + heatRate * dt);
+
+    // Update heating bar
+    boilState.phaseBarFillEl.style.width = (boilState.temperature * 100).toFixed(1) + '%';
+    const tempPct = Math.round(boilState.temperature * 100);
+    boilState.phaseBarLabelRightEl.textContent =
+      tempPct < 30 ? 'Cold' :
+      tempPct < 60 ? 'Warming...' :
+      tempPct < 90 ? 'Getting hot!' :
+                     '🔥 Almost boiling!';
+    boilState.phaseBarFillEl.style.background =
+      `linear-gradient(90deg, #3498db ${(1-boilState.temperature)*40}%, #e74c3c 100%)`;
+
+    if (boilState.temperature >= 1) {
+      // START BOILING
+      boilState.phase = 'boiling';
+      boilState.boilStartTime = now;
+      boilState.statusEl.textContent = '🔥 Boiling! Turn it down to 4 or 5 quickly!';
+      boilState.statusEl.className = 'boil-status danger';
+      toast('💧 It\'s boiling! Turn down to 4-5 now!');
+    } else {
+      // Status messages during heating
+      if (dialV < BOIL_HEAT_THRESH) {
+        boilState.statusEl.textContent = 'Turn the dial to 5 or higher to heat!';
+        boilState.statusEl.className = 'boil-status';
+      } else {
+        boilState.statusEl.textContent = `Heating on ${rounded}… ${dialV > 7 ? 'Nice and fast!' : 'Keep going!'}`;
+        boilState.statusEl.className = 'boil-status info';
+      }
+    }
+  }
+
+  else if (boilState.phase === 'boiling') {
+    const elapsed = now - boilState.boilStartTime;
+    const pct = Math.min(1, elapsed / BOIL_WINDOW_MS);
+    boilState.phaseBarFillEl.style.width = (pct * 100).toFixed(1) + '%';
+    boilState.phaseBarFillEl.style.background = `linear-gradient(90deg, #e74c3c, #ff6b6b)`;
+    boilState.phaseBarLabelLeftEl.textContent  = '⏱ Time before fail';
+    boilState.phaseBarLabelRightEl.textContent = `${(((BOIL_WINDOW_MS - elapsed)/1000)).toFixed(1)}s`;
+
+    const remaining = BOIL_WINDOW_MS - elapsed;
+    if (remaining < 1000) {
+      boilState.statusEl.textContent = `⚠️ Turn it down NOW! ${(remaining/1000).toFixed(1)}s left!`;
+      boilState.statusEl.className = 'boil-status danger';
+    }
+
+    // Player turned it down to simmer range?
+    if (dialV >= SIMMER_MIN && dialV <= SIMMER_MAX + 0.5) {
+      boilState.phase = 'simmering';
+      boilState.simmerCookTime = 0;
+      boilState.simmerOverTime = 0;
+      boilState.simmerWrapEl.classList.add('visible');
+      boilState.phaseBarLabelLeftEl.textContent  = 'Temperature';
+      boilState.phaseBarLabelRightEl.textContent = 'Simmering';
+      boilState.phaseBarFillEl.style.background = 'linear-gradient(90deg, #f39c12, #f1c40f)';
+      toast('👌 Simmering nicely! Let it cook...');
+    } else if (elapsed >= BOIL_WINDOW_MS) {
+      // FAIL — boiled too long
+      boilRestart('💥 Boiled over! Turn it to 4-5 faster next time.');
+    }
+  }
+
+  else if (boilState.phase === 'simmering') {
+    const inRange = dialV >= SIMMER_MIN - 0.3 && dialV <= SIMMER_MAX + 0.5;
+    if (inRange) {
+      boilState.simmerCookTime += dt;
+      boilState.simmerOverTime = 0;
+    } else if (dialV < SIMMER_MIN - 0.3) {
+      // Too low — not simmering (don't accumulate overcook, just pause)
+      boilState.statusEl.textContent = '📉 Too low! Keep it on 4 or 5 to simmer.';
+      boilState.statusEl.className = 'boil-status warning';
+    } else {
+      // Too high — accumulate overcook
+      boilState.simmerOverTime += dt;
+    }
+
+    const cookPct = Math.min(1, boilState.simmerCookTime / SIMMER_COOK_MS);
+    boilState.simmerFillEl.style.width = (cookPct * 100).toFixed(1) + '%';
+    if (boilState.simmerPctEl) boilState.simmerPctEl.textContent = Math.round(cookPct * 100) + '%';
+
+    // Phase bar shows temperature staying steady
+    boilState.phaseBarFillEl.style.width = '78%';
+
+    if (inRange) {
+      if (cookPct < 1) {
+        boilState.statusEl.textContent = `♨️ Simmering on ${rounded}… cooking ${Math.round(cookPct*100)}%`;
+        boilState.statusEl.className = 'boil-status info';
+      } else {
+        boilState.phase = 'done';
+        boilState.statusEl.textContent = '✅ Cooked! Turn the dial to 0!';
+        boilState.statusEl.className = 'boil-status ok';
+        toast('🥔 Potatoes cooked! Turn the stove off!');
+        boilState.simmerWrapEl.classList.remove('visible');
+      }
+    }
+
+    if (boilState.simmerOverTime >= SIMMER_OVERCOOK_MS) {
+      boilRestart('🥵 Overcooked! Keep it at 4 or 5.');
+    }
+  }
+
+  else if (boilState.phase === 'done') {
+    // Waiting for player to turn dial to 0
+    if (rounded === 0) {
+      onBoilComplete();
+    } else {
+      boilState.statusEl.textContent = `Turn the dial to 0 to finish! (Currently ${rounded})`;
+      boilState.statusEl.className = 'boil-status warning';
+    }
+  }
+
+  // ---- Bubbles and steam ----
+  const bubbleRate = boilState.phase === 'boiling' ? 80 :
+                     boilState.phase === 'simmering' ? 180 : 0;
+  if (bubbleRate > 0 && now - boilState.lastBubble > bubbleRate) {
+    boilState.lastBubble = now;
+    spawnBoilBubble();
+  }
+  const steamRate = boilState.phase === 'boiling' ? 200 :
+                    boilState.phase === 'simmering' ? 400 : 0;
+  if (steamRate > 0 && now - boilState.lastSteam > steamRate) {
+    boilState.lastSteam = now;
+    spawnBoilSteam();
+  }
+
+  // ---- Animate chunks ----
+  if (boilState.chunks) {
+    const t = now * 0.001;
+    boilState.chunks.forEach((ck) => {
+      const bob = boilState.phase === 'boiling' || boilState.phase === 'simmering'
+        ? Math.sin(t * (ck.bobSpeed * 60) + ck.bobPhase) * ck.bobAmp * 1.5
+        : 0;
+      const drift = Math.sin(t * 0.7 + ck.driftPhase) * ck.driftAmp;
+      const x = ck.baseX + drift;
+      const y = ck.baseY + bob;
+      const w = ck.w, hh = ck.h;
+      ck.shadowEl.setAttribute('x', x+0.5); ck.shadowEl.setAttribute('y', y+1.5);
+      ck.shadowEl.setAttribute('width', w); ck.shadowEl.setAttribute('height', hh);
+      ck.bodyEl.setAttribute('x', x); ck.bodyEl.setAttribute('y', y);
+      ck.bodyEl.setAttribute('width', w); ck.bodyEl.setAttribute('height', hh);
+      ck.shineEl.setAttribute('x', x + w*0.1); ck.shineEl.setAttribute('y', y + hh*0.1);
+      ck.shineEl.setAttribute('width', w*0.6); ck.shineEl.setAttribute('height', hh*0.25);
+    });
+  }
+}
+
+function spawnBoilBubble() {
+  const el = document.createElement('div');
+  el.className = 'boil-bubble';
+  const size = 4 + Math.random() * 8;
+  const x = 10 + Math.random() * 170;
+  const dur = 0.6 + Math.random() * 0.8;
+  el.style.cssText = `width:${size}px;height:${size}px;left:${x}px;bottom:0;animation-duration:${dur}s;`;
+  boilState.bubbleContainerEl.appendChild(el);
+  setTimeout(() => el.remove(), dur * 1000);
+}
+
+function spawnBoilSteam() {
+  const el = document.createElement('div');
+  el.className = 'boil-steam';
+  const size = 12 + Math.random() * 16;
+  const x = 20 + Math.random() * 140;
+  const dur = 0.8 + Math.random() * 0.6;
+  el.style.cssText = `width:${size}px;height:${size}px;left:${x}px;bottom:0;animation-duration:${dur}s;`;
+  boilState.steamContainerEl.appendChild(el);
+  setTimeout(() => el.remove(), dur * 1000);
+}
+
+function boilRestart(msg) {
+  toast(msg, 2500);
+  // Reset but keep dial angle (natural physics)
+  boilState.phase = 'heating';
+  boilState.temperature = 0;
+  boilState.boilStartTime = null;
+  boilState.simmerCookTime = 0;
+  boilState.simmerOverTime = 0;
+  boilState.simmerWrapEl.classList.remove('visible');
+  boilState.phaseBarLabelLeftEl.textContent  = 'Temperature';
+  boilState.phaseBarLabelRightEl.textContent = 'Cold';
+  boilState.phaseBarFillEl.style.background = 'linear-gradient(90deg, #e74c3c, #f39c12)';
+  boilState.statusEl.textContent = 'Turn the dial to 5 or higher to reheat!';
+  boilState.statusEl.className = 'boil-status';
+}
+
+function onBoilComplete() {
+  if (boilState.done) return;
+  boilState.done = true;
+  if (boilState.animRAF) { cancelAnimationFrame(boilState.animRAF); boilState.animRAF = null; }
+
+  document.removeEventListener('mousemove', onBoilDialMove);
+  document.removeEventListener('touchmove', onBoilDialMove);
+  document.removeEventListener('mouseup',   onBoilDialUp);
+  document.removeEventListener('touchend',  onBoilDialUp);
+
+  boilState.statusEl.textContent = '🎉 Perfect! Potatoes boiled!';
+  boilState.statusEl.className = 'boil-status ok';
+
+  setTimeout(() => {
+    if (practiceMode) {
+      toast('Great boiling! Starting again... ♨️');
+      loadBoilStep();
+    } else {
+      toast('Boiled! 🎉 More steps coming soon...');
+      broadcastMyProgress(0.833, 4);
+      onRaceFinished();
+    }
+  }, 900);
 }
 
 // ============================================================
