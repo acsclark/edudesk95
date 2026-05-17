@@ -2480,6 +2480,7 @@ function renderFinishScoreboard() {
 function loadPeelStep() {
   document.getElementById('hud-step-label').textContent = 'Step 1/6';
   document.getElementById('hud-step-name').textContent = 'Peel the Potatoes';
+  broadcastMyProgress(gameState.potatosDone / TOTAL_POTATOES * 0.333, 1);
 
   const area = document.getElementById('game-area');
   area.innerHTML = `
@@ -3005,6 +3006,7 @@ let cutState = {
 function loadCutStep() {
   document.getElementById('hud-step-label').textContent = 'Step 2/6';
   document.getElementById('hud-step-name').textContent = 'Cube the Potatoes';
+  broadcastMyProgress(0.333, 2);
 
   const area = document.getElementById('game-area');
   area.innerHTML = `
@@ -3328,7 +3330,7 @@ function triggerChunkExplosion() {
           if (titleEl) titleEl.textContent = `🔪 Potato 1 of ${TOTAL_POTATOES}`;
         } else {
           toast('All potatoes cubed! 🎉 Now fill the pot!');
-          broadcastMyProgress(0.667, 2);
+          broadcastMyProgress(0.667, 3);
           loadFillStep();
         }
       }, 700);
@@ -3798,6 +3800,7 @@ fillState = {
 function loadFillStep() {
   document.getElementById('hud-step-label').textContent = 'Step 3/6';
   document.getElementById('hud-step-name').textContent = 'Fill the Pot';
+  broadcastMyProgress(0.5, 3);
 
   const area = document.getElementById('game-area');
   area.innerHTML = `
@@ -4229,7 +4232,7 @@ function onPotFilled() {
       loadFillStep();
     } else {
       toast('Pot filled! 🔥 Time to boil!');
-      broadcastMyProgress(0.5, 3);
+      broadcastMyProgress(0.667, 4);
       loadBoilStep();
     }
   }, 800);
@@ -4286,6 +4289,7 @@ boilState = {
 function loadBoilStep() {
   document.getElementById('hud-step-label').textContent = 'Step 4/6';
   document.getElementById('hud-step-name').textContent = 'Boil the Pot';
+  broadcastMyProgress(0.667, 4);
 
   const area = document.getElementById('game-area');
   area.innerHTML = `
