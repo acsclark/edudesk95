@@ -868,6 +868,214 @@
   /* ========== RESPONSIVE ========== */
   @media (max-width: 500px) {
     .panel { padding: 20px; }
+
+  /* ========== FILL POT STEP ========== */
+  .fill-workspace {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 16px;
+    width: 100%;
+    max-width: 520px;
+    user-select: none;
+  }
+
+  .fill-scene {
+    display: flex;
+    align-items: flex-end;
+    gap: 32px;
+    justify-content: center;
+  }
+
+  /* Tap / faucet */
+  .tap-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+  }
+
+  .tap-handle-wrap {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    touch-action: none;
+    cursor: grab;
+  }
+  .tap-handle-wrap:active { cursor: grabbing; }
+
+  .tap-body {
+    font-size: 4.5rem;
+    line-height: 1;
+    text-align: center;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+  }
+
+  .tap-knob {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, #8b7355, #c4a882, #8b7355);
+    border: 3px solid rgba(255,255,255,0.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    touch-action: none;
+    cursor: grab;
+  }
+  .tap-knob:active { cursor: grabbing; }
+
+  .tap-knob-marker {
+    width: 4px;
+    height: 28px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 2px;
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    transform-origin: bottom center;
+  }
+
+  .tap-spout {
+    font-size: 1.6rem;
+    line-height: 1;
+  }
+
+  .tap-label {
+    font-family: var(--display-font);
+    font-size: 0.85rem;
+    color: rgba(255,243,208,0.5);
+    text-align: center;
+  }
+
+  .water-stream {
+    width: 8px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #60c8f0, #3aa8d8, #60c8f0);
+    transition: height 0.1s, opacity 0.2s, width 0.1s;
+    margin: 0 auto;
+    opacity: 0;
+  }
+
+  /* Pot */
+  .pot-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pot-container {
+    position: relative;
+    width: 160px;
+    height: 200px;
+  }
+
+  .pot-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .fill-gauge-wrap {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .fill-gauge-track {
+    position: relative;
+    height: 22px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 99px;
+    border: 1px solid rgba(255,255,255,0.08);
+    overflow: visible;
+  }
+
+  .fill-gauge-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #3aa8d8, #60c8f0);
+    transition: width 0.05s linear;
+    position: relative;
+  }
+
+  .fill-zone-marker {
+    position: absolute;
+    top: -6px;
+    bottom: -6px;
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .fill-zone-ok {
+    background: rgba(76,175,80,0.25);
+    border: 1.5px solid rgba(76,175,80,0.6);
+  }
+  .fill-zone-low {
+    left: 0;
+    background: rgba(231,76,60,0.12);
+    border-right: 2px dashed rgba(231,76,60,0.5);
+  }
+  .fill-zone-high {
+    right: 0;
+    background: rgba(231,76,60,0.12);
+    border-left: 2px dashed rgba(231,76,60,0.5);
+  }
+
+  .fill-gauge-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: rgba(255,243,208,0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-top: 4px;
+    padding: 0 2px;
+  }
+
+  .fill-status {
+    font-family: var(--display-font);
+    font-size: 1.1rem;
+    color: var(--potato-light);
+    text-align: center;
+    min-height: 1.4em;
+    transition: color 0.3s;
+  }
+  .fill-status.ok    { color: #a8e6a0; }
+  .fill-status.low   { color: #ff9f7f; }
+  .fill-status.high  { color: #e74c3c; }
+  .fill-status.overflow { color: #e74c3c; }
+
+  .tap-open-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: rgba(135,206,235,0.8);
+    font-family: var(--display-font);
+    min-height: 1.2em;
+    text-align: center;
+  }
+
+  .fill-instructions {
+    text-align: center;
+    font-size: 0.88rem;
+    color: rgba(255,243,208,0.55);
+    font-weight: 600;
+    line-height: 1.6;
+    max-width: 340px;
+  }
+  .fill-instructions strong {
+    color: var(--potato-light);
+    font-family: var(--display-font);
+    font-size: 1rem;
+  }
+
+  /* ========== RESPONSIVE ========== */
+  @media (max-width: 500px) {
+    .panel { padding: 20px; }
     .race-sidebar { display: none; }
   }
 </style>
@@ -930,11 +1138,11 @@
         <span class="ps-arrow">›</span>
       </button>
 
-      <button class="practice-step-btn disabled" onclick="comingSoon('Filling the Pot')">
+      <button class="practice-step-btn" onclick="startPractice('fill')">
         <span class="ps-icon">🫕</span>
         <div class="ps-text">
-          <div class="ps-title">Filling the Pot <span class="ps-soon">Coming Soon</span></div>
-          <div class="ps-desc">Load chunks in the pot, then add water to the right level.</div>
+          <div class="ps-title">Filling the Pot</div>
+          <div class="ps-desc">Turn the tap to fill the pot. Hit the sweet spot — not too little, not too much!</div>
         </div>
         <span class="ps-arrow">›</span>
       </button>
@@ -1620,13 +1828,18 @@ function startPractice(step) {
     document.getElementById('hud-timer').style.fontSize = '1rem';
     document.getElementById('hud-timer').style.color = '#a8e6a0';
     loadCutStep();
+  } else if (step === 'fill') {
+    document.getElementById('hud-timer').textContent = 'PRACTICE';
+    document.getElementById('hud-timer').style.fontSize = '1rem';
+    document.getElementById('hud-timer').style.color = '#a8e6a0';
+    loadFillStep();
   }
 }
 
 function injectPracticeBanner(step) {
   // Remove any existing
   document.querySelectorAll('.practice-banner').forEach(e=>e.remove());
-  const stepNames = { peel: 'Peeling', cut: 'Cubing' };
+  const stepNames = { peel: 'Peeling', cut: 'Cubing', fill: 'Filling the Pot' };
   const banner = document.createElement('div');
   banner.className = 'practice-banner';
   banner.innerHTML = `
@@ -1641,6 +1854,8 @@ function exitPractice() {
   practiceStep = null;
   if (peelState.animRAF) { cancelAnimationFrame(peelState.animRAF); peelState.animRAF = null; }
   if (cutState.animRAF)  { cancelAnimationFrame(cutState.animRAF);  cutState.animRAF = null; }
+  if (fillState.animRAF) { cancelAnimationFrame(fillState.animRAF); fillState.animRAF = null; }
+  fillState.knobActive = false;
   document.querySelectorAll('.practice-banner').forEach(e=>e.remove());
   // Reset HUD timer style
   const timer = document.getElementById('hud-timer');
@@ -1818,6 +2033,9 @@ let peelState = {
   peelStrokePoints: [],
 };
 
+// fillState declared here so exitPractice can reference it before loadFillStep runs
+let fillState = { animRAF: null, knobActive: false, done: false, draining: false };
+
 function initPeelPotato() {
   peelState.peelMap = Array.from({length:PEEL_ROWS}, ()=>new Array(PEEL_SECTIONS).fill(false));
   peelState.peelCount = 0;
@@ -1826,6 +2044,7 @@ function initPeelPotato() {
   peelState.isDragging = false;
   peelState.isPeeling = false;
   peelState.peelStrokePoints = [];
+  peelState.potatoPeelDone = false;
 
   const canvas = document.getElementById('potatoCanvas');
   if (!canvas) return;
@@ -1837,6 +2056,14 @@ function initPeelPotato() {
   const scale = maxW / 380;
   canvas.style.width = maxW+'px';
   canvas.style.height = (300*scale)+'px';
+
+  canvas.removeEventListener('mousedown', onPeelStart);
+  canvas.removeEventListener('mousemove', onPeelMove);
+  canvas.removeEventListener('mouseup', onPeelEnd);
+  canvas.removeEventListener('mouseleave', onPeelEnd);
+  canvas.removeEventListener('touchstart', onPeelTouchStart);
+  canvas.removeEventListener('touchmove', onPeelTouchMove);
+  canvas.removeEventListener('touchend', onPeelEnd);
 
   canvas.addEventListener('mousedown', onPeelStart);
   canvas.addEventListener('mousemove', onPeelMove);
@@ -2026,6 +2253,10 @@ function updatePeelProgress(pct) {
 }
 
 function onPotatoPeeled() {
+  // Guard: only fire once per potato
+  if (peelState.potatoPeelDone) return;
+  peelState.potatoPeelDone = true;
+
   gameState.potatosDone++;
   toast(`Potato ${gameState.potatosDone} peeled! ✨`);
 
@@ -2051,16 +2282,15 @@ function onPotatoPeeled() {
 
   // Move to next potato
   gameState.currentPotatoIndex++;
-  peelState.peelMap = Array.from({length:PEEL_ROWS}, ()=>new Array(PEEL_SECTIONS).fill(false));
-  peelState.peelCount = 0;
 
-  // Flash effect
+  // Flash effect then reinitialise cleanly
   const canvas = peelState.canvas;
   if (canvas) {
     canvas.style.transition = 'opacity 0.2s';
     canvas.style.opacity = '0';
     setTimeout(() => {
       canvas.style.opacity = '1';
+      initPeelPotato();
       renderPotatoThumbs();
       updatePeelProgress(0);
       // Update instructions
@@ -2583,9 +2813,9 @@ function triggerChunkExplosion() {
           const titleEl = document.querySelector('.cut-instructions strong');
           if (titleEl) titleEl.textContent = `🔪 Potato 1 of ${TOTAL_POTATOES}`;
         } else {
-          toast('All potatoes cubed! 🎉 More steps coming soon...');
+          toast('All potatoes cubed! 🎉 Now fill the pot!');
           broadcastMyProgress(0.667, 2);
-          onRaceFinished();   // Placeholder — next steps will hook in here
+          loadFillStep();
         }
       }, 700);
       return;
@@ -3016,6 +3246,479 @@ function drawScatteringChunks(ctx, chunks) {
 
     ctx.restore();
   }
+}
+
+// ============================================================
+//  STEP: FILL THE POT
+// ============================================================
+// Player rotates a tap knob (drag in a circle) to open/close water.
+// More turns = higher flow rate. Must turn the SAME amount to close it.
+// Water fills toward the target zone. Overflow = drain + restart.
+
+const FILL_MIN = 0.524;  // lower bound of OK zone (fraction of pot)
+const FILL_MAX = 0.608;  // upper bound of OK zone
+const FILL_OVERFLOW = 1.00; // full overflow
+
+fillState = {
+  animRAF: null,
+  waterLevel: 0,        // 0..1
+  tapAngle: 0,          // current knob angle in radians
+  tapOpenTurns: 0,      // how far open (positive = open)
+  flowRate: 0,          // current water flow (0..1 normalised)
+  knobActive: false,
+  knobStartAngle: 0,    // pointer angle at drag start
+  knobStartTurns: 0,    // tapOpenTurns at drag start
+  lastPtrAngle: 0,
+  overflowing: false,
+  draining: false,
+  done: false,
+  knobEl: null,
+  markerEl: null,
+  streamEl: null,
+  waterPathEl: null,    // SVG water rect
+  statusEl: null,
+  openLabelEl: null,
+  gaugeFillEl: null,
+};
+
+function loadFillStep() {
+  document.getElementById('hud-step-label').textContent = 'Step 3/6';
+  document.getElementById('hud-step-name').textContent = 'Fill the Pot';
+
+  const area = document.getElementById('game-area');
+  area.innerHTML = `
+    <div class="fill-workspace">
+      <div class="fill-scene">
+
+        <!-- TAP -->
+        <div class="tap-wrap">
+          <div class="tap-body">🚰</div>
+          <div class="tap-handle-wrap" id="fill-knob-wrap">
+            <div class="tap-knob" id="fill-knob">
+              <div class="tap-knob-marker" id="fill-knob-marker"></div>
+            </div>
+          </div>
+          <div class="tap-open-label" id="fill-open-label">Tap closed</div>
+          <div class="water-stream" id="fill-stream" style="height:0px;opacity:0;"></div>
+        </div>
+
+        <!-- POT -->
+        <div class="pot-wrap">
+          <svg class="pot-svg" viewBox="0 0 160 200" id="fill-pot-svg" xmlns="http://www.w3.org/2000/svg" width="260" height="320">
+            <!-- pot body -->
+            <defs>
+              <clipPath id="pot-clip">
+                <path d="M 20 40 L 10 185 Q 10 195 20 195 L 140 195 Q 150 195 150 185 L 140 40 Z"/>
+              </clipPath>
+              <linearGradient id="water-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#60c8f0" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#1a78a8" stop-opacity="1"/>
+              </linearGradient>
+              <linearGradient id="pot-grad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#555"/>
+                <stop offset="40%" stop-color="#aaa"/>
+                <stop offset="100%" stop-color="#666"/>
+              </linearGradient>
+            </defs>
+
+            <!-- zone markers inside pot (low/ok/high) -->
+            <g clip-path="url(#pot-clip)">
+              <!-- too-low zone -->
+              <rect x="10" y="${200 - 195*FILL_MIN}" width="140" height="${195*FILL_MIN}" fill="rgba(231,76,60,0.07)"/>
+              <!-- ok zone -->
+              <rect x="10" y="${200 - 195*FILL_MAX}" width="140" height="${195*(FILL_MAX-FILL_MIN)}" fill="rgba(76,175,80,0.1)"/>
+              <!-- zone dashes -->
+              <line x1="10" y1="${200 - 195*FILL_MIN}" x2="150" y2="${200 - 195*FILL_MIN}" stroke="rgba(231,76,60,0.5)" stroke-width="1.5" stroke-dasharray="5,4"/>
+              <line x1="10" y1="${200 - 195*FILL_MAX}" x2="150" y2="${200 - 195*FILL_MAX}" stroke="rgba(231,76,60,0.5)" stroke-width="1.5" stroke-dasharray="5,4"/>
+              <!-- water fill rect -->
+              <rect id="fill-water-rect" x="11" y="195" width="138" height="0" fill="url(#water-grad)"/>
+              <!-- potato chunks (rendered above water so they're visible) -->
+              <g id="fill-chunks"></g>
+              <!-- water shimmer -->
+              <rect id="fill-water-shimmer" x="11" y="195" width="138" height="6" fill="rgba(255,255,255,0.18)" rx="2"/>
+            </g>
+
+            <!-- pot body outline -->
+            <path d="M 20 40 L 10 185 Q 10 195 20 195 L 140 195 Q 150 195 150 185 L 140 40 Z"
+                  fill="none" stroke="url(#pot-grad)" stroke-width="4" stroke-linejoin="round"/>
+
+            <!-- pot rim -->
+            <rect x="12" y="34" width="136" height="14" rx="5"
+                  fill="#888" stroke="#aaa" stroke-width="1.5"/>
+
+            <!-- handles -->
+            <rect x="0" y="50" width="14" height="30" rx="5" fill="#777" stroke="#aaa" stroke-width="1"/>
+            <rect x="146" y="50" width="14" height="30" rx="5" fill="#777" stroke="#aaa" stroke-width="1"/>
+
+            <!-- zone labels -->
+            <text x="155" y="${200 - 195*FILL_MIN + 4}" font-size="7" fill="rgba(231,76,60,0.7)" font-family="sans-serif">MIN</text>
+            <text x="155" y="${200 - 195*FILL_MAX + 4}" font-size="7" fill="rgba(231,76,60,0.7)" font-family="sans-serif">MAX</text>
+          </svg>
+        </div>
+
+      </div>
+
+      <!-- Gauge bar -->
+      <div class="fill-gauge-wrap">
+        <div class="fill-gauge-track" id="fill-gauge-track">
+          <div class="fill-zone-marker fill-zone-low"  style="width:${FILL_MIN*100}%;"></div>
+          <div class="fill-zone-marker fill-zone-ok"   style="left:${FILL_MIN*100}%;width:${(FILL_MAX-FILL_MIN)*100}%;"></div>
+          <div class="fill-zone-marker fill-zone-high" style="width:${(1-FILL_MAX)*100}%;"></div>
+          <div class="fill-gauge-fill" id="fill-gauge-fill" style="width:0%;"></div>
+        </div>
+        <div class="fill-gauge-label">
+          <span>🚱 Not enough</span>
+          <span>✅ Just right</span>
+          <span>💦 Too much</span>
+        </div>
+      </div>
+
+      <div class="fill-status" id="fill-status">Turn the tap to start filling!</div>
+    </div>
+  `;
+
+  // Cache elements
+  fillState.knobEl       = document.getElementById('fill-knob');
+  fillState.markerEl     = document.getElementById('fill-knob-marker');
+  fillState.streamEl     = document.getElementById('fill-stream');
+  fillState.waterPathEl  = document.getElementById('fill-water-rect');
+  fillState.shimmerEl    = document.getElementById('fill-water-shimmer');
+  fillState.statusEl     = document.getElementById('fill-status');
+  fillState.openLabelEl  = document.getElementById('fill-open-label');
+  fillState.gaugeFillEl  = document.getElementById('fill-gauge-fill');
+  fillState.chunksEl     = document.getElementById('fill-chunks');
+
+  // Generate chunk layout — mirrors the 4x4 cut grid, packed into pot interior
+  // Pot interior SVG coords: x ~15..145 (130 wide), y ~48..192 (144 tall)
+  // Lay chunks in a ~5 col × 4 row grid so they fill the bottom realistically
+  fillState.chunks = [];
+  const cols = 5, rows = 4;
+  const potLeft = 18, potRight = 142, potBottom = 190;
+  const cw = (potRight - potLeft) / cols;   // chunk width in SVG units
+  const ch = 20;                             // chunk height in SVG units
+  let idx = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const baseX = potLeft + c * cw + cw * 0.08;
+      const baseY = potBottom - (r + 1) * (ch + 2); // stacked from bottom
+      fillState.chunks.push({
+        baseX,
+        baseY,
+        w: cw * 0.84,
+        h: ch * 0.88,
+        // Bob parameters: random phase & amplitude for organic feel
+        bobPhase:  Math.random() * Math.PI * 2,
+        bobAmp:    1.2 + Math.random() * 1.2,
+        bobSpeed:  0.018 + Math.random() * 0.012,
+        // Current rendered Y
+        y: baseY,
+        // Slight X drift when floating
+        driftPhase: Math.random() * Math.PI * 2,
+        driftAmp:   0.6 + Math.random() * 0.8,
+        t: 0,
+      });
+      idx++;
+    }
+  }
+
+  // Build SVG rect elements for each chunk
+  const ns = 'http://www.w3.org/2000/svg';
+  fillState.chunksEl.innerHTML = '';
+  fillState.chunks.forEach((ck, i) => {
+    const g = document.createElementNS(ns, 'g');
+    // Shadow
+    const shadow = document.createElementNS(ns, 'rect');
+    shadow.setAttribute('rx', '2');
+    shadow.setAttribute('fill', 'rgba(0,0,0,0.18)');
+    g.appendChild(shadow);
+    // Body
+    const body = document.createElementNS(ns, 'rect');
+    body.setAttribute('rx', '2');
+    const grad = document.createElementNS(ns, 'linearGradient');
+    grad.setAttribute('id', `cg${i}`);
+    grad.setAttribute('x1','0'); grad.setAttribute('y1','0');
+    grad.setAttribute('x2','0'); grad.setAttribute('y2','1');
+    const s1 = document.createElementNS(ns, 'stop');
+    s1.setAttribute('offset','0%'); s1.setAttribute('stop-color','#fff8e0');
+    const s2 = document.createElementNS(ns, 'stop');
+    s2.setAttribute('offset','100%'); s2.setAttribute('stop-color','#e8c878');
+    grad.appendChild(s1); grad.appendChild(s2);
+    // Add gradient to defs
+    document.querySelector('#fill-pot-svg defs').appendChild(grad);
+    body.setAttribute('fill', `url(#cg${i})`);
+    body.setAttribute('stroke', 'rgba(160,120,40,0.5)');
+    body.setAttribute('stroke-width', '0.8');
+    g.appendChild(body);
+    // Highlight
+    const shine = document.createElementNS(ns, 'rect');
+    shine.setAttribute('rx', '1');
+    shine.setAttribute('fill', 'rgba(255,255,255,0.3)');
+    g.appendChild(shine);
+    fillState.chunksEl.appendChild(g);
+    // Store refs
+    ck.shadowEl = shadow;
+    ck.bodyEl   = body;
+    ck.shineEl  = shine;
+  });
+
+  // Reset state
+  fillState.waterLevel   = 0;
+  fillState.tapAngle     = 0;
+  fillState.tapOpenTurns = 0;
+  fillState.flowRate     = 0;
+  fillState.knobActive   = false;
+  fillState.overflowing  = false;
+  fillState.draining     = false;
+  fillState.done         = false;
+
+  // Events
+  const knobWrap = document.getElementById('fill-knob-wrap');
+  knobWrap.addEventListener('mousedown',  onFillKnobDown);
+  knobWrap.addEventListener('touchstart', onFillKnobDown, {passive:false});
+  document.addEventListener('mousemove',  onFillKnobMove);
+  document.addEventListener('touchmove',  onFillKnobMove, {passive:false});
+  document.addEventListener('mouseup',    onFillKnobUp);
+  document.addEventListener('touchend',   onFillKnobUp);
+
+  if (fillState.animRAF) cancelAnimationFrame(fillState.animRAF);
+  fillAnimLoop();
+}
+
+// ---- Knob interaction ----
+function getFillKnobCenter() {
+  const r = fillState.knobEl.getBoundingClientRect();
+  return { x: r.left + r.width/2, y: r.top + r.height/2 };
+}
+
+function ptrAngle(e, center) {
+  const t = e.touches ? e.touches[0] : e;
+  return Math.atan2(t.clientY - center.y, t.clientX - center.x);
+}
+
+function onFillKnobDown(e) {
+  e.preventDefault();
+  if (fillState.done || fillState.draining) return;
+  fillState.knobActive = true;
+  const c = getFillKnobCenter();
+  fillState.lastPtrAngle = ptrAngle(e, c);
+  fillState.knobStartTurns = fillState.tapOpenTurns;
+}
+
+function onFillKnobMove(e) {
+  if (!fillState.knobActive) return;
+  e.preventDefault();
+  if (fillState.done || fillState.draining) return;
+
+  const c = getFillKnobCenter();
+  const newAngle = ptrAngle(e, c);
+  let delta = newAngle - fillState.lastPtrAngle;
+
+  // Wrap delta to [-π, π]
+  if (delta >  Math.PI) delta -= Math.PI * 2;
+  if (delta < -Math.PI) delta += Math.PI * 2;
+
+  fillState.lastPtrAngle = newAngle;
+  fillState.tapAngle += delta;
+
+  // tapOpenTurns: positive = open. Clockwise (positive delta) opens.
+  fillState.tapOpenTurns = Math.max(0, fillState.tapOpenTurns + delta / (Math.PI * 2));
+
+  // Update knob visual
+  fillState.markerEl.style.transform = `translateX(-50%) rotate(${fillState.tapAngle}rad)`;
+  fillState.markerEl.style.transformOrigin = 'bottom center';
+}
+
+function onFillKnobUp(e) {
+  fillState.knobActive = false;
+}
+
+// ---- Animation loop ----
+function fillAnimLoop() {
+  fillState.animRAF = requestAnimationFrame(fillAnimLoop);
+  if (!fillState.waterPathEl) return;
+
+  const turns = fillState.tapOpenTurns;
+  // Flow rate: proportional to turns open, capped at 1
+  // Max useful turns = 3; beyond that flow rate plateaus
+  const targetFlow = Math.min(1, turns / 3);
+  // Smooth the flow rate
+  fillState.flowRate += (targetFlow - fillState.flowRate) * 0.08;
+
+  if (fillState.draining) {
+    // Drain at fixed speed
+    fillState.waterLevel = Math.max(0, fillState.waterLevel - 0.006);
+    if (fillState.waterLevel <= 0) {
+      fillState.draining = false;
+      fillState.overflowing = false;
+      fillState.tapOpenTurns = 0;
+      fillState.tapAngle = 0;
+      fillState.flowRate = 0;
+      fillState.markerEl.style.transform = 'translateX(-50%) rotate(0rad)';
+      fillState.statusEl.textContent = 'Pot drained. Try again!';
+      fillState.statusEl.className = 'fill-status low';
+      // Snap chunks back to rest positions
+      if (fillState.chunks) fillState.chunks.forEach(ck => { ck.y = ck.baseY; });
+    }
+  } else if (!fillState.done) {
+    // Fill based on flow rate (max ~0.003 per frame at full flow)
+    fillState.waterLevel = Math.min(FILL_OVERFLOW, fillState.waterLevel + fillState.flowRate * 0.006);
+
+    if (fillState.waterLevel >= FILL_OVERFLOW) {
+      // Overflow!
+      fillState.draining = true;
+      fillState.overflowing = true;
+      fillState.flowRate = 0;
+      toast('💦 Overflow! Draining the pot...', 2000);
+      fillState.statusEl.textContent = '💦 Too much! Draining...';
+      fillState.statusEl.className = 'fill-status overflow';
+    }
+  }
+
+  // Update stream visual
+  const streamH = Math.round(fillState.flowRate * 60);
+  const streamW = Math.max(4, Math.round(fillState.flowRate * 12));
+  fillState.streamEl.style.height  = streamH + 'px';
+  fillState.streamEl.style.width   = streamW + 'px';
+  fillState.streamEl.style.opacity = fillState.flowRate > 0.01 ? '1' : '0';
+
+  // Update open label
+  const pct = Math.round(turns / 3 * 100);
+  if (turns < 0.05) {
+    fillState.openLabelEl.textContent = 'Tap closed';
+    fillState.openLabelEl.style.color = 'rgba(255,243,208,0.4)';
+  } else {
+    fillState.openLabelEl.textContent = `Open ${Math.min(100,pct)}%`;
+    fillState.openLabelEl.style.color = '#87CEEB';
+  }
+
+  // Update SVG water
+  const potInnerH = 155; // usable fill height in SVG units (195 - 40 rim)
+  const waterH = Math.round(fillState.waterLevel * potInnerH);
+  const waterY = 195 - waterH;
+  fillState.waterPathEl.setAttribute('y', waterY);
+  fillState.waterPathEl.setAttribute('height', waterH);
+  // Shimmer line at water surface
+  fillState.shimmerEl.setAttribute('y', waterY);
+  fillState.shimmerEl.style.opacity = fillState.waterLevel > 0.01 ? '1' : '0';
+
+  // Animate potato chunks
+  if (fillState.chunks) {
+    const now = performance.now() * 0.001; // seconds
+    fillState.chunks.forEach((ck, i) => {
+      ck.t += ck.bobSpeed;
+
+      // Water surface Y in SVG coords
+      const surfaceY = waterY;
+      // Chunk natural resting Y (sitting on bottom or stacked)
+      const restY = ck.baseY;
+      // Float Y: chunk floats just above water surface when water is high enough
+      // A chunk "floats" once the water level covers its base
+      const chunkBottomSVG = ck.baseY + ck.h; // SVG y increases downward
+      const waterCoversBase = waterY < chunkBottomSVG;
+
+      let targetY;
+      if (waterCoversBase) {
+        // Floating: chunk sits at water surface minus chunk height, with bob
+        const bob = Math.sin(now * (ck.bobSpeed * 60) + ck.bobPhase) * ck.bobAmp;
+        targetY = surfaceY - ck.h - 1 + bob;
+        // Clamp so chunk doesn't float above pot rim (SVG y=40)
+        targetY = Math.max(42, targetY);
+      } else {
+        // Sitting on bottom / on lower chunks
+        targetY = restY;
+      }
+
+      // Smooth movement
+      ck.y += (targetY - ck.y) * 0.12;
+
+      // X drift when floating
+      const driftX = waterCoversBase
+        ? Math.sin(now * 0.7 + ck.driftPhase) * ck.driftAmp
+        : 0;
+      const x = ck.baseX + driftX;
+      const y = ck.y;
+      const w = ck.w, h = ck.h;
+
+      // Update shadow (slightly offset, slightly larger)
+      ck.shadowEl.setAttribute('x', x + 0.5);
+      ck.shadowEl.setAttribute('y', y + 1.5);
+      ck.shadowEl.setAttribute('width',  w);
+      ck.shadowEl.setAttribute('height', h);
+
+      // Update body
+      ck.bodyEl.setAttribute('x', x);
+      ck.bodyEl.setAttribute('y', y);
+      ck.bodyEl.setAttribute('width',  w);
+      ck.bodyEl.setAttribute('height', h);
+
+      // Update shine (top strip)
+      ck.shineEl.setAttribute('x', x + w * 0.1);
+      ck.shineEl.setAttribute('y', y + h * 0.1);
+      ck.shineEl.setAttribute('width',  w * 0.6);
+      ck.shineEl.setAttribute('height', h * 0.25);
+
+      // Fade chunks that are deeply submerged (below water surface + some depth)
+      const submergeDepth = (chunkBottomSVG - waterY) / potInnerH;
+      const alpha = waterCoversBase
+        ? Math.max(0.35, 1 - submergeDepth * 1.2)
+        : 1;
+      ck.bodyEl.setAttribute('opacity', alpha);
+      ck.shineEl.setAttribute('opacity', alpha * 0.6);
+      ck.shadowEl.setAttribute('opacity', alpha * 0.4);
+    });
+  }
+
+  // Update gauge bar
+  fillState.gaugeFillEl.style.width = (fillState.waterLevel * 100).toFixed(1) + '%';
+
+  // Update status text (only when not draining/done)
+  if (!fillState.draining && !fillState.done) {
+    if (fillState.waterLevel < 0.01) {
+      fillState.statusEl.textContent = 'Turn the tap to start filling!';
+      fillState.statusEl.className = 'fill-status';
+    } else if (fillState.waterLevel < FILL_MIN) {
+      fillState.statusEl.textContent = '🚱 Not enough water yet...';
+      fillState.statusEl.className = 'fill-status low';
+    } else if (fillState.waterLevel <= FILL_MAX) {
+      fillState.statusEl.textContent = '✅ Looking good! Close the tap!';
+      fillState.statusEl.className = 'fill-status ok';
+    } else {
+      fillState.statusEl.textContent = '⚠️ Getting too full — close it!';
+      fillState.statusEl.className = 'fill-status high';
+    }
+
+    // Check for success: tap fully closed AND water in OK zone
+    if (turns < 0.05 && fillState.flowRate < 0.01 &&
+        fillState.waterLevel >= FILL_MIN && fillState.waterLevel <= FILL_MAX) {
+      onPotFilled();
+    }
+  }
+}
+
+function onPotFilled() {
+  if (fillState.done) return;
+  fillState.done = true;
+  if (fillState.animRAF) { cancelAnimationFrame(fillState.animRAF); fillState.animRAF = null; }
+
+  // Remove listeners
+  document.removeEventListener('mousemove', onFillKnobMove);
+  document.removeEventListener('touchmove', onFillKnobMove);
+  document.removeEventListener('mouseup',   onFillKnobUp);
+  document.removeEventListener('touchend',  onFillKnobUp);
+
+  fillState.statusEl.textContent = '🎉 Perfect! Pot filled!';
+  fillState.statusEl.className = 'fill-status ok';
+
+  setTimeout(() => {
+    if (practiceMode) {
+      toast('Great filling! Starting again... 🫕');
+      loadFillStep();
+    } else {
+      toast('Pot filled! 🎉 More steps coming soon...');
+      broadcastMyProgress(0.833, 3);
+      onRaceFinished(); // placeholder until next steps
+    }
+  }, 800);
 }
 
 // ============================================================
