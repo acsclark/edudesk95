@@ -1170,9 +1170,9 @@ function ensureFirebase(cb, onError) {
   s.textContent = `
     try {
       const { initializeApp }   = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
-      const { getDatabase, ref, set, push, onValue, onChildAdded, remove, serverTimestamp }
+      const { getDatabase, ref, set, get, push, onValue, onChildAdded, remove, serverTimestamp }
         = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
-      window._fb = { initializeApp, getDatabase, ref, set, push, onValue, onChildAdded, remove, serverTimestamp };
+      window._fb = { initializeApp, getDatabase, ref, set, get, push, onValue, onChildAdded, remove, serverTimestamp };
       window.dispatchEvent(new Event('fb-ready'));
     } catch(e) {
       window.dispatchEvent(new CustomEvent('fb-error', { detail: e.message }));
@@ -1452,18 +1452,32 @@ function joinGame(btn) {
   btn.disabled = true;
 
   setupNetwork(() => {
-    btn.textContent = origText;
-    btn.disabled = false;
-    dbSet(myPlayerPath(), {
-      id: gameState.myId, name,
-      avatar: AVATARS[1], isHost: false,
-      color: PLAYER_COLORS[1], progress: 0, step: 0, ts: Date.now()
+    // First, check if the room exists
+    window._fb.get(dbRef(metaPath())).then(snapshot => {
+      if (!snapshot.exists()) {
+        btn.textContent = origText;
+        btn.disabled = false;
+        document.getElementById('join-error').textContent = 'Room not found! Check the code.';
+        return;
+      }
+      
+      // Room exists, now join it
+      btn.textContent = origText;
+      btn.disabled = false;
+      dbSet(myPlayerPath(), {
+        id: gameState.myId, name,
+        avatar: AVATARS[1], isHost: false,
+        color: PLAYER_COLORS[1], progress: 0, step: 0, ts: Date.now()
+      });
+      startPlayerListeners();
+      document.getElementById('player-room-code-display').textContent = code;
+      showScreen('screen-lobby-player');
+      toast('Joined! Waiting for host... 🥔');
+    }).catch(err => {
+      btn.textContent = origText;
+      btn.disabled = false;
+      document.getElementById('join-error').textContent = 'Failed to join room: ' + err.message;
     });
-    startPlayerListeners();
-    document.getElementById('player-room-code-display').textContent = code;
-    updatePlayerLobbyUI();
-    showScreen('screen-lobby-player');
-    toast('Joined! Waiting for host... 🥔');
   });
 }
 
