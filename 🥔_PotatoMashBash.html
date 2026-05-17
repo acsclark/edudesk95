@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>🥔 Potato Mash Bash</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
@@ -349,6 +349,7 @@
     justify-content: center;
     position: relative;
     overflow: hidden;
+    touch-action: none;
   }
 
   /* ========== POTATO PEELING ========== */
@@ -397,6 +398,7 @@
   .canvas-wrapper {
     position: relative;
     cursor: none;
+    touch-action: none;
   }
 
   #potatoCanvas {
@@ -773,6 +775,7 @@
     position: relative;
     cursor: none;
     flex-shrink: 0;
+    touch-action: none;
   }
 
   #cutCanvas {
@@ -1895,21 +1898,49 @@ function onPeelEnd() {
 
 function onPeelTouchStart(e) {
   e.preventDefault();
-  onPeelStart(e);
+  e.stopPropagation();
+  const touch = e.touches[0];
+  const pos = getCanvasPos(touch);
+  const hit = hitTestPotato(pos.x, pos.y);
+  if (hit) {
+    peelState.isPeeling = true;
+    peelState.isDragging = false;
+    peelState.peelStrokePoints = [pos];
+    applyPeelAt(pos.x, pos.y);
+  } else {
+    peelState.isDragging = true;
+    peelState.isPeeling = false;
+    peelState.lastMX = pos.x;
+    peelState.lastMY = pos.y;
+  }
 }
 function onPeelTouchMove(e) {
   e.preventDefault();
-  onPeelMove(e);
+  e.stopPropagation();
+  const touch = e.touches[0];
+  const pos = getCanvasPos(touch);
+  if (peelState.isPeeling) {
+    applyPeelAt(pos.x, pos.y);
+    peelState.peelStrokePoints.push(pos);
+  } else if (peelState.isDragging) {
+    const dx = pos.x - peelState.lastMX;
+    const dy = pos.y - peelState.lastMY;
+    peelState.rotY += dx * 0.012;
+    peelState.rotX += dy * 0.008;
+    peelState.rotX = Math.max(-1.2, Math.min(1.2, peelState.rotX));
+    peelState.lastMX = pos.x;
+    peelState.lastMY = pos.y;
+  }
 }
 
 function getCanvasPos(e) {
   const rect = peelState.canvas.getBoundingClientRect();
   const scaleX = peelState.w / rect.width;
   const scaleY = peelState.h / rect.height;
-  // Support MouseEvent, TouchEvent, or a raw Touch object
-  const touch = e.touches?.[0] ?? e.changedTouches?.[0];
-  const clientX = touch ? touch.clientX : (e.clientX ?? 0);
-  const clientY = touch ? touch.clientY : (e.clientY ?? 0);
+  // Accept MouseEvent, TouchEvent, or a bare Touch object
+  const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+  const clientX = touch ? touch.clientX : (e.clientX || 0);
+  const clientY = touch ? touch.clientY : (e.clientY || 0);
   return {
     x: (clientX - rect.left) * scaleX,
     y: (clientY - rect.top) * scaleY
@@ -2283,8 +2314,8 @@ function initCutCanvas() {
   const canvas = document.getElementById('cutCanvas');
   if (!canvas) return;
 
-  // Responsive sizing
-  const maxW = Math.min(420, window.innerWidth - 200);
+  // Responsive sizing — on narrow screens the panel is below, not beside
+  const maxW = Math.min(420, window.innerWidth - 32);
   const scale = maxW / 420;
   canvas.style.width = maxW + 'px';
   canvas.style.height = (320 * scale) + 'px';
@@ -2318,12 +2349,10 @@ function getCutCanvasPos(e) {
   const rect = canvas.getBoundingClientRect();
   const sx = 420 / rect.width;
   const sy = 320 / rect.height;
-  const touch = e.touches?.[0] ?? e.changedTouches?.[0];
-  const clientX = touch ? touch.clientX : (e.clientX ?? 0);
-  const clientY = touch ? touch.clientY : (e.clientY ?? 0);
-  const cx = clientX - rect.left;
-  const cy = clientY - rect.top;
-  return { x: cx * sx, y: cy * sy };
+  const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+  const clientX = touch ? touch.clientX : (e.clientX || 0);
+  const clientY = touch ? touch.clientY : (e.clientY || 0);
+  return { x: (clientX - rect.left) * sx, y: (clientY - rect.top) * sy };
 }
 
 function isOverPotato(x, y) {
@@ -2385,9 +2414,32 @@ function onCutMouseLeave() {
   }
 }
 
-function onCutTouchStart(e) { e.preventDefault(); onCutMouseDown(e); }
-function onCutTouchMove(e)  { e.preventDefault(); onCutMouseMove(e); }
-function onCutTouchEnd(e)   { onCutMouseUp(e); }
+function onCutTouchStart(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (cutState.chunksAnimating || cutState.chunksDone) return;
+  const pos = getCutCanvasPos(e.touches[0]);
+  cutState.dragStart = pos;
+  cutState.isDragging = true;
+}
+function onCutTouchMove(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (cutState.chunksAnimating) return;
+  const pos = getCutCanvasPos(e.touches[0]);
+  cutState.mouseX = pos.x;
+  cutState.mouseY = pos.y;
+}
+function onCutTouchEnd(e) {
+  e.preventDefault();
+  if (!cutState.isDragging || cutState.chunksAnimating || cutState.chunksDone) {
+    cutState.isDragging = false; return;
+  }
+  const pos = getCutCanvasPos(e.changedTouches[0]);
+  finaliseCutGesture(cutState.dragStart, pos);
+  cutState.isDragging = false;
+  cutState.dragStart = null;
+}
 
 // ---- cut logic ----
 function finaliseCutGesture(start, end) {
@@ -3091,6 +3143,19 @@ document.addEventListener('mouseleave', () => {
 document.addEventListener('mouseenter', () => {
   document.getElementById('cursor').style.opacity = '1';
 });
+
+// Hide the custom cursor on touch devices (it's mouse-only)
+if ('ontouchstart' in window) {
+  document.getElementById('cursor').style.display = 'none';
+}
+
+// Prevent iOS from swallowing touchstart/touchmove on the game screen
+// (belt-and-suspenders on top of touch-action:none and canvas listeners)
+document.addEventListener('touchmove', function(e) {
+  if (!document.getElementById('screen-game').classList.contains('hidden')) {
+    e.preventDefault();
+  }
+}, { passive: false });
 
 document.getElementById('join-code-input').addEventListener('input', function() {
   this.value = this.value.toUpperCase();
