@@ -1426,6 +1426,124 @@
     font-weight: 600;
     margin-top: 4px;
   }
+  /* ========== SEASONING STEP ========== */
+  .season-workspace {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    width: 100%;
+    max-width: 520px;
+    user-select: none;
+  }
+  .season-bowl-wrap {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+  }
+  .season-status {
+    font-family: var(--display-font);
+    font-size: 1.05rem;
+    color: var(--potato-light);
+    text-align: center;
+    min-height: 1.5em;
+    transition: color 0.3s;
+    padding: 0 10px;
+  }
+  .season-status.ok      { color: #a8e6a0; }
+  .season-status.warning { color: #f39c12; }
+  .season-status.info    { color: #87ceeb; }
+
+  .season-tools {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+  .season-tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+  }
+  .season-tool-icon-wrap {
+    position: relative;
+    width: 72px;
+    height: 130px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.08s ease;
+  }
+  .season-tool-label {
+    font-family: var(--display-font);
+    font-size: 0.82rem;
+    color: rgba(255,243,208,0.65);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .season-progress-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 320px;
+  }
+  .season-prog-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .season-prog-icon { font-size: 1.2rem; flex-shrink: 0; }
+  .season-prog-track {
+    flex: 1;
+    height: 14px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 99px;
+    border: 1px solid rgba(255,255,255,0.06);
+    overflow: hidden;
+  }
+  .season-prog-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.2s ease;
+  }
+  .season-prog-fill.salt   { background: linear-gradient(90deg, #b0c8e0, #e8f4ff); }
+  .season-prog-fill.pepper { background: linear-gradient(90deg, #555, #888); }
+  .season-prog-fill.butter { background: linear-gradient(90deg, #e8c84a, #ffe680); }
+  .season-prog-check { font-size: 1.1rem; flex-shrink: 0; min-width: 1.2em; text-align:center; }
+
+  /* Shaker shake animation */
+  @keyframes shakerLeft  { 0%,100%{transform:rotate(-28deg) translateX(-6px)} 50%{transform:rotate(28deg) translateX(6px)} }
+  @keyframes shakerRight { 0%,100%{transform:rotate(28deg)  translateX(6px)}  50%{transform:rotate(-28deg) translateX(-6px)} }
+  .shaking-left  { animation: shakerLeft  0.13s ease infinite; }
+  .shaking-right { animation: shakerRight 0.13s ease infinite; }
+
+  /* Butter smear animation */
+  @keyframes butterPress { 0%{transform:scaleY(1)} 40%{transform:scaleY(0.82)} 100%{transform:scaleY(1)} }
+  .butter-pressing { animation: butterPress 0.18s ease; }
+
+  /* Particle specks */
+  @keyframes speckFall {
+    0%   { transform: translateY(0) rotate(0deg);   opacity: 0.9; }
+    100% { transform: translateY(60px) rotate(180deg); opacity: 0; }
+  }
+  .season-speck {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: speckFall linear forwards;
+  }
 </style>
 </head>
 <body>
@@ -1504,11 +1622,11 @@
         <span class="ps-arrow">›</span>
       </button>
 
-      <button class="practice-step-btn disabled" onclick="comingSoon('Seasoning')">
+      <button class="practice-step-btn" onclick="startPractice('season')">
         <span class="ps-icon">🧂</span>
         <div class="ps-text">
-          <div class="ps-title">Seasoning <span class="ps-soon">Coming Soon</span></div>
-          <div class="ps-desc">Drain, then add salt, pepper & butter in the right order.</div>
+          <div class="ps-title">Seasoning</div>
+          <div class="ps-desc">Shake on salt &amp; pepper, then spread the butter!</div>
         </div>
         <span class="ps-arrow">›</span>
       </button>
@@ -1735,9 +1853,9 @@ function ensureFirebase(cb, onError) {
   s.textContent = `
     try {
       const { initializeApp }   = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
-      const { getDatabase, ref, set, get, push, onValue, onChildAdded, remove, serverTimestamp }
+      const { getDatabase, ref, set, get, push, onValue, onChildAdded, remove, serverTimestamp, onDisconnect }
         = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
-      window._fb = { initializeApp, getDatabase, ref, set, get, push, onValue, onChildAdded, remove, serverTimestamp };
+      window._fb = { initializeApp, getDatabase, ref, set, get, push, onValue, onChildAdded, remove, serverTimestamp, onDisconnect };
       window.dispatchEvent(new Event('fb-ready'));
     } catch(e) {
       window.dispatchEvent(new CustomEvent('fb-error', { detail: e.message }));
@@ -1862,6 +1980,24 @@ function startHostListeners() {
     
     console.log('PMB Host: Players data received:', data);
 
+    // Detect players who have left (in gameState but no longer in Firebase)
+    const stillPresent = Object.keys(data);
+    const leftPlayers = gameState.players.filter(p => !stillPresent.includes(p.id));
+    leftPlayers.forEach(p => {
+      console.log('PMB Host: Player left:', p.name);
+      gameState.players = gameState.players.filter(pl => pl.id !== p.id);
+      toast(`${p.name} left the game 👋`);
+    });
+    if (leftPlayers.length > 0) {
+      updateLobbyUI();
+      updateRaceSidebar();
+      updateLiveOrder();
+      // Update meta so joining players get the new list
+      if (gameState.gameStarted === false) {
+        dbSet(metaPath(), { status: 'waiting', players: gameState.players });
+      }
+    }
+
     Object.entries(data).forEach(([pid, pdata]) => {
       if (pid === gameState.myId) return; // that's me
       const exists = gameState.players.find(p => p.id === pid);
@@ -1925,9 +2061,18 @@ function startPlayerListeners() {
     }
   });
 
-  // Listen to all player records for race progress
+  // Listen to all player records for race progress + departures
   dbListen(playersPath(), 'value', snap => {
     const data = snap.val() || {};
+    const stillPresent = Object.keys(data);
+
+    // Remove players who have left
+    const leftPlayers = gameState.players.filter(p => !stillPresent.includes(p.id) && p.id !== gameState.myId);
+    leftPlayers.forEach(p => {
+      gameState.players = gameState.players.filter(pl => pl.id !== p.id);
+      toast(`${p.name} left the game 👋`);
+    });
+
     Object.entries(data).forEach(([pid, pdata]) => {
       if (pid === gameState.myId) return;
       const p = gameState.players.find(pl => pl.id === pid);
@@ -2009,7 +2154,10 @@ function hostGame(btn) {
     btn.disabled = false;
     console.log('PMB Host: Setting up room', gameState.roomCode, 'with path', myPlayerPath());
     dbSet(myPlayerPath(), { id: gameState.myId, name, avatar: AVATARS[0], isHost: true, color: PLAYER_COLORS[0], progress: 0, step: 0, ts: Date.now() })
-      .then(() => console.log('PMB Host: Player data written'))
+      .then(() => {
+        console.log('PMB Host: Player data written');
+        window._fb.onDisconnect(dbRef(myPlayerPath())).remove().catch(e => console.warn('onDisconnect err:', e));
+      })
       .catch(err => console.error('PMB Host: Error writing player data:', err));
     dbSet(metaPath(), { status: 'waiting', players: gameState.players })
       .then(() => console.log('PMB Host: Meta written with players:', gameState.players))
@@ -2063,6 +2211,8 @@ function joinGame(btn) {
         color: PLAYER_COLORS[1], progress: 0, step: 0, ts: Date.now()
       }).then(() => {
         console.log('PMB: Player data written to', myPlayerPath());
+        // Register onDisconnect so Firebase removes this player if they close the tab/crash
+        window._fb.onDisconnect(dbRef(myPlayerPath())).remove().catch(e => console.warn('onDisconnect err:', e));
       }).catch(err => {
         console.error('PMB: Failed to write player data:', err);
       });
@@ -2202,13 +2352,18 @@ function startPractice(step) {
     document.getElementById('hud-timer').style.fontSize = '1rem';
     document.getElementById('hud-timer').style.color = '#a8e6a0';
     loadBoilStep();
+  } else if (step === 'season') {
+    document.getElementById('hud-timer').textContent = 'PRACTICE';
+    document.getElementById('hud-timer').style.fontSize = '1rem';
+    document.getElementById('hud-timer').style.color = '#a8e6a0';
+    loadSeasonStep();
   }
 }
 
 function injectPracticeBanner(step) {
   // Remove any existing
   document.querySelectorAll('.practice-banner').forEach(e=>e.remove());
-  const stepNames = { peel: 'Peeling', cut: 'Cubing', fill: 'Filling the Pot', boil: 'Boiling' };
+  const stepNames = { peel: 'Peeling', cut: 'Cubing', fill: 'Filling the Pot', boil: 'Boiling', season: 'Seasoning' };
   const banner = document.createElement('div');
   banner.className = 'practice-banner';
   banner.innerHTML = `
@@ -2227,6 +2382,7 @@ function exitPractice() {
   if (boilState.animRAF) { cancelAnimationFrame(boilState.animRAF); boilState.animRAF = null; }
   fillState.knobActive = false;
   boilState.dialActive = false;
+  seasonCleanup();
   document.querySelectorAll('.practice-banner').forEach(e=>e.remove());
   // Reset HUD timer style
   const timer = document.getElementById('hud-timer');
@@ -4785,11 +4941,553 @@ function onBoilComplete() {
       toast('Great boiling! Starting again... ♨️');
       loadBoilStep();
     } else {
-      toast('Boiled! 🎉 More steps coming soon...');
-      broadcastMyProgress(0.833, 4);
-      onRaceFinished();
+      toast('Boiled! 🧂 Time to season!');
+      broadcastMyProgress(0.833, 5);
+      loadSeasonStep();
     }
   }, 900);
+}
+
+// ============================================================
+//  STEP: SEASONING  (salt shake + pepper shake + butter spread)
+// ============================================================
+// Sub-steps in order: salt → pepper → butter
+// Salt & pepper: rapid shake gesture (device motion OR pointer drag back-and-forth)
+// Butter: press-and-drag across the bowl to spread
+
+const SEASON_SHAKES_NEEDED  = 18;  // shakes to complete salt or pepper
+const SEASON_BUTTER_SWIPES  = 6;   // swipe strokes to fully cover bowl
+
+let seasonState = {
+  phase: 'salt',        // 'salt' | 'pepper' | 'butter' | 'done'
+  saltShakes:   0,
+  pepperShakes: 0,
+  butterCoverage: 0,    // 0-1
+  done: false,
+  // shake detection
+  lastShakeDir: 0,      // -1 left, 1 right
+  shakeX: 0,
+  shakeActive: false,
+  shakePtrId: null,
+  shakeStartX: 0,
+  shakeLastX: 0,
+  shakeThresh: 28,      // px travel to count one shake
+  // butter swipe
+  butterActive: false,
+  butterLastX: 0,
+  butterLastY: 0,
+  butterTotalTravel: 0,
+  // refs
+  statusEl: null,
+  saltFillEl: null,
+  pepperFillEl: null,
+  butterFillEl: null,
+  saltCheckEl: null,
+  pepperCheckEl: null,
+  butterCheckEl: null,
+  saltBtnEl: null,
+  pepperBtnEl: null,
+  butterBtnEl: null,
+  bowlEl: null,
+  particleContainerEl: null,
+  motionHandler: null,
+};
+
+function loadSeasonStep() {
+  document.getElementById('hud-step-label').textContent = 'Step 5/6';
+  document.getElementById('hud-step-name').textContent = 'Season the Potatoes';
+  if (!practiceMode) broadcastMyProgress(0.834, 5);
+
+  const area = document.getElementById('game-area');
+  area.innerHTML = `
+    <div class="season-workspace">
+      <div class="season-status" id="season-status">🧂 Shake the salt shaker!</div>
+
+      <!-- BOWL SVG -->
+      <div class="season-bowl-wrap">
+        <div style="position:relative;display:inline-block;">
+          <svg id="season-bowl-svg" viewBox="0 0 200 130" width="260" height="170" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <clipPath id="season-bowl-clip">
+                <ellipse cx="100" cy="65" rx="82" ry="52"/>
+              </clipPath>
+              <radialGradient id="bowl-mash-grad" cx="50%" cy="40%" r="60%">
+                <stop offset="0%" stop-color="#f0d88a"/>
+                <stop offset="60%" stop-color="#d4a84b"/>
+                <stop offset="100%" stop-color="#b8893a"/>
+              </radialGradient>
+              <radialGradient id="bowl-body-grad" cx="40%" cy="30%" r="70%">
+                <stop offset="0%" stop-color="#e8e0d0"/>
+                <stop offset="100%" stop-color="#bdb0a0"/>
+              </radialGradient>
+            </defs>
+            <!-- bowl shadow -->
+            <ellipse cx="102" cy="125" rx="78" ry="9" fill="rgba(0,0,0,0.22)"/>
+            <!-- bowl body -->
+            <path d="M 18 65 Q 18 125 100 125 Q 182 125 182 65 Z" fill="url(#bowl-body-grad)" stroke="#aaa" stroke-width="1.5"/>
+            <!-- mash fill -->
+            <g clip-path="url(#season-bowl-clip)">
+              <ellipse cx="100" cy="70" rx="80" ry="46" fill="url(#bowl-mash-grad)"/>
+              <!-- mash texture lumps -->
+              <ellipse cx="72" cy="68" rx="22" ry="10" fill="rgba(255,255,255,0.12)" transform="rotate(-12,72,68)"/>
+              <ellipse cx="128" cy="74" rx="18" ry="8" fill="rgba(0,0,0,0.07)" transform="rotate(8,128,74)"/>
+              <ellipse cx="100" cy="58" rx="25" ry="11" fill="rgba(255,255,255,0.09)"/>
+              <!-- butter layer (shown when butter phase active/done) -->
+              <ellipse id="season-butter-layer" cx="100" cy="68" rx="0" ry="0"
+                       fill="rgba(255,220,30,0.55)" opacity="0.9"/>
+              <!-- seasoning particles already applied -->
+              <g id="season-applied-particles"></g>
+            </g>
+            <!-- bowl rim -->
+            <ellipse cx="100" cy="65" rx="82" ry="18" fill="none" stroke="#c8bba8" stroke-width="3"/>
+            <ellipse cx="100" cy="65" rx="82" ry="18" fill="rgba(255,255,255,0.08)"/>
+            <!-- particle container for falling specks -->
+          </svg>
+          <div id="season-particles" style="position:absolute;top:10px;left:0;width:260px;height:160px;pointer-events:none;overflow:visible;"></div>
+        </div>
+      </div>
+
+      <!-- TOOLS ROW -->
+      <div class="season-tools">
+
+        <!-- SALT SHAKER -->
+        <div class="season-tool-btn" id="season-salt-btn"
+             ontouchstart="onShakerDown(event,'salt')" ontouchend="onShakerUp(event)"
+             onmousedown="onShakerDown(event,'salt')" onmouseup="onShakerUp(event)">
+          <div class="season-tool-icon-wrap" id="season-salt-icon">
+            <svg viewBox="0 0 50 120" width="50" height="120" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="salt-grad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#d8e8f0"/>
+                  <stop offset="50%" stop-color="#f8feff"/>
+                  <stop offset="100%" stop-color="#b8ccd8"/>
+                </linearGradient>
+              </defs>
+              <!-- cap -->
+              <rect x="14" y="2" width="22" height="18" rx="4" fill="#88aabb" stroke="#6688aa" stroke-width="1"/>
+              <rect x="18" y="6" width="4" height="4" rx="1" fill="rgba(255,255,255,0.5)"/>
+              <rect x="28" y="6" width="4" height="4" rx="1" fill="rgba(255,255,255,0.5)"/>
+              <rect x="23" y="11" width="4" height="4" rx="1" fill="rgba(255,255,255,0.5)"/>
+              <!-- body -->
+              <rect x="10" y="18" width="30" height="72" rx="6" fill="url(#salt-grad)" stroke="#aac0cc" stroke-width="1.5"/>
+              <!-- label -->
+              <rect x="13" y="30" width="24" height="38" rx="3" fill="rgba(255,255,255,0.6)"/>
+              <text x="25" y="52" text-anchor="middle" font-size="9" font-weight="800" fill="#446688" font-family="Arial">SALT</text>
+              <!-- base -->
+              <rect x="8" y="88" width="34" height="12" rx="5" fill="#7799aa" stroke="#557788" stroke-width="1"/>
+            </svg>
+          </div>
+          <div class="season-tool-label">Salt</div>
+        </div>
+
+        <!-- PEPPER SHAKER -->
+        <div class="season-tool-btn" id="season-pepper-btn"
+             ontouchstart="onShakerDown(event,'pepper')" ontouchend="onShakerUp(event)"
+             onmousedown="onShakerDown(event,'pepper')" onmouseup="onShakerUp(event)">
+          <div class="season-tool-icon-wrap" id="season-pepper-icon">
+            <svg viewBox="0 0 50 120" width="50" height="120" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="pepper-grad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#3a3a3a"/>
+                  <stop offset="50%" stop-color="#5a5a5a"/>
+                  <stop offset="100%" stop-color="#2a2a2a"/>
+                </linearGradient>
+              </defs>
+              <!-- cap -->
+              <rect x="14" y="2" width="22" height="18" rx="4" fill="#222" stroke="#111" stroke-width="1"/>
+              <rect x="18" y="6" width="4" height="4" rx="1" fill="rgba(255,255,255,0.3)"/>
+              <rect x="28" y="6" width="4" height="4" rx="1" fill="rgba(255,255,255,0.3)"/>
+              <rect x="23" y="11" width="4" height="4" rx="1" fill="rgba(255,255,255,0.3)"/>
+              <!-- body -->
+              <rect x="10" y="18" width="30" height="72" rx="6" fill="url(#pepper-grad)" stroke="#111" stroke-width="1.5"/>
+              <!-- label -->
+              <rect x="13" y="30" width="24" height="38" rx="3" fill="rgba(255,255,255,0.12)"/>
+              <text x="25" y="46" text-anchor="middle" font-size="7" font-weight="800" fill="#ddd" font-family="Arial">PEP</text>
+              <text x="25" y="57" text-anchor="middle" font-size="7" font-weight="800" fill="#ddd" font-family="Arial">PER</text>
+              <!-- base -->
+              <rect x="8" y="88" width="34" height="12" rx="5" fill="#1a1a1a" stroke="#111" stroke-width="1"/>
+            </svg>
+          </div>
+          <div class="season-tool-label">Pepper</div>
+        </div>
+
+        <!-- BUTTER PAT -->
+        <div class="season-tool-btn" id="season-butter-btn"
+             ontouchstart="onButterDown(event)" ontouchend="onButterUp(event)" ontouchmove="onButterMove(event)"
+             onmousedown="onButterDown(event)" onmouseup="onButterUp(event)" onmousemove="onButterMove(event)">
+          <div class="season-tool-icon-wrap" id="season-butter-icon">
+            <svg viewBox="0 0 80 120" width="80" height="120" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="butter-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#ffe870"/>
+                  <stop offset="40%" stop-color="#f5c832"/>
+                  <stop offset="100%" stop-color="#d4a010"/>
+                </linearGradient>
+                <linearGradient id="butter-side-grad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#c89008"/>
+                  <stop offset="100%" stop-color="#e0b020"/>
+                </linearGradient>
+                <linearGradient id="wrapper-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#e8f0e8"/>
+                  <stop offset="100%" stop-color="#c8d8c8"/>
+                </linearGradient>
+              </defs>
+              <!-- wrapper paper -->
+              <rect x="12" y="65" width="56" height="42" rx="2" fill="url(#wrapper-grad)" stroke="#aabbaa" stroke-width="1"/>
+              <rect x="12" y="65" width="56" height="6" rx="1" fill="rgba(0,0,0,0.05)"/>
+              <text x="40" y="91" text-anchor="middle" font-size="7.5" font-weight="700" fill="#558855" font-family="Arial">BUTTER</text>
+              <!-- butter block sides -->
+              <polygon points="12,65 20,56 68,56 68,65" fill="url(#butter-side-grad)"/>
+              <polygon points="68,56 68,65 68,107 60,107 60,56" fill="#c08000" opacity="0.5"/>
+              <!-- butter top face -->
+              <rect x="12" y="46" width="56" height="22" rx="2" fill="url(#butter-grad)" stroke="#c8a000" stroke-width="1"/>
+              <!-- shine -->
+              <rect x="16" y="48" width="28" height="5" rx="2" fill="rgba(255,255,255,0.4)"/>
+              <!-- pat top highlight -->
+              <rect x="12" y="46" width="56" height="6" rx="2" fill="rgba(255,255,255,0.2)"/>
+            </svg>
+          </div>
+          <div class="season-tool-label">Butter</div>
+        </div>
+
+      </div>
+
+      <!-- PROGRESS BARS -->
+      <div class="season-progress-row">
+        <div class="season-prog-item">
+          <span class="season-prog-icon">🧂</span>
+          <div class="season-prog-track">
+            <div class="season-prog-fill salt" id="season-salt-fill" style="width:0%"></div>
+          </div>
+          <span class="season-prog-check" id="season-salt-check">  </span>
+        </div>
+        <div class="season-prog-item">
+          <span class="season-prog-icon">🌶️</span>
+          <div class="season-prog-track">
+            <div class="season-prog-fill pepper" id="season-pepper-fill" style="width:0%"></div>
+          </div>
+          <span class="season-prog-check" id="season-pepper-check">  </span>
+        </div>
+        <div class="season-prog-item">
+          <span class="season-prog-icon">🧈</span>
+          <div class="season-prog-track">
+            <div class="season-prog-fill butter" id="season-butter-fill" style="width:0%"></div>
+          </div>
+          <span class="season-prog-check" id="season-butter-check">  </span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Cache refs
+  seasonState.statusEl       = document.getElementById('season-status');
+  seasonState.saltFillEl     = document.getElementById('season-salt-fill');
+  seasonState.pepperFillEl   = document.getElementById('season-pepper-fill');
+  seasonState.butterFillEl   = document.getElementById('season-butter-fill');
+  seasonState.saltCheckEl    = document.getElementById('season-salt-check');
+  seasonState.pepperCheckEl  = document.getElementById('season-pepper-check');
+  seasonState.butterCheckEl  = document.getElementById('season-butter-check');
+  seasonState.saltBtnEl      = document.getElementById('season-salt-btn');
+  seasonState.pepperBtnEl    = document.getElementById('season-pepper-btn');
+  seasonState.butterBtnEl    = document.getElementById('season-butter-btn');
+  seasonState.bowlEl         = document.getElementById('season-bowl-svg');
+  seasonState.particleEl     = document.getElementById('season-particles');
+  seasonState.butterLayerEl  = document.getElementById('season-butter-layer');
+  seasonState.appliedEl      = document.getElementById('season-applied-particles');
+
+  // Reset state
+  seasonState.phase           = 'salt';
+  seasonState.saltShakes      = 0;
+  seasonState.pepperShakes    = 0;
+  seasonState.butterCoverage  = 0;
+  seasonState.done            = false;
+  seasonState.shakeActive     = false;
+  seasonState.butterActive    = false;
+  seasonState.butterTotalTravel = 0;
+  seasonState.lastShakeDir    = 0;
+  seasonState.motionHandler   = null;
+
+  // Visual feedback: dim tools that aren't active yet
+  updateSeasonToolStates();
+
+  // Try to request device motion (for real shake on mobile)
+  if (typeof DeviceMotionEvent !== 'undefined' && DeviceMotionEvent.requestPermission) {
+    DeviceMotionEvent.requestPermission().then(perm => {
+      if (perm === 'granted') attachMotionShake();
+    }).catch(() => {});
+  } else if (window.DeviceMotionEvent) {
+    attachMotionShake();
+  }
+}
+
+function attachMotionShake() {
+  let lastAx = 0;
+  let motionDir = 0;
+  let motionThresh = 12; // m/s²
+  seasonState.motionHandler = (e) => {
+    if (seasonState.done) return;
+    const ax = e.accelerationIncludingGravity?.x || 0;
+    const delta = ax - lastAx;
+    lastAx = ax;
+    if (delta > motionThresh && motionDir !== 1) {
+      motionDir = 1;
+      countShake();
+    } else if (delta < -motionThresh && motionDir !== -1) {
+      motionDir = -1;
+      countShake();
+    }
+  };
+  window.addEventListener('devicemotion', seasonState.motionHandler);
+}
+
+function seasonCleanup() {
+  if (seasonState.motionHandler) {
+    window.removeEventListener('devicemotion', seasonState.motionHandler);
+    seasonState.motionHandler = null;
+  }
+  document.removeEventListener('mousemove', onShakerMouseMove);
+  document.removeEventListener('mouseup',   onShakerMouseUp);
+}
+
+// ---- Shaker drag/pointer events (fallback for non-motion) ----
+let _shakerType = null;
+
+function onShakerDown(e, type) {
+  if (seasonState.done) return;
+  if (seasonState.phase !== type) {
+    toast(type === 'salt' ? '🧂 Do salt first!' : type === 'pepper' ? '🌶️ Do pepper next!' : '');
+    return;
+  }
+  e.preventDefault();
+  _shakerType = type;
+  seasonState.shakeActive = true;
+  const t = e.touches ? e.touches[0] : e;
+  seasonState.shakeStartX = t.clientX;
+  seasonState.shakeLastX  = t.clientX;
+  seasonState.lastShakeDir = 0;
+
+  if (!e.touches) {
+    document.addEventListener('mousemove', onShakerMouseMove);
+    document.addEventListener('mouseup',   onShakerMouseUp);
+  }
+
+  // tilt shaker
+  const iconEl = document.getElementById(`season-${type}-icon`);
+  if (iconEl) iconEl.style.transform = 'rotate(-35deg) translateX(-4px)';
+}
+
+function onShakerUp(e) {
+  if (!seasonState.shakeActive) return;
+  seasonState.shakeActive = false;
+  // restore shaker upright
+  const iconEl = _shakerType ? document.getElementById(`season-${_shakerType}-icon`) : null;
+  if (iconEl) { iconEl.style.transform = ''; iconEl.classList.remove('shaking-left','shaking-right'); }
+  _shakerType = null;
+  document.removeEventListener('mousemove', onShakerMouseMove);
+  document.removeEventListener('mouseup',   onShakerMouseUp);
+}
+
+function onShakerMouseMove(e) { handleShakerMove(e); }
+function onShakerMouseUp(e)   { onShakerUp(e); }
+
+document.addEventListener('touchmove', (e) => {
+  if (!seasonState.shakeActive) return;
+  handleShakerMove(e.touches[0]);
+}, { passive: false });
+
+function handleShakerMove(t) {
+  if (!seasonState.shakeActive || seasonState.done) return;
+  const x = t.clientX;
+  const dx = x - seasonState.shakeLastX;
+  const threshold = seasonState.shakeThresh;
+
+  if (dx > threshold && seasonState.lastShakeDir !== 1) {
+    seasonState.lastShakeDir = 1;
+    seasonState.shakeLastX = x;
+    const iconEl = _shakerType ? document.getElementById(`season-${_shakerType}-icon`) : null;
+    if (iconEl) { iconEl.classList.remove('shaking-left'); void iconEl.offsetWidth; iconEl.classList.add('shaking-right'); }
+    countShake();
+  } else if (dx < -threshold && seasonState.lastShakeDir !== -1) {
+    seasonState.lastShakeDir = -1;
+    seasonState.shakeLastX = x;
+    const iconEl = _shakerType ? document.getElementById(`season-${_shakerType}-icon`) : null;
+    if (iconEl) { iconEl.classList.remove('shaking-right'); void iconEl.offsetWidth; iconEl.classList.add('shaking-left'); }
+    countShake();
+  }
+}
+
+function countShake() {
+  if (seasonState.done) return;
+  if (seasonState.phase === 'salt') {
+    seasonState.saltShakes = Math.min(SEASON_SHAKES_NEEDED, seasonState.saltShakes + 1);
+    const pct = seasonState.saltShakes / SEASON_SHAKES_NEEDED;
+    seasonState.saltFillEl.style.width = (pct * 100) + '%';
+    spawnSeasonSpecks('salt');
+    if (seasonState.saltShakes >= SEASON_SHAKES_NEEDED) onSaltDone();
+    else {
+      const remaining = SEASON_SHAKES_NEEDED - seasonState.saltShakes;
+      seasonState.statusEl.textContent = `🧂 Shaking… ${Math.round(pct*100)}%`;
+    }
+  } else if (seasonState.phase === 'pepper') {
+    seasonState.pepperShakes = Math.min(SEASON_SHAKES_NEEDED, seasonState.pepperShakes + 1);
+    const pct = seasonState.pepperShakes / SEASON_SHAKES_NEEDED;
+    seasonState.pepperFillEl.style.width = (pct * 100) + '%';
+    spawnSeasonSpecks('pepper');
+    if (seasonState.pepperShakes >= SEASON_SHAKES_NEEDED) onPepperDone();
+    else seasonState.statusEl.textContent = `🌶️ Shaking… ${Math.round(pct*100)}%`;
+  }
+}
+
+function onSaltDone() {
+  seasonState.saltCheckEl.textContent = '✅';
+  seasonState.phase = 'pepper';
+  toast('🧂 Salted! Now shake the pepper!');
+  seasonState.statusEl.textContent = '🌶️ Shake the pepper shaker!';
+  seasonState.statusEl.className = 'season-status info';
+  onShakerUp({ touches: null });
+  updateSeasonToolStates();
+}
+
+function onPepperDone() {
+  seasonState.pepperCheckEl.textContent = '✅';
+  seasonState.phase = 'butter';
+  toast('🌶️ Peppered! Now swipe the butter across!');
+  seasonState.statusEl.textContent = '🧈 Press and drag the butter across the bowl!';
+  seasonState.statusEl.className = 'season-status info';
+  onShakerUp({ touches: null });
+  updateSeasonToolStates();
+}
+
+// ---- Butter swipe ----
+const BUTTER_TRAVEL_NEEDED = 400; // total px of drag travel
+
+function onButterDown(e) {
+  if (seasonState.done || seasonState.phase !== 'butter') {
+    if (seasonState.phase !== 'butter') toast('🧈 Season with salt & pepper first!');
+    return;
+  }
+  e.preventDefault();
+  seasonState.butterActive = true;
+  const t = e.touches ? e.touches[0] : e;
+  seasonState.butterLastX = t.clientX;
+  seasonState.butterLastY = t.clientY;
+  const iconEl = document.getElementById('season-butter-icon');
+  if (iconEl) iconEl.classList.add('butter-pressing');
+}
+
+function onButterMove(e) {
+  if (!seasonState.butterActive || seasonState.done) return;
+  e.preventDefault();
+  const t = e.touches ? e.touches[0] : e;
+  const dx = t.clientX - seasonState.butterLastX;
+  const dy = t.clientY - seasonState.butterLastY;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  seasonState.butterLastX = t.clientX;
+  seasonState.butterLastY = t.clientY;
+
+  if (dist < 2) return;
+  seasonState.butterTotalTravel += dist;
+  const pct = Math.min(1, seasonState.butterTotalTravel / BUTTER_TRAVEL_NEEDED);
+  seasonState.butterCoverage = pct;
+  seasonState.butterFillEl.style.width = (pct * 100) + '%';
+
+  // Expand butter layer on the bowl SVG
+  const rx = pct * 76;
+  const ry = pct * 38;
+  if (seasonState.butterLayerEl) {
+    seasonState.butterLayerEl.setAttribute('rx', rx);
+    seasonState.butterLayerEl.setAttribute('ry', ry);
+  }
+
+  // Spawn butter smear particles
+  spawnButterSmear(t.clientX, t.clientY);
+
+  seasonState.statusEl.textContent = `🧈 Spreading… ${Math.round(pct*100)}%`;
+
+  if (pct >= 1) onButterDone();
+}
+
+function onButterUp(e) {
+  if (!seasonState.butterActive) return;
+  seasonState.butterActive = false;
+  const iconEl = document.getElementById('season-butter-icon');
+  if (iconEl) iconEl.classList.remove('butter-pressing');
+}
+
+document.addEventListener('touchend', (e) => { onButterUp(e); });
+
+function onButterDone() {
+  if (seasonState.done) return;
+  seasonState.butterCheckEl.textContent = '✅';
+  seasonState.phase = 'done';
+  seasonState.done = true;
+  seasonState.statusEl.textContent = '🎉 Perfectly seasoned!';
+  seasonState.statusEl.className = 'season-status ok';
+  seasonCleanup();
+  setTimeout(() => {
+    if (practiceMode) {
+      toast('Delicious seasoning! Starting again... 🧂');
+      loadSeasonStep();
+    } else {
+      toast('Seasoned! 🥣 Time to mash!');
+      broadcastMyProgress(0.92, 5);
+      onRaceFinished(); // placeholder until mashing step
+    }
+  }, 900);
+}
+
+function updateSeasonToolStates() {
+  const saltDone   = seasonState.saltShakes   >= SEASON_SHAKES_NEEDED;
+  const pepperDone = seasonState.pepperShakes >= SEASON_SHAKES_NEEDED;
+
+  [seasonState.saltBtnEl, seasonState.pepperBtnEl, seasonState.butterBtnEl].forEach(el => {
+    if (el) el.style.opacity = '0.35';
+  });
+  if (seasonState.phase === 'salt'   && seasonState.saltBtnEl)   seasonState.saltBtnEl.style.opacity   = '1';
+  if (seasonState.phase === 'pepper' && seasonState.pepperBtnEl) seasonState.pepperBtnEl.style.opacity = '1';
+  if (seasonState.phase === 'butter' && seasonState.butterBtnEl) seasonState.butterBtnEl.style.opacity = '1';
+  if (saltDone   && seasonState.saltBtnEl)   seasonState.saltBtnEl.style.opacity   = '0.5';
+  if (pepperDone && seasonState.pepperBtnEl) seasonState.pepperBtnEl.style.opacity = '0.5';
+}
+
+function spawnSeasonSpecks(type) {
+  if (!seasonState.particleEl) return;
+  const count = 4;
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.className = 'season-speck';
+    const size = type === 'salt' ? 3 + Math.random()*3 : 2 + Math.random()*3;
+    const color = type === 'salt' ? `rgba(230,240,255,${0.7+Math.random()*0.3})` : `rgba(30,20,10,${0.6+Math.random()*0.4})`;
+    const x = 40 + Math.random() * 180;
+    const y = 20 + Math.random() * 60;
+    const dur = 0.4 + Math.random() * 0.5;
+    el.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;background:${color};animation-duration:${dur}s;`;
+    seasonState.particleEl.appendChild(el);
+    setTimeout(() => el.remove(), dur * 1000 + 50);
+  }
+
+  // Also place a permanent tiny dot on the bowl
+  if (seasonState.appliedEl) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const circle = document.createElementNS(ns, 'circle');
+    circle.setAttribute('cx', 28 + Math.random() * 144);
+    circle.setAttribute('cy', 48 + Math.random() * 36);
+    const r = type === 'salt' ? 1.2 + Math.random()*1.2 : 1 + Math.random()*1.5;
+    circle.setAttribute('r', r);
+    circle.setAttribute('fill', type === 'salt' ? 'rgba(255,255,255,0.55)' : 'rgba(20,10,5,0.6)');
+    seasonState.appliedEl.appendChild(circle);
+  }
+}
+
+function spawnButterSmear(clientX, clientY) {
+  if (!seasonState.particleEl) return;
+  const bowlRect = seasonState.particleEl.getBoundingClientRect();
+  const lx = clientX - bowlRect.left;
+  const ly = clientY - bowlRect.top;
+  const el = document.createElement('div');
+  el.style.cssText = `position:absolute;left:${lx-8}px;top:${ly-4}px;width:${16+Math.random()*12}px;height:${5+Math.random()*4}px;background:rgba(255,220,30,0.45);border-radius:50%;pointer-events:none;filter:blur(2px);`;
+  seasonState.particleEl.appendChild(el);
+  setTimeout(() => el.remove(), 1200);
 }
 
 // ============================================================
@@ -4935,6 +5633,13 @@ function copyRoomCode() {
     .then(()=>toast(`Room code ${code} copied! 📋`))
     .catch(()=>toast(`Room code: ${code}`));
 }
+
+// Clean up Firebase presence on page unload (best-effort; onDisconnect handles hard crashes)
+window.addEventListener('beforeunload', () => {
+  if (gameState.myId && gameState.roomCode && (gameState.mode === 'host' || gameState.mode === 'player')) {
+    try { window._fb?.remove(dbRef(myPlayerPath())); } catch(e) {}
+  }
+});
 </script>
 </body>
 </html>
