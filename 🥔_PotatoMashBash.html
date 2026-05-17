@@ -1083,16 +1083,11 @@
 // ============================================================
 const AVATARS = ['🥔','👨‍🍳','👩‍🍳','🍴','🥄','🫙','🧅','🫛'];
 const PLAYER_COLORS = ['#e8c97a','#a8e6a0','#87CEEB','#FFB6C1'];
-const CHANNEL_NAME = 'potato-mash-bash';
 const TOTAL_POTATOES = 2;
 const PEEL_SECTIONS = 24; // segments around potato
 const PEEL_ROWS = 8;      // vertical bands
 const TOTAL_PEELS = PEEL_SECTIONS * PEEL_ROWS;
 const PEELS_NEEDED_RATIO = 0.88; // 88% peeled = done
-
-// ============================================================
-//  STATE
-// ============================================================
 let gameState = {
   mode: null,           // 'host' | 'player' | 'solo'
   roomCode: null,
@@ -1111,8 +1106,6 @@ let gameState = {
   raceEnd: null,
   finished: false,
 };
-
-let channel = null; // BroadcastChannel
 
 // ============================================================
 //  UTILITIES
@@ -1145,77 +1138,218 @@ function fmt(ms) {
 }
 
 // ============================================================
-//  BROADCAST CHANNEL (multiplayer sync)
+//  FIREBASE REALTIME DATABASE — multiplayer layer
+//
+//  All game state lives at:
+//    /rooms/{roomCode}/players/{playerId}   — per-player record
+//    /rooms/{roomCode}/meta                 — room-level state (started, etc.)
+//    /rooms/{roomCode}/events/{pushId}      — broadcast events (start, finish…)
+//
+//  The host writes meta + responds to JOIN events.
+//  Players write their own player record and listen to everything.
 // ============================================================
-function setupChannel() {
-  if (channel) { channel.close(); }
-  channel = new BroadcastChannel(CHANNEL_NAME);
-  channel.onmessage = (e) => handleChannelMessage(e.data);
+
+let fbApp = null;      // Firebase app instance
+let fbDb  = null;      // Firebase database instance
+let fbListeners = [];  // [{ref, type, fn}] — so we can detach on leave
+
+// ---- Firebase SDK (loaded dynamically) ----
+let fbLoaded = false;
+let fbLoadCallbacks = [];
+
+function ensureFirebase(cb) {
+  if (fbLoaded) { cb(); return; }
+  fbLoadCallbacks.push(cb);
+  if (document.getElementById('fb-sdk')) return; // already loading
+
+  const s = document.createElement('script');
+  s.id = 'fb-sdk';
+  s.type = 'module';
+  // We use the compat CDN so we can keep imperative-style code
+  s.textContent = `
+    import { initializeApp }        from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import { getDatabase, ref, set, push, onValue, onChildAdded, remove, serverTimestamp }
+      from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+    window._fb = { initializeApp, getDatabase, ref, set, push, onValue, onChildAdded, remove, serverTimestamp };
+    window.dispatchEvent(new Event('fb-ready'));
+  `;
+  document.head.appendChild(s);
+
+  window.addEventListener('fb-ready', () => {
+    fbLoaded = true;
+    fbLoadCallbacks.forEach(fn => fn());
+    fbLoadCallbacks = [];
+  }, { once: true });
 }
 
-function broadcast(type, data={}) {
-  if (!channel) return;
-  channel.postMessage({ type, from: gameState.myId, roomCode: gameState.roomCode, ...data });
+// ============================================================
+//  FIREBASE CONFIG  ← Paste your values here
+// ============================================================
+const FIREBASE_CONFIG = {
+  apiKey:      "PASTE_YOUR_API_KEY_HERE",
+  databaseURL: "PASTE_YOUR_DATABASE_URL_HERE",
+  projectId:   "PASTE_YOUR_PROJECT_ID_HERE",
+};
+
+function initFirebase() {
+  if (fbApp) return;
+  fbApp = window._fb.initializeApp(FIREBASE_CONFIG, 'pmb');
+  fbDb  = window._fb.getDatabase(fbApp);
 }
 
-function handleChannelMessage(msg) {
-  if (msg.roomCode !== gameState.roomCode) return;
-  if (msg.from === gameState.myId) return;
+// ---- DB helpers ----
+function dbRef(path) {
+  return window._fb.ref(fbDb, path);
+}
+function dbSet(path, value) {
+  return window._fb.set(dbRef(path), value);
+}
+function dbPush(path, value) {
+  return window._fb.push(dbRef(path), value);
+}
+function dbListen(path, type, fn) {
+  // type: 'value' | 'child_added'
+  const r = dbRef(path);
+  let unsub;
+  if (type === 'value') {
+    unsub = window._fb.onValue(r, fn);
+  } else {
+    unsub = window._fb.onChildAdded(r, fn);
+  }
+  fbListeners.push(unsub);
+  return unsub;
+}
+function detachAllListeners() {
+  fbListeners.forEach(fn => { try { fn(); } catch(e){} });
+  fbListeners = [];
+}
 
-  switch(msg.type) {
-    case 'PLAYER_JOIN':
-      if (gameState.mode === 'host') {
-        // Add player to list
-        const exists = gameState.players.find(p=>p.id===msg.from);
-        if (!exists && gameState.players.length < parseInt(document.getElementById('max-players-select')?.value||4)) {
-          const newPlayer = {
-            id: msg.from, name: msg.playerName,
-            avatar: AVATARS[gameState.players.length % AVATARS.length],
-            isHost: false, color: PLAYER_COLORS[gameState.players.length],
-            progress: 0, step: 0
-          };
-          gameState.players.push(newPlayer);
-          updateLobbyUI();
-          broadcast('LOBBY_STATE', { players: gameState.players });
-          toast(`${msg.playerName} joined! 🥔`);
-        }
-      }
-      break;
+// ---- Room path helpers ----
+function roomPath()              { return `rooms/${gameState.roomCode}`; }
+function metaPath()              { return `${roomPath()}/meta`; }
+function playersPath()           { return `${roomPath()}/players`; }
+function myPlayerPath()          { return `${playersPath()}/${gameState.myId}`; }
+function eventsPath()            { return `${roomPath()}/events`; }
 
-    case 'LOBBY_STATE':
-      if (gameState.mode === 'player') {
-        gameState.players = msg.players;
-        updatePlayerLobbyUI();
-      }
-      break;
+// ---- Network init — called before any host/join action ----
+function setupNetwork(onReady) {
+  ensureFirebase(() => { initFirebase(); onReady(); });
+}
 
-    case 'GAME_START':
-      if (gameState.mode === 'player') {
-        gameState.players = msg.players;
-        startCountdown();
-      }
-      break;
+// ============================================================
+//  MULTIPLAYER EVENT HANDLERS
+// ============================================================
 
-    case 'PLAYER_PROGRESS':
-      // Update another player's progress in race sidebar
-      const p = gameState.players.find(pl=>pl.id===msg.from);
-      if (p) {
-        p.progress = msg.progress;
-        p.step = msg.step;
+function startHostListeners() {
+  // Listen for player records appearing under /players
+  dbListen(playersPath(), 'value', snap => {
+    const data = snap.val() || {};
+    const maxP = parseInt(document.getElementById('max-players-select')?.value || 4);
+
+    Object.entries(data).forEach(([pid, pdata]) => {
+      if (pid === gameState.myId) return; // that's me
+      const exists = gameState.players.find(p => p.id === pid);
+      if (!exists && gameState.players.length < maxP) {
+        const newPlayer = {
+          id: pid,
+          name: pdata.name,
+          avatar: AVATARS[gameState.players.length % AVATARS.length],
+          isHost: false,
+          color: PLAYER_COLORS[gameState.players.length % PLAYER_COLORS.length],
+          progress: 0, step: 0
+        };
+        gameState.players.push(newPlayer);
+        updateLobbyUI();
+        // Write updated lobby state to meta so joiner can see it
+        dbSet(metaPath(), { status: 'waiting', players: gameState.players });
+        toast(`${pdata.name} joined! 🥔`);
+      } else if (exists) {
+        // Update progress from their record
+        exists.progress = pdata.progress || 0;
+        exists.step = pdata.step || 0;
+        if (pdata.finishTime) exists.finishTime = pdata.finishTime;
         updateRaceSidebar();
       }
-      break;
+    });
+  });
 
-    case 'PLAYER_FINISHED':
-      const fp = gameState.players.find(pl=>pl.id===msg.from);
-      if (fp) {
-        fp.finishTime = msg.finishTime;
-        fp.finishRank = msg.rank;
+  // Listen for events (finish notifications etc.)
+  dbListen(eventsPath(), 'child_added', snap => {
+    const msg = snap.val();
+    if (!msg || msg.from === gameState.myId) return;
+    handleEvent(msg);
+  });
+}
+
+function startPlayerListeners() {
+  // Listen to meta for lobby state + game start
+  dbListen(metaPath(), 'value', snap => {
+    const meta = snap.val();
+    if (!meta) return;
+
+    if (meta.status === 'waiting' && meta.players) {
+      gameState.players = meta.players;
+      updatePlayerLobbyUI();
+    }
+    if (meta.status === 'started' && !gameState.gameStarted) {
+      gameState.players = meta.players || gameState.players;
+      gameState.gameStarted = true;
+      startCountdown();
+    }
+  });
+
+  // Listen to all player records for race progress
+  dbListen(playersPath(), 'value', snap => {
+    const data = snap.val() || {};
+    Object.entries(data).forEach(([pid, pdata]) => {
+      if (pid === gameState.myId) return;
+      const p = gameState.players.find(pl => pl.id === pid);
+      if (p) {
+        p.progress = pdata.progress || 0;
+        p.step = pdata.step || 0;
+        if (pdata.finishTime) p.finishTime = pdata.finishTime;
       }
+    });
+    updateRaceSidebar();
+  });
+
+  // Listen for events
+  dbListen(eventsPath(), 'child_added', snap => {
+    const msg = snap.val();
+    if (!msg || msg.from === gameState.myId) return;
+    handleEvent(msg);
+  });
+}
+
+function handleEvent(msg) {
+  switch (msg.type) {
+    case 'PLAYER_FINISHED':
+      const fp = gameState.players.find(pl => pl.id === msg.from);
+      if (fp) { fp.finishTime = msg.finishTime; }
       updateRaceSidebar();
-      toast(`${msg.playerName} finished! ${fmt(msg.finishTime)} 🏁`);
+      if (msg.from !== gameState.myId) toast(`${msg.playerName} finished! ${fmt(msg.finishTime)} 🏁`);
       break;
   }
+}
+
+// Write my progress to my player record (throttled)
+let _progressThrottle = 0;
+let practiceMode = false;
+let practiceStep = null;
+function broadcastMyProgress(progress, step) {
+  const me = gameState.players.find(p => p.id === gameState.myId);
+  if (me) { me.progress = progress; me.step = step; }
+  updateRaceSidebar();
+  if (gameState.mode === 'solo' || practiceMode) return;
+  const now = Date.now();
+  if (now - _progressThrottle < 500) return; // write at most every 500ms
+  _progressThrottle = now;
+  dbSet(myPlayerPath(), {
+    id: gameState.myId, name: gameState.myName,
+    avatar: me?.avatar || '🥔', color: me?.color || '#e8c97a',
+    isHost: gameState.mode === 'host',
+    progress, step, ts: Date.now()
+  }).catch(() => {});
 }
 
 // ============================================================
@@ -1235,10 +1369,15 @@ function hostGame() {
     isHost: true, color: PLAYER_COLORS[0], progress: 0, step: 0
   }];
 
-  setupChannel();
-  document.getElementById('room-code-display').textContent = gameState.roomCode;
-  updateLobbyUI();
-  showScreen('screen-lobby-host');
+  setupNetwork(() => {
+    // Write host player + initial meta
+    dbSet(myPlayerPath(), { id: gameState.myId, name, avatar: AVATARS[0], isHost: true, color: PLAYER_COLORS[0], progress: 0, step: 0, ts: Date.now() });
+    dbSet(metaPath(), { status: 'waiting', players: gameState.players });
+    startHostListeners();
+    document.getElementById('room-code-display').textContent = gameState.roomCode;
+    updateLobbyUI();
+    showScreen('screen-lobby-host');
+  });
 }
 
 function joinGame() {
@@ -1254,14 +1393,19 @@ function joinGame() {
   gameState.roomCode = code;
   gameState.players = [];
 
-  setupChannel();
-  document.getElementById('player-room-code-display').textContent = code;
-
-  // Announce to host
-  broadcast('PLAYER_JOIN', { playerName: name });
-  updatePlayerLobbyUI();
-  showScreen('screen-lobby-player');
-  toast('Joined! Waiting for host... 🥔');
+  setupNetwork(() => {
+    // Write my player record — host's listener will pick it up
+    dbSet(myPlayerPath(), {
+      id: gameState.myId, name,
+      avatar: AVATARS[1], isHost: false,
+      color: PLAYER_COLORS[1], progress: 0, step: 0, ts: Date.now()
+    });
+    startPlayerListeners();
+    document.getElementById('player-room-code-display').textContent = code;
+    updatePlayerLobbyUI();
+    showScreen('screen-lobby-player');
+    toast('Joined! Waiting for host... 🥔');
+  });
 }
 
 function startSolo() {
@@ -1278,12 +1422,17 @@ function startSolo() {
 
 function hostStartGame() {
   if (gameState.players.length < 1) { toast('Need players to start!'); return; }
-  broadcast('GAME_START', { players: gameState.players });
+  // Write 'started' to meta — all players' listeners will pick it up
+  dbSet(metaPath(), { status: 'started', players: gameState.players });
   startCountdown();
 }
 
 function leaveGame() {
-  if (channel) { channel.close(); channel = null; }
+  detachAllListeners();
+  // Remove my player record from DB
+  if (fbDb && gameState.myId && gameState.roomCode) {
+    try { window._fb.remove(dbRef(myPlayerPath())); } catch(e) {}
+  }
   practiceMode = false; practiceStep = null;
   document.querySelectorAll('.practice-banner').forEach(e=>e.remove());
   if (peelState.animRAF) { cancelAnimationFrame(peelState.animRAF); peelState.animRAF = null; }
@@ -1293,9 +1442,6 @@ function leaveGame() {
   showScreen('screen-landing');
 }
 
-function copyRoomCode() {
-  navigator.clipboard?.writeText(gameState.roomCode).then(()=>toast('Room code copied! 📋'));
-}
 
 function updateLobbyUI() {
   const maxP = parseInt(document.getElementById('max-players-select')?.value||4);
@@ -1338,8 +1484,6 @@ function updatePlayerLobbyUI() {
 // ============================================================
 //  PRACTICE MODE
 // ============================================================
-let practiceMode = false;
-let practiceStep = null;
 
 function startPractice(step) {
   practiceMode = true;
@@ -1411,8 +1555,6 @@ function comingSoon(name) {
   toast(`${name} practice coming soon! 🥔`);
 }
 
-// Override the race-finish behaviour in practice mode
-const _origOnRaceFinished = typeof onRaceFinished !== 'undefined' ? onRaceFinished : null;
 
 // ============================================================
 //  COUNTDOWN & START
@@ -1504,12 +1646,6 @@ function updateRaceSidebar() {
   });
 }
 
-function broadcastMyProgress(progress, step) {
-  const me = gameState.players.find(p=>p.id===gameState.myId);
-  if (me) { me.progress=progress; me.step=step; }
-  updateRaceSidebar();
-  broadcast('PLAYER_PROGRESS', { progress, step });
-}
 
 // ============================================================
 //  STEP: PEEL POTATOES
@@ -2738,12 +2874,23 @@ function onRaceFinished() {
   gameState.raceEnd = performance.now();
   const elapsed = gameState.raceEnd - gameState.raceStart;
 
-  // Broadcast finish
-  broadcast('PLAYER_FINISHED', {
-    playerName: gameState.myName,
-    finishTime: elapsed,
-    rank: 1
-  });
+  // Write finish to my player record + push event
+  if (gameState.mode !== 'solo' && !practiceMode && fbDb) {
+    const me = gameState.players.find(p=>p.id===gameState.myId);
+    dbSet(myPlayerPath(), {
+      id: gameState.myId, name: gameState.myName,
+      avatar: me?.avatar||'🥔', color: me?.color||'#e8c97a',
+      isHost: gameState.mode==='host', progress: 1, step: 99,
+      finishTime: elapsed, ts: Date.now()
+    }).catch(()=>{});
+    dbPush(eventsPath(), {
+      type: 'PLAYER_FINISHED',
+      from: gameState.myId,
+      playerName: gameState.myName,
+      finishTime: elapsed,
+      ts: Date.now()
+    }).catch(()=>{});
+  }
 
   spawnConfetti();
   showFinishScreen(elapsed);
@@ -2799,7 +2946,7 @@ function playAgain() {
     } else {
       // Reset game state but keep lobby
       gameState.players.forEach(p => { p.progress=0; p.step=0; p.finishTime=undefined; });
-      broadcast('LOBBY_STATE', { players: gameState.players });
+      dbSet(metaPath(), { status: 'waiting', players: gameState.players }).catch(()=>{});
       updateLobbyUI();
       showScreen('screen-lobby-host');
     }
@@ -2843,9 +2990,6 @@ document.addEventListener('mouseenter', () => {
   document.getElementById('cursor').style.opacity = '1';
 });
 
-// ============================================================
-//  INPUT HELPERS
-// ============================================================
 document.getElementById('join-code-input').addEventListener('input', function() {
   this.value = this.value.toUpperCase();
 });
