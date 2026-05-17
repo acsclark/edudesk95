@@ -1905,13 +1905,21 @@ function startPlayerListeners() {
     console.log('PMB Player: Meta update received:', meta);
     if (!meta) return;
 
+    // Firebase can return arrays as plain objects {0:{...},1:{...}} — normalise to array
+    const normalisePlayers = (raw) => {
+      if (!raw) return [];
+      if (Array.isArray(raw)) return raw;
+      return Object.values(raw);
+    };
+
     if (meta.status === 'waiting' && meta.players) {
-      console.log('PMB Player: Updating player list:', meta.players);
-      gameState.players = meta.players;
+      const players = normalisePlayers(meta.players);
+      console.log('PMB Player: Updating player list:', players);
+      gameState.players = players;
       updatePlayerLobbyUI();
     }
     if (meta.status === 'started' && !gameState.gameStarted) {
-      gameState.players = meta.players || gameState.players;
+      gameState.players = normalisePlayers(meta.players) || gameState.players;
       gameState.gameStarted = true;
       startCountdown();
     }
