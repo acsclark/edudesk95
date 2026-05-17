@@ -1,0 +1,2862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🥔 Potato Mash Bash</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
+
+  :root {
+    --potato-brown: #8B6914;
+    --potato-tan: #C4922A;
+    --potato-light: #E8C97A;
+    --potato-peeled: #F5E6C8;
+    --potato-flesh: #FFF3D0;
+    --bg-dark: #1a0f00;
+    --bg-mid: #2d1a00;
+    --accent-green: #4CAF50;
+    --accent-red: #e74c3c;
+    --accent-yellow: #f1c40f;
+    --accent-blue: #3498db;
+    --text-light: #fff8e7;
+    --panel-bg: rgba(255,255,255,0.07);
+    --panel-border: rgba(255,220,100,0.2);
+    --ui-font: 'Nunito', sans-serif;
+    --display-font: 'Fredoka One', cursive;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-dark);
+    font-family: var(--ui-font);
+    color: var(--text-light);
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse at 20% 20%, rgba(139,105,20,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(76,175,80,0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(45,26,0,0.8) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ========== SCREENS ========== */
+  .screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  .screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.97);
+  }
+
+  /* ========== LANDING ========== */
+  #screen-landing {
+    flex-direction: column;
+    gap: 32px;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .game-title {
+    font-family: var(--display-font);
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    color: var(--potato-light);
+    text-shadow: 
+      0 0 40px rgba(232,201,122,0.5),
+      4px 4px 0 rgba(0,0,0,0.5);
+    line-height: 1;
+    animation: titleBounce 2s ease-in-out infinite;
+  }
+
+  @keyframes titleBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .game-subtitle {
+    font-size: 1.1rem;
+    color: rgba(255,243,208,0.6);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .title-potato {
+    font-size: clamp(3rem, 10vw, 6rem);
+    animation: potatoSpin 4s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes potatoSpin {
+    0% { transform: rotate(-10deg) scale(1); }
+    25% { transform: rotate(10deg) scale(1.05); }
+    50% { transform: rotate(-5deg) scale(1); }
+    75% { transform: rotate(8deg) scale(1.03); }
+    100% { transform: rotate(-10deg) scale(1); }
+  }
+
+  .menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .btn {
+    padding: 16px 32px;
+    border: none;
+    border-radius: 16px;
+    font-family: var(--display-font);
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 0.5px;
+  }
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0);
+    transition: background 0.15s;
+  }
+  .btn:hover::after { background: rgba(255,255,255,0.08); }
+  .btn:active { transform: scale(0.96) translateY(2px) !important; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #c4922a, #8b6914);
+    color: #fff8e7;
+    box-shadow: 0 4px 16px rgba(139,105,20,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+  .btn-secondary {
+    background: linear-gradient(135deg, #2d5a27, #1a3a18);
+    color: #a8e6a0;
+    box-shadow: 0 4px 16px rgba(76,175,80,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+    border: 1px solid rgba(76,175,80,0.3);
+  }
+  .btn-ghost {
+    background: var(--panel-bg);
+    color: rgba(255,243,208,0.7);
+    border: 1px solid var(--panel-border);
+  }
+  .btn-danger {
+    background: linear-gradient(135deg, #c0392b, #922b21);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(231,76,60,0.3);
+  }
+  .btn-small {
+    padding: 10px 20px;
+    font-size: 1rem;
+    border-radius: 12px;
+  }
+
+  /* ========== PANEL ========== */
+  .panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 24px;
+    padding: 32px;
+    backdrop-filter: blur(10px);
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .panel-title {
+    font-family: var(--display-font);
+    font-size: 1.8rem;
+    color: var(--potato-light);
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .input-group label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: rgba(255,243,208,0.6);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  input[type="text"], input[type="number"] {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,220,100,0.25);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text-light);
+    font-family: var(--ui-font);
+    font-size: 1.1rem;
+    font-weight: 600;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  input:focus {
+    border-color: rgba(232,201,122,0.6);
+    box-shadow: 0 0 0 3px rgba(232,201,122,0.1);
+  }
+  input::placeholder { color: rgba(255,243,208,0.3); }
+
+  .room-code-display {
+    font-family: var(--display-font);
+    font-size: 3rem;
+    text-align: center;
+    letter-spacing: 10px;
+    color: var(--potato-light);
+    background: rgba(0,0,0,0.3);
+    border-radius: 16px;
+    padding: 20px;
+    margin: 16px 0;
+    text-shadow: 0 0 20px rgba(232,201,122,0.4);
+    border: 2px dashed rgba(232,201,122,0.3);
+  }
+
+  .player-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .player-slot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.08);
+    font-weight: 700;
+    transition: all 0.3s;
+  }
+  .player-slot.filled {
+    background: rgba(76,175,80,0.1);
+    border-color: rgba(76,175,80,0.3);
+    animation: slotFill 0.4s ease;
+  }
+  @keyframes slotFill {
+    0% { transform: scale(0.97); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+  .player-slot .slot-avatar {
+    font-size: 1.5rem;
+    width: 36px;
+    text-align: center;
+  }
+  .player-slot .slot-name {
+    flex: 1;
+    font-size: 1rem;
+  }
+  .slot-status {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .slot-status.host { background: rgba(232,201,122,0.2); color: var(--potato-light); }
+  .slot-status.joined { background: rgba(76,175,80,0.2); color: #a8e6a0; }
+  .slot-status.waiting { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); }
+
+  /* ========== GAME SCREEN ========== */
+  #screen-game {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .game-hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: rgba(0,0,0,0.5);
+    border-bottom: 1px solid rgba(255,220,100,0.1);
+    z-index: 20;
+    flex-shrink: 0;
+  }
+
+  .hud-timer {
+    font-family: var(--display-font);
+    font-size: 1.8rem;
+    color: var(--potato-light);
+    text-shadow: 0 0 10px rgba(232,201,122,0.4);
+  }
+
+  .hud-step {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: rgba(255,243,208,0.6);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+  .hud-step strong {
+    display: block;
+    font-family: var(--display-font);
+    font-size: 1.2rem;
+    color: var(--text-light);
+    letter-spacing: 0.5px;
+  }
+
+  .hud-players {
+    display: flex;
+    gap: 8px;
+  }
+  .hud-player {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 20px;
+    padding: 4px 10px 4px 4px;
+    border: 1px solid rgba(255,255,255,0.1);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .hud-player .avatar { font-size: 1.1rem; }
+  .hud-player.is-you { border-color: rgba(232,201,122,0.4); background: rgba(232,201,122,0.1); }
+
+  .game-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ========== POTATO PEELING ========== */
+  .peel-workspace {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    width: 100%;
+    max-width: 700px;
+  }
+
+  .potato-progress {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .potato-thumb {
+    width: 48px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    transition: all 0.4s;
+    background: rgba(0,0,0,0.2);
+  }
+  .potato-thumb.done {
+    background: rgba(76,175,80,0.2);
+    border-color: rgba(76,175,80,0.5);
+  }
+  .potato-thumb.active {
+    border-color: rgba(232,201,122,0.6);
+    background: rgba(232,201,122,0.1);
+    box-shadow: 0 0 16px rgba(232,201,122,0.3);
+    animation: activePulse 1s ease-in-out infinite;
+  }
+  @keyframes activePulse {
+    0%, 100% { box-shadow: 0 0 16px rgba(232,201,122,0.3); }
+    50% { box-shadow: 0 0 28px rgba(232,201,122,0.5); }
+  }
+
+  .canvas-wrapper {
+    position: relative;
+    cursor: none;
+  }
+
+  #potatoCanvas {
+    display: block;
+    border-radius: 20px;
+  }
+
+  .custom-cursor {
+    position: fixed;
+    width: 40px;
+    height: 40px;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.2s;
+    font-size: 28px;
+    text-align: center;
+    line-height: 40px;
+  }
+
+  .peel-instructions {
+    text-align: center;
+    font-size: 0.95rem;
+    color: rgba(255,243,208,0.65);
+    font-weight: 600;
+    max-width: 360px;
+    line-height: 1.6;
+  }
+  .peel-instructions strong {
+    color: var(--potato-light);
+    font-family: var(--display-font);
+    font-size: 1.1rem;
+  }
+
+  .peeling-hint {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: rgba(232,201,122,0.08);
+    border: 1px solid rgba(232,201,122,0.2);
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    color: rgba(255,243,208,0.7);
+    font-weight: 600;
+  }
+  .peeling-hint .hint-icon { font-size: 1.2rem; }
+
+  .peel-progress-bar-wrap {
+    width: 100%;
+    max-width: 340px;
+  }
+  .peel-progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: rgba(255,243,208,0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .peel-progress-bar {
+    height: 10px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 99px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .peel-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #8b6914, #e8c97a);
+    border-radius: 99px;
+    transition: width 0.3s ease;
+    position: relative;
+  }
+  .peel-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 20px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3));
+  }
+
+  /* ========== RACE PROGRESS ========== */
+  .race-sidebar {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 20;
+  }
+  .race-player-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 10px;
+    padding: 6px 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+    font-size: 0.8rem;
+    font-weight: 700;
+    min-width: 130px;
+  }
+  .race-player-row.is-you {
+    border-color: rgba(232,201,122,0.35);
+    background: rgba(232,201,122,0.07);
+  }
+  .race-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .race-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.4s ease;
+    background: linear-gradient(90deg, #8b6914, #f1c40f);
+  }
+
+  /* ========== NOTIFICATIONS / TOASTS ========== */
+  .toast-container {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    background: rgba(20,12,0,0.95);
+    border: 1px solid rgba(232,201,122,0.3);
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-family: var(--display-font);
+    font-size: 1.1rem;
+    color: var(--potato-light);
+    text-align: center;
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.5s forwards;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes toastOut {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  }
+
+  /* ========== FINISH SCREEN ========== */
+  #screen-finish {
+    flex-direction: column;
+    gap: 24px;
+    text-align: center;
+    padding: 20px;
+  }
+  .finish-title {
+    font-family: var(--display-font);
+    font-size: clamp(2rem, 7vw, 4rem);
+    color: var(--potato-light);
+    text-shadow: 0 0 40px rgba(232,201,122,0.5);
+    animation: titleBounce 1.5s ease-in-out infinite;
+  }
+  .finish-time {
+    font-family: var(--display-font);
+    font-size: 2.5rem;
+    color: #f1c40f;
+    text-shadow: 0 0 20px rgba(241,196,15,0.4);
+  }
+  .results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 340px;
+  }
+  .result-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 12px;
+    padding: 12px 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    font-weight: 700;
+  }
+  .result-row.first-place { border-color: rgba(241,196,15,0.4); background: rgba(241,196,15,0.08); }
+  .result-rank { font-family: var(--display-font); font-size: 1.3rem; width: 28px; text-align: center; }
+
+  /* ========== MISC ========== */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: rgba(255,243,208,0.25);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 4px 0;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,220,100,0.15);
+  }
+
+  .back-btn {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 30;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,243,208,0.6);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-family: var(--ui-font);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .back-btn:hover { background: rgba(0,0,0,0.6); color: var(--text-light); }
+
+  .error-msg {
+    color: #ff6b6b;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-align: center;
+    min-height: 20px;
+  }
+
+  .spinning { animation: spinFull 0.6s linear infinite; }
+  @keyframes spinFull { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  /* Confetti */
+  .confetti-piece {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    pointer-events: none;
+    z-index: 9998;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* ========== PRACTICE SCREEN ========== */
+  .practice-step-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,220,100,0.18);
+    border-radius: 16px;
+    padding: 16px 18px;
+    cursor: pointer;
+    transition: background 0.18s, transform 0.15s, border-color 0.18s;
+    text-align: left;
+    width: 100%;
+    color: var(--text-light);
+    font-family: var(--ui-font);
+  }
+  .practice-step-btn:hover:not(.disabled) {
+    background: rgba(232,201,122,0.1);
+    border-color: rgba(232,201,122,0.4);
+    transform: translateX(4px);
+  }
+  .practice-step-btn:active:not(.disabled) {
+    transform: scale(0.98);
+  }
+  .practice-step-btn.disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .ps-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+    width: 40px;
+    text-align: center;
+  }
+  .ps-text { flex: 1; }
+  .ps-title {
+    font-family: var(--display-font);
+    font-size: 1.15rem;
+    color: var(--potato-light);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ps-desc {
+    font-size: 0.8rem;
+    color: rgba(255,243,208,0.5);
+    font-weight: 600;
+    margin-top: 3px;
+    line-height: 1.4;
+  }
+  .ps-soon {
+    font-family: var(--ui-font);
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    background: rgba(135,206,235,0.15);
+    color: rgba(135,206,235,0.8);
+    border: 1px solid rgba(135,206,235,0.25);
+    border-radius: 20px;
+    padding: 2px 8px;
+    vertical-align: middle;
+  }
+  .ps-arrow {
+    font-size: 1.5rem;
+    color: rgba(255,243,208,0.3);
+    flex-shrink: 0;
+    font-weight: 300;
+  }
+  .practice-step-btn:hover:not(.disabled) .ps-arrow {
+    color: rgba(232,201,122,0.7);
+  }
+
+  /* Practice finish banner */
+  .practice-banner {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    background: rgba(76,175,80,0.15);
+    border-bottom: 1px solid rgba(76,175,80,0.3);
+    padding: 8px 20px;
+    text-align: center;
+    font-family: var(--display-font);
+    font-size: 1rem;
+    color: #a8e6a0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* ========== CUTTING STEP ========== */
+  .cut-workspace {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    width: 100%;
+    max-width: 760px;
+  }
+
+  .cut-top-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .cut-board-wrap {
+    position: relative;
+    cursor: none;
+    flex-shrink: 0;
+  }
+
+  #cutCanvas {
+    display: block;
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  }
+
+  .cut-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 160px;
+  }
+
+  .cut-potato-thumbs {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .cut-counts {
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,220,100,0.2);
+    border-radius: 14px;
+    padding: 14px 16px;
+  }
+  .cut-count-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: rgba(255,243,208,0.7);
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .cut-count-row:last-child { border-bottom: none; }
+  .cut-count-val {
+    font-family: var(--display-font);
+    font-size: 1.3rem;
+    color: var(--potato-light);
+  }
+  .cut-count-val.done { color: #a8e6a0; }
+
+  .cut-instructions {
+    text-align: center;
+    font-size: 0.9rem;
+    color: rgba(255,243,208,0.6);
+    font-weight: 600;
+    line-height: 1.6;
+    max-width: 380px;
+  }
+  .cut-instructions strong {
+    color: var(--potato-light);
+    font-family: var(--display-font);
+    font-size: 1.05rem;
+  }
+
+  /* Knife animation overlay */
+  .knife-slash {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9990;
+    font-size: 32px;
+    transform-origin: center;
+    animation: knifeSlash 0.35s ease-out forwards;
+  }
+  @keyframes knifeSlash {
+    0%   { opacity: 1; transform: scale(0.8) rotate(var(--ang)); }
+    40%  { opacity: 1; transform: scale(1.15) rotate(var(--ang)); }
+    100% { opacity: 0; transform: scale(0.9) rotate(var(--ang)) translateY(-18px); }
+  }
+
+  /* Cut line flash */
+  .cut-flash {
+    position: absolute;
+    background: rgba(255,255,255,0.55);
+    pointer-events: none;
+    animation: cutFlash 0.4s ease-out forwards;
+    border-radius: 2px;
+  }
+  @keyframes cutFlash {
+    0%   { opacity: 0.8; }
+    100% { opacity: 0; }
+  }
+
+  /* ========== RESPONSIVE ========== */
+  @media (max-width: 500px) {
+    .panel { padding: 20px; }
+    .race-sidebar { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Custom Cursor -->
+<div class="custom-cursor" id="cursor">🥔</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toasts"></div>
+
+<!-- ===== SCREEN: LANDING ===== -->
+<div class="screen" id="screen-landing">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:28px;width:100%;max-width:380px;">
+    <div>
+      <div class="title-potato">🥔</div>
+      <div class="game-title">Potato<br>Mash Bash</div>
+      <div class="game-subtitle">The great mash-off</div>
+    </div>
+    <div class="menu-buttons">
+      <button class="btn btn-primary" onclick="showScreen('screen-host-setup')">🏠 Host a Game</button>
+      <button class="btn btn-secondary" onclick="showScreen('screen-join')">🚪 Join a Game</button>
+      <div class="divider">or</div>
+      <button class="btn btn-ghost" onclick="startSolo()">⚡ Solo Speed Run</button>
+      <button class="btn btn-ghost" onclick="showScreen('screen-practice')" style="border-color:rgba(135,206,235,0.3);color:rgba(135,206,235,0.85);">🎓 Practice Mode</button>
+    </div>
+    <div style="font-size:0.75rem;color:rgba(255,243,208,0.3);text-align:center;line-height:1.6;">
+      Multiplayer uses same-browser tabs.<br>Share the room code with friends!
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN: PRACTICE ===== -->
+<div class="screen hidden" id="screen-practice">
+  <button class="back-btn" onclick="showScreen('screen-landing')">← Back</button>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:24px;width:100%;max-width:480px;padding:20px;">
+    <div style="text-align:center;">
+      <div style="font-size:2.5rem;">🎓</div>
+      <div style="font-family:var(--display-font);font-size:2rem;color:var(--potato-light);margin-top:4px;">Practice Mode</div>
+      <div style="font-size:0.9rem;color:rgba(255,243,208,0.5);margin-top:6px;font-weight:600;">Pick a step to master before the big race</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;width:100%;">
+
+      <button class="practice-step-btn" onclick="startPractice('peel')">
+        <span class="ps-icon">🥔</span>
+        <div class="ps-text">
+          <div class="ps-title">Peeling</div>
+          <div class="ps-desc">Rotate & scrape the skin off. Master the drag technique.</div>
+        </div>
+        <span class="ps-arrow">›</span>
+      </button>
+
+      <button class="practice-step-btn" onclick="startPractice('cut')">
+        <span class="ps-icon">🔪</span>
+        <div class="ps-text">
+          <div class="ps-title">Cubing</div>
+          <div class="ps-desc">Slice 4×4 cuts across the potato. Horizontal & vertical.</div>
+        </div>
+        <span class="ps-arrow">›</span>
+      </button>
+
+      <button class="practice-step-btn disabled" onclick="comingSoon('Filling the Pot')">
+        <span class="ps-icon">🫕</span>
+        <div class="ps-text">
+          <div class="ps-title">Filling the Pot <span class="ps-soon">Coming Soon</span></div>
+          <div class="ps-desc">Load chunks in the pot, then add water to the right level.</div>
+        </div>
+        <span class="ps-arrow">›</span>
+      </button>
+
+      <button class="practice-step-btn disabled" onclick="comingSoon('Boiling')">
+        <span class="ps-icon">♨️</span>
+        <div class="ps-text">
+          <div class="ps-title">Boiling <span class="ps-soon">Coming Soon</span></div>
+          <div class="ps-desc">Turn the stove to 9 and wait for the boil. Don't burn it!</div>
+        </div>
+        <span class="ps-arrow">›</span>
+      </button>
+
+      <button class="practice-step-btn disabled" onclick="comingSoon('Seasoning')">
+        <span class="ps-icon">🧂</span>
+        <div class="ps-text">
+          <div class="ps-title">Seasoning <span class="ps-soon">Coming Soon</span></div>
+          <div class="ps-desc">Drain, then add salt, pepper & butter in the right order.</div>
+        </div>
+        <span class="ps-arrow">›</span>
+      </button>
+
+      <button class="practice-step-btn disabled" onclick="comingSoon('Mashing')">
+        <span class="ps-icon">🥣</span>
+        <div class="ps-text">
+          <div class="ps-title">Mashing <span class="ps-soon">Coming Soon</span></div>
+          <div class="ps-desc">Mash until fluffy! The final and most satisfying step.</div>
+        </div>
+        <span class="ps-arrow">›</span>
+      </button>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN: HOST SETUP ===== -->
+<div class="screen hidden" id="screen-host-setup">
+  <button class="back-btn" onclick="showScreen('screen-landing')">← Back</button>
+  <div class="panel">
+    <div class="panel-title">🏠 Host a Game</div>
+    <div class="input-group">
+      <label>Your Name</label>
+      <input type="text" id="host-name-input" placeholder="Chef Potato..." maxlength="16">
+    </div>
+    <div class="input-group">
+      <label>Max Players</label>
+      <select id="max-players-select" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,220,100,0.25);border-radius:12px;padding:14px 16px;color:var(--text-light);font-family:var(--ui-font);font-size:1.1rem;font-weight:600;width:100%;outline:none;cursor:pointer;">
+        <option value="2">2 Players</option>
+        <option value="3">3 Players</option>
+        <option value="4" selected>4 Players</option>
+      </select>
+    </div>
+    <div class="error-msg" id="host-error"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="hostGame()">🥔 Create Room</button>
+  </div>
+</div>
+
+<!-- ===== SCREEN: LOBBY (HOST) ===== -->
+<div class="screen hidden" id="screen-lobby-host">
+  <button class="back-btn" onclick="leaveGame()">← Leave</button>
+  <div class="panel" style="max-width:480px;">
+    <div class="panel-title">🎮 Waiting Room</div>
+    <div style="text-align:center;font-size:0.8rem;color:rgba(255,243,208,0.5);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Room Code</div>
+    <div class="room-code-display" id="room-code-display">----</div>
+    <div style="text-align:center;font-size:0.8rem;color:rgba(255,243,208,0.45);margin-bottom:16px;">Share this code with your friends!</div>
+    <div class="player-slots" id="lobby-player-slots"></div>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-ghost btn-small" style="flex:1;" onclick="copyRoomCode()">📋 Copy Code</button>
+      <button class="btn btn-primary" style="flex:2;" id="start-game-btn" onclick="hostStartGame()">🚀 Start Race!</button>
+    </div>
+    <div style="text-align:center;font-size:0.8rem;color:rgba(255,243,208,0.35);margin-top:12px;">Need at least 1 player to start</div>
+  </div>
+</div>
+
+<!-- ===== SCREEN: JOIN ===== -->
+<div class="screen hidden" id="screen-join">
+  <button class="back-btn" onclick="showScreen('screen-landing')">← Back</button>
+  <div class="panel">
+    <div class="panel-title">🚪 Join a Game</div>
+    <div class="input-group">
+      <label>Your Name</label>
+      <input type="text" id="join-name-input" placeholder="Spud Whisperer..." maxlength="16">
+    </div>
+    <div class="input-group">
+      <label>Room Code</label>
+      <input type="text" id="join-code-input" placeholder="ABCD" maxlength="4" style="text-transform:uppercase;letter-spacing:4px;font-size:1.5rem;text-align:center;">
+    </div>
+    <div class="error-msg" id="join-error"></div>
+    <button class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="joinGame()">🥔 Join Room</button>
+  </div>
+</div>
+
+<!-- ===== SCREEN: LOBBY (PLAYER) ===== -->
+<div class="screen hidden" id="screen-lobby-player">
+  <button class="back-btn" onclick="leaveGame()">← Leave</button>
+  <div class="panel">
+    <div class="panel-title">⏳ Getting Ready...</div>
+    <div style="text-align:center;font-size:0.85rem;color:rgba(255,243,208,0.5);margin-bottom:12px;">Room</div>
+    <div class="room-code-display" id="player-room-code-display">----</div>
+    <div class="player-slots" id="player-lobby-slots"></div>
+    <div style="text-align:center;margin-top:20px;">
+      <div style="font-size:2rem;" class="spinning">⚙️</div>
+      <div style="font-size:0.9rem;color:rgba(255,243,208,0.5);margin-top:8px;font-weight:600;">Waiting for host to start...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN: COUNTDOWN ===== -->
+<div class="screen hidden" id="screen-countdown">
+  <div style="text-align:center;">
+    <div style="font-family:var(--display-font);font-size:1.2rem;color:rgba(255,243,208,0.6);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;">Race starts in</div>
+    <div id="countdown-number" style="font-family:var(--display-font);font-size:clamp(6rem,20vw,12rem);color:var(--potato-light);text-shadow:0 0 60px rgba(232,201,122,0.5);line-height:1;transition:transform 0.1s;">3</div>
+    <div style="font-size:1.5rem;margin-top:16px;">🥔🥔🥔</div>
+  </div>
+</div>
+
+<!-- ===== SCREEN: GAME ===== -->
+<div class="screen hidden" id="screen-game">
+  <div class="game-hud">
+    <div class="hud-timer" id="hud-timer">0:00.0</div>
+    <div class="hud-step">
+      <span id="hud-step-label">Step 1/6</span>
+      <strong id="hud-step-name">Peel the Potatoes</strong>
+    </div>
+    <div class="hud-players" id="hud-players"></div>
+  </div>
+  <div class="game-area" id="game-area">
+    <!-- Dynamic content inserted here -->
+  </div>
+  <!-- Race sidebar -->
+  <div class="race-sidebar" id="race-sidebar"></div>
+</div>
+
+<!-- ===== SCREEN: FINISH ===== -->
+<div class="screen hidden" id="screen-finish">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:20px;">
+    <div class="finish-title">🥔 MASH COMPLETE! 🥔</div>
+    <div id="finish-message" style="font-size:1.1rem;color:rgba(255,243,208,0.7);font-weight:700;"></div>
+    <div class="finish-time" id="finish-time">0:00.0</div>
+    <div class="results-list" id="results-list"></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
+      <button class="btn btn-primary" onclick="playAgain()">🔄 Play Again</button>
+      <button class="btn btn-ghost" onclick="showScreen('screen-landing')">🏠 Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  CONSTANTS & CONFIG
+// ============================================================
+const AVATARS = ['🥔','👨‍🍳','👩‍🍳','🍴','🥄','🫙','🧅','🫛'];
+const PLAYER_COLORS = ['#e8c97a','#a8e6a0','#87CEEB','#FFB6C1'];
+const CHANNEL_NAME = 'potato-mash-bash';
+const TOTAL_POTATOES = 2;
+const PEEL_SECTIONS = 24; // segments around potato
+const PEEL_ROWS = 8;      // vertical bands
+const TOTAL_PEELS = PEEL_SECTIONS * PEEL_ROWS;
+const PEELS_NEEDED_RATIO = 0.88; // 88% peeled = done
+
+// ============================================================
+//  STATE
+// ============================================================
+let gameState = {
+  mode: null,           // 'host' | 'player' | 'solo'
+  roomCode: null,
+  myName: null,
+  myId: null,
+  players: [],          // [{id, name, avatar, isHost, color, progress}]
+  gameStarted: false,
+  // Peeling
+  currentPotatoIndex: 0,
+  peelMap: null,        // 2D array [row][section] = true/false
+  peelCount: 0,
+  potatosDone: 0,
+  // Timer
+  raceStart: null,
+  timerInterval: null,
+  raceEnd: null,
+  finished: false,
+};
+
+let channel = null; // BroadcastChannel
+
+// ============================================================
+//  UTILITIES
+// ============================================================
+function uid() {
+  return Math.random().toString(36).slice(2,9);
+}
+function genRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:4}, ()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.toggle('hidden', s.id !== id);
+  });
+}
+function toast(msg, duration=2800) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(), duration+300);
+}
+function fmt(ms) {
+  const s = Math.floor(ms/1000);
+  const m = Math.floor(s/60);
+  const sec = s%60;
+  const dec = Math.floor((ms%1000)/100);
+  return `${m}:${String(sec).padStart(2,'0')}.${dec}`;
+}
+
+// ============================================================
+//  BROADCAST CHANNEL (multiplayer sync)
+// ============================================================
+function setupChannel() {
+  if (channel) { channel.close(); }
+  channel = new BroadcastChannel(CHANNEL_NAME);
+  channel.onmessage = (e) => handleChannelMessage(e.data);
+}
+
+function broadcast(type, data={}) {
+  if (!channel) return;
+  channel.postMessage({ type, from: gameState.myId, roomCode: gameState.roomCode, ...data });
+}
+
+function handleChannelMessage(msg) {
+  if (msg.roomCode !== gameState.roomCode) return;
+  if (msg.from === gameState.myId) return;
+
+  switch(msg.type) {
+    case 'PLAYER_JOIN':
+      if (gameState.mode === 'host') {
+        // Add player to list
+        const exists = gameState.players.find(p=>p.id===msg.from);
+        if (!exists && gameState.players.length < parseInt(document.getElementById('max-players-select')?.value||4)) {
+          const newPlayer = {
+            id: msg.from, name: msg.playerName,
+            avatar: AVATARS[gameState.players.length % AVATARS.length],
+            isHost: false, color: PLAYER_COLORS[gameState.players.length],
+            progress: 0, step: 0
+          };
+          gameState.players.push(newPlayer);
+          updateLobbyUI();
+          broadcast('LOBBY_STATE', { players: gameState.players });
+          toast(`${msg.playerName} joined! 🥔`);
+        }
+      }
+      break;
+
+    case 'LOBBY_STATE':
+      if (gameState.mode === 'player') {
+        gameState.players = msg.players;
+        updatePlayerLobbyUI();
+      }
+      break;
+
+    case 'GAME_START':
+      if (gameState.mode === 'player') {
+        gameState.players = msg.players;
+        startCountdown();
+      }
+      break;
+
+    case 'PLAYER_PROGRESS':
+      // Update another player's progress in race sidebar
+      const p = gameState.players.find(pl=>pl.id===msg.from);
+      if (p) {
+        p.progress = msg.progress;
+        p.step = msg.step;
+        updateRaceSidebar();
+      }
+      break;
+
+    case 'PLAYER_FINISHED':
+      const fp = gameState.players.find(pl=>pl.id===msg.from);
+      if (fp) {
+        fp.finishTime = msg.finishTime;
+        fp.finishRank = msg.rank;
+      }
+      updateRaceSidebar();
+      toast(`${msg.playerName} finished! ${fmt(msg.finishTime)} 🏁`);
+      break;
+  }
+}
+
+// ============================================================
+//  LOBBY
+// ============================================================
+function hostGame() {
+  const name = document.getElementById('host-name-input').value.trim();
+  if (!name) { document.getElementById('host-error').textContent = 'Please enter your name!'; return; }
+  document.getElementById('host-error').textContent = '';
+
+  gameState.mode = 'host';
+  gameState.myId = uid();
+  gameState.myName = name;
+  gameState.roomCode = genRoomCode();
+  gameState.players = [{
+    id: gameState.myId, name, avatar: AVATARS[0],
+    isHost: true, color: PLAYER_COLORS[0], progress: 0, step: 0
+  }];
+
+  setupChannel();
+  document.getElementById('room-code-display').textContent = gameState.roomCode;
+  updateLobbyUI();
+  showScreen('screen-lobby-host');
+}
+
+function joinGame() {
+  const name = document.getElementById('join-name-input').value.trim();
+  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+  if (!name) { document.getElementById('join-error').textContent = 'Please enter your name!'; return; }
+  if (code.length !== 4) { document.getElementById('join-error').textContent = 'Enter a 4-letter room code!'; return; }
+  document.getElementById('join-error').textContent = '';
+
+  gameState.mode = 'player';
+  gameState.myId = uid();
+  gameState.myName = name;
+  gameState.roomCode = code;
+  gameState.players = [];
+
+  setupChannel();
+  document.getElementById('player-room-code-display').textContent = code;
+
+  // Announce to host
+  broadcast('PLAYER_JOIN', { playerName: name });
+  updatePlayerLobbyUI();
+  showScreen('screen-lobby-player');
+  toast('Joined! Waiting for host... 🥔');
+}
+
+function startSolo() {
+  gameState.mode = 'solo';
+  gameState.myId = uid();
+  gameState.myName = 'You';
+  gameState.roomCode = genRoomCode();
+  gameState.players = [{
+    id: gameState.myId, name: 'You', avatar: '🥔',
+    isHost: true, color: PLAYER_COLORS[0], progress: 0, step: 0
+  }];
+  startCountdown();
+}
+
+function hostStartGame() {
+  if (gameState.players.length < 1) { toast('Need players to start!'); return; }
+  broadcast('GAME_START', { players: gameState.players });
+  startCountdown();
+}
+
+function leaveGame() {
+  if (channel) { channel.close(); channel = null; }
+  practiceMode = false; practiceStep = null;
+  document.querySelectorAll('.practice-banner').forEach(e=>e.remove());
+  if (peelState.animRAF) { cancelAnimationFrame(peelState.animRAF); peelState.animRAF = null; }
+  if (cutState.animRAF)  { cancelAnimationFrame(cutState.animRAF);  cutState.animRAF = null; }
+  gameState = { mode:null, roomCode:null, myName:null, myId:null, players:[], gameStarted:false,
+    currentPotatoIndex:0, peelMap:null, peelCount:0, potatosDone:0, raceStart:null, timerInterval:null, raceEnd:null, finished:false };
+  showScreen('screen-landing');
+}
+
+function copyRoomCode() {
+  navigator.clipboard?.writeText(gameState.roomCode).then(()=>toast('Room code copied! 📋'));
+}
+
+function updateLobbyUI() {
+  const maxP = parseInt(document.getElementById('max-players-select')?.value||4);
+  const slots = document.getElementById('lobby-player-slots');
+  if (!slots) return;
+  slots.innerHTML = '';
+  for (let i=0; i<maxP; i++) {
+    const p = gameState.players[i];
+    const el = document.createElement('div');
+    el.className = 'player-slot' + (p ? ' filled' : '');
+    if (p) {
+      el.innerHTML = `
+        <span class="slot-avatar">${p.avatar}</span>
+        <span class="slot-name">${p.name}${p.id===gameState.myId?' (You)':''}</span>
+        <span class="slot-status ${p.isHost?'host':'joined'}">${p.isHost?'Host':'Ready'}</span>
+      `;
+    } else {
+      el.innerHTML = `<span class="slot-avatar" style="opacity:0.3">👤</span><span class="slot-name" style="color:rgba(255,255,255,0.25)">Waiting...</span><span class="slot-status waiting">Empty</span>`;
+    }
+    slots.appendChild(el);
+  }
+}
+
+function updatePlayerLobbyUI() {
+  const slots = document.getElementById('player-lobby-slots');
+  if (!slots) return;
+  slots.innerHTML = '';
+  gameState.players.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'player-slot filled';
+    el.innerHTML = `
+      <span class="slot-avatar">${p.avatar}</span>
+      <span class="slot-name">${p.name}${p.id===gameState.myId?' (You)':''}</span>
+      <span class="slot-status ${p.isHost?'host':'joined'}">${p.isHost?'Host':'Joined'}</span>
+    `;
+    slots.appendChild(el);
+  });
+}
+
+// ============================================================
+//  PRACTICE MODE
+// ============================================================
+let practiceMode = false;
+let practiceStep = null;
+
+function startPractice(step) {
+  practiceMode = true;
+  practiceStep = step;
+
+  // Set up a minimal solo-style game state
+  gameState.mode = 'solo';
+  gameState.myId = uid();
+  gameState.myName = 'Practice';
+  gameState.roomCode = 'PRAC';
+  gameState.players = [{
+    id: gameState.myId, name: 'Practice', avatar: '🎓',
+    isHost: true, color: PLAYER_COLORS[0], progress: 0, step: 0
+  }];
+  gameState.gameStarted = true;
+  gameState.finished = false;
+  gameState.currentPotatoIndex = 0;
+  gameState.potatosDone = 0;
+  gameState.raceStart = performance.now();
+
+  showScreen('screen-game');
+  buildHUD();
+  buildRaceSidebar();
+  // Don't start timer visually in practice — show "PRACTICE" badge instead
+  injectPracticeBanner(step);
+
+  if (step === 'peel') {
+    document.getElementById('hud-timer').textContent = 'PRACTICE';
+    document.getElementById('hud-timer').style.fontSize = '1rem';
+    document.getElementById('hud-timer').style.color = '#a8e6a0';
+    loadPeelStep();
+  } else if (step === 'cut') {
+    document.getElementById('hud-timer').textContent = 'PRACTICE';
+    document.getElementById('hud-timer').style.fontSize = '1rem';
+    document.getElementById('hud-timer').style.color = '#a8e6a0';
+    loadCutStep();
+  }
+}
+
+function injectPracticeBanner(step) {
+  // Remove any existing
+  document.querySelectorAll('.practice-banner').forEach(e=>e.remove());
+  const stepNames = { peel: 'Peeling', cut: 'Cubing' };
+  const banner = document.createElement('div');
+  banner.className = 'practice-banner';
+  banner.innerHTML = `
+    <span>🎓 Practice Mode — ${stepNames[step]||step}</span>
+    <button onclick="exitPractice()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff8e7;border-radius:8px;padding:4px 12px;font-family:var(--ui-font);font-size:0.8rem;font-weight:700;cursor:pointer;">✕ Exit</button>
+  `;
+  document.body.appendChild(banner);
+}
+
+function exitPractice() {
+  practiceMode = false;
+  practiceStep = null;
+  if (peelState.animRAF) { cancelAnimationFrame(peelState.animRAF); peelState.animRAF = null; }
+  if (cutState.animRAF)  { cancelAnimationFrame(cutState.animRAF);  cutState.animRAF = null; }
+  document.querySelectorAll('.practice-banner').forEach(e=>e.remove());
+  // Reset HUD timer style
+  const timer = document.getElementById('hud-timer');
+  if (timer) { timer.style.fontSize = ''; timer.style.color = ''; }
+  // Reset game state
+  gameState = { mode:null, roomCode:null, myName:null, myId:null, players:[], gameStarted:false,
+    currentPotatoIndex:0, peelMap:null, peelCount:0, potatosDone:0, raceStart:null, timerInterval:null, raceEnd:null, finished:false };
+  showScreen('screen-practice');
+}
+
+function comingSoon(name) {
+  toast(`${name} practice coming soon! 🥔`);
+}
+
+// Override the race-finish behaviour in practice mode
+const _origOnRaceFinished = typeof onRaceFinished !== 'undefined' ? onRaceFinished : null;
+
+// ============================================================
+//  COUNTDOWN & START
+// ============================================================
+function startCountdown() {
+  showScreen('screen-countdown');
+  let count = 3;
+  const numEl = document.getElementById('countdown-number');
+  numEl.textContent = count;
+
+  const interval = setInterval(() => {
+    count--;
+    if (count > 0) {
+      numEl.style.transform = 'scale(1.3)';
+      setTimeout(()=>numEl.style.transform='scale(1)', 100);
+      numEl.textContent = count;
+    } else if (count === 0) {
+      numEl.textContent = 'GO!';
+      numEl.style.color = '#a8e6a0';
+      numEl.style.transform = 'scale(1.4)';
+    } else {
+      clearInterval(interval);
+      beginGame();
+    }
+  }, 1000);
+}
+
+// ============================================================
+//  GAME START
+// ============================================================
+function beginGame() {
+  gameState.gameStarted = true;
+  gameState.finished = false;
+  gameState.currentPotatoIndex = 0;
+  gameState.potatosDone = 0;
+  gameState.raceStart = performance.now();
+
+  showScreen('screen-game');
+  buildHUD();
+  buildRaceSidebar();
+  startTimer();
+  loadPeelStep();
+}
+
+function startTimer() {
+  if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+  gameState.timerInterval = setInterval(() => {
+    if (gameState.finished) return;
+    const elapsed = performance.now() - gameState.raceStart;
+    document.getElementById('hud-timer').textContent = fmt(elapsed);
+  }, 100);
+}
+
+function buildHUD() {
+  const hud = document.getElementById('hud-players');
+  hud.innerHTML = '';
+  gameState.players.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'hud-player' + (p.id===gameState.myId?' is-you':'');
+    el.id = `hud-player-${p.id}`;
+    el.innerHTML = `<span class="avatar">${p.avatar}</span><span>${p.name.slice(0,8)}</span>`;
+    hud.appendChild(el);
+  });
+}
+
+function buildRaceSidebar() {
+  const sb = document.getElementById('race-sidebar');
+  sb.innerHTML = '';
+  if (gameState.players.length <= 1) { sb.style.display='none'; return; }
+  sb.style.display='flex';
+
+  gameState.players.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'race-player-row' + (p.id===gameState.myId?' is-you':'');
+    el.id = `race-row-${p.id}`;
+    el.innerHTML = `
+      <span>${p.avatar}</span>
+      <span style="font-size:0.75rem;flex:0 0 auto;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name.slice(0,8)}</span>
+      <div class="race-bar-wrap"><div class="race-bar-fill" id="race-bar-${p.id}" style="width:0%;background:${p.color}"></div></div>
+    `;
+    sb.appendChild(el);
+  });
+}
+
+function updateRaceSidebar() {
+  gameState.players.forEach(p => {
+    const bar = document.getElementById(`race-bar-${p.id}`);
+    if (bar) bar.style.width = Math.min(100, (p.progress||0)*100)+'%';
+  });
+}
+
+function broadcastMyProgress(progress, step) {
+  const me = gameState.players.find(p=>p.id===gameState.myId);
+  if (me) { me.progress=progress; me.step=step; }
+  updateRaceSidebar();
+  broadcast('PLAYER_PROGRESS', { progress, step });
+}
+
+// ============================================================
+//  STEP: PEEL POTATOES
+// ============================================================
+function loadPeelStep() {
+  document.getElementById('hud-step-label').textContent = 'Step 1/6';
+  document.getElementById('hud-step-name').textContent = 'Peel the Potatoes';
+
+  const area = document.getElementById('game-area');
+  area.innerHTML = `
+    <div class="peel-workspace">
+      <div class="potato-progress" id="potato-progress"></div>
+      <div class="canvas-wrapper" id="canvas-wrapper">
+        <canvas id="potatoCanvas" width="380" height="300"></canvas>
+      </div>
+      <div class="peel-progress-bar-wrap">
+        <div class="peel-progress-label">
+          <span>Peeled</span>
+          <span id="peel-pct-label">0%</span>
+        </div>
+        <div class="peel-progress-bar">
+          <div class="peel-progress-fill" id="peel-progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="peel-instructions">
+        <strong>🥔 Peel Potato ${gameState.currentPotatoIndex+1} of ${TOTAL_POTATOES}</strong><br>
+        Click and drag across the potato to peel it!<br>
+        Peel at least 88% to move to the next one.
+      </div>
+      <div class="peeling-hint">
+        <span class="hint-icon">💡</span>
+        <span>Hold and drag to peel in one stroke</span>
+      </div>
+    </div>
+  `;
+
+  renderPotatoThumbs();
+  initPeelPotato();
+}
+
+function renderPotatoThumbs() {
+  const prog = document.getElementById('potato-progress');
+  if (!prog) return;
+  prog.innerHTML = '';
+  for (let i=0; i<TOTAL_POTATOES; i++) {
+    const el = document.createElement('div');
+    el.className = 'potato-thumb' + 
+      (i < gameState.potatosDone ? ' done' : '') +
+      (i === gameState.currentPotatoIndex && i >= gameState.potatosDone ? ' active' : '');
+    el.textContent = i < gameState.potatosDone ? '✅' : '🥔';
+    prog.appendChild(el);
+  }
+}
+
+// ---- POTATO CANVAS ENGINE ----
+let peelState = {
+  peelMap: null,    // [row][section] peeled?
+  rotX: -0.3,       // pitch (tilt)
+  rotY: 0,          // yaw (spin)
+  isDragging: false,
+  lastMX: 0, lastMY: 0,
+  isPeeling: false,
+  peelCount: 0,
+  animRAF: null,
+  canvas: null, ctx: null,
+  w: 380, h: 300,
+  cx: 190, cy: 155,
+  rx: 120, ry: 85,  // potato ellipse radii
+  // Peel stroke accumulation
+  peelStrokePoints: [],
+};
+
+function initPeelPotato() {
+  peelState.peelMap = Array.from({length:PEEL_ROWS}, ()=>new Array(PEEL_SECTIONS).fill(false));
+  peelState.peelCount = 0;
+  peelState.rotY = 0;
+  peelState.rotX = -0.3;
+  peelState.isDragging = false;
+  peelState.isPeeling = false;
+  peelState.peelStrokePoints = [];
+
+  const canvas = document.getElementById('potatoCanvas');
+  if (!canvas) return;
+  peelState.canvas = canvas;
+  peelState.ctx = canvas.getContext('2d');
+
+  // Resize canvas for screen
+  const maxW = Math.min(380, window.innerWidth - 40);
+  const scale = maxW / 380;
+  canvas.style.width = maxW+'px';
+  canvas.style.height = (300*scale)+'px';
+
+  canvas.addEventListener('mousedown', onPeelStart);
+  canvas.addEventListener('mousemove', onPeelMove);
+  canvas.addEventListener('mouseup', onPeelEnd);
+  canvas.addEventListener('mouseleave', onPeelEnd);
+  canvas.addEventListener('touchstart', onPeelTouchStart, {passive:false});
+  canvas.addEventListener('touchmove', onPeelTouchMove, {passive:false});
+  canvas.addEventListener('touchend', onPeelEnd);
+
+  if (peelState.animRAF) cancelAnimationFrame(peelState.animRAF);
+  renderPeelFrame();
+}
+
+function onPeelStart(e) {
+  e.preventDefault();
+  const pos = getCanvasPos(e);
+  const hit = hitTestPotato(pos.x, pos.y);
+  if (hit) {
+    peelState.isPeeling = true;
+    peelState.peelStrokePoints = [pos];
+    applyPeelAt(pos.x, pos.y);
+  } else {
+    // Rotation mode
+    peelState.isDragging = true;
+    peelState.lastMX = pos.x;
+    peelState.lastMY = pos.y;
+  }
+}
+
+function onPeelMove(e) {
+  const pos = getCanvasPos(e);
+  // Update custom cursor
+  const cursorEl = document.getElementById('cursor');
+  if (peelState.isPeeling) {
+    cursorEl.textContent = '🔪';
+    applyPeelAt(pos.x, pos.y);
+    peelState.peelStrokePoints.push(pos);
+  } else if (peelState.isDragging) {
+    cursorEl.textContent = '✋';
+    const dx = pos.x - peelState.lastMX;
+    const dy = pos.y - peelState.lastMY;
+    peelState.rotY += dx * 0.012;
+    peelState.rotX += dy * 0.008;
+    peelState.rotX = Math.max(-1.2, Math.min(1.2, peelState.rotX));
+    peelState.lastMX = pos.x;
+    peelState.lastMY = pos.y;
+  } else {
+    const hit = hitTestPotato(pos.x, pos.y);
+    cursorEl.textContent = hit ? '🔪' : '🤚';
+  }
+}
+
+function onPeelEnd() {
+  peelState.isDragging = false;
+  peelState.isPeeling = false;
+  peelState.peelStrokePoints = [];
+  document.getElementById('cursor').textContent = '🥔';
+}
+
+function onPeelTouchStart(e) {
+  e.preventDefault();
+  onPeelStart(e.touches[0]);
+}
+function onPeelTouchMove(e) {
+  e.preventDefault();
+  onPeelMove(e.touches[0]);
+}
+
+function getCanvasPos(e) {
+  const rect = peelState.canvas.getBoundingClientRect();
+  const scaleX = peelState.w / rect.width;
+  const scaleY = peelState.h / rect.height;
+  const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+  const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+  return {
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top) * scaleY
+  };
+}
+
+function hitTestPotato(x, y) {
+  const dx = (x - peelState.cx) / peelState.rx;
+  const dy = (y - peelState.cy) / peelState.ry;
+  return dx*dx + dy*dy <= 1;
+}
+
+// Convert screen point to surface (row, section) 
+function screenToSurface(x, y) {
+  const nx = (x - peelState.cx) / peelState.rx;
+  const ny = (y - peelState.cy) / peelState.ry;
+  const dist = Math.sqrt(nx*nx + ny*ny);
+  if (dist > 1) return null;
+
+  // The "depth" into the sphere
+  const nz = Math.sqrt(Math.max(0, 1 - nx*nx - ny*ny));
+
+  // Reverse the rotX tilt to get object-space coords
+  const cosX = Math.cos(-peelState.rotX);
+  const sinX = Math.sin(-peelState.rotX);
+  const oy = ny * cosX - nz * sinX;
+  const oz = ny * sinX + nz * cosX;
+
+  // oy is the vertical parameter
+  const row = Math.floor(((oy + 1) / 2) * PEEL_ROWS);
+  const clampedRow = Math.max(0, Math.min(PEEL_ROWS-1, row));
+
+  // For section, we need the angle on the horizontal circle
+  // rotY affects which part is facing us
+  const angle = Math.atan2(nx, oz) + peelState.rotY;
+  const normalAngle = ((angle % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
+  const section = Math.floor(normalAngle / (Math.PI*2) * PEEL_SECTIONS);
+  const clampedSection = Math.max(0, Math.min(PEEL_SECTIONS-1, section));
+
+  return { row: clampedRow, section: clampedSection };
+}
+
+function applyPeelAt(x, y) {
+  const surf = screenToSurface(x, y);
+  if (!surf) return;
+  const { row, section } = surf;
+
+  // Peel a small patch around the contact point
+  const patchR = 1;
+  const patchS = 2;
+  let anyNew = false;
+
+  for (let dr=-patchR; dr<=patchR; dr++) {
+    for (let ds=-patchS; ds<=patchS; ds++) {
+      const r = Math.max(0, Math.min(PEEL_ROWS-1, row+dr));
+      const s = ((section+ds) + PEEL_SECTIONS) % PEEL_SECTIONS;
+      if (!peelState.peelMap[r][s]) {
+        peelState.peelMap[r][s] = true;
+        peelState.peelCount++;
+        anyNew = true;
+      }
+    }
+  }
+
+  if (anyNew) {
+    const pct = peelState.peelCount / TOTAL_PEELS;
+    updatePeelProgress(pct);
+    broadcastMyProgress(
+      (gameState.potatosDone + pct) / TOTAL_POTATOES * 0.333,
+      1
+    );
+    if (pct >= PEELS_NEEDED_RATIO) {
+      onPotatoPeeled();
+    }
+  }
+}
+
+function updatePeelProgress(pct) {
+  const fill = document.getElementById('peel-progress-fill');
+  const label = document.getElementById('peel-pct-label');
+  if (fill) fill.style.width = Math.min(100, pct*100).toFixed(1)+'%';
+  if (label) label.textContent = Math.min(100, Math.floor(pct*100))+'%';
+}
+
+function onPotatoPeeled() {
+  gameState.potatosDone++;
+  toast(`Potato ${gameState.potatosDone} peeled! ✨`);
+
+  if (gameState.potatosDone >= TOTAL_POTATOES) {
+    // All potatoes peeled
+    if (peelState.animRAF) { cancelAnimationFrame(peelState.animRAF); peelState.animRAF = null; }
+    setTimeout(() => {
+      if (practiceMode) {
+        toast('Perfect peeling! Starting again... 🥔');
+        // Reset and loop
+        gameState.currentPotatoIndex = 0;
+        gameState.potatosDone = 0;
+        peelState.peelMap = Array.from({length:PEEL_ROWS}, ()=>new Array(PEEL_SECTIONS).fill(false));
+        peelState.peelCount = 0;
+        loadPeelStep();
+      } else {
+        toast('All potatoes peeled! 🎉 Now cube them!');
+        loadCutStep();
+      }
+    }, 600);
+    return;
+  }
+
+  // Move to next potato
+  gameState.currentPotatoIndex++;
+  peelState.peelMap = Array.from({length:PEEL_ROWS}, ()=>new Array(PEEL_SECTIONS).fill(false));
+  peelState.peelCount = 0;
+
+  // Flash effect
+  const canvas = peelState.canvas;
+  if (canvas) {
+    canvas.style.transition = 'opacity 0.2s';
+    canvas.style.opacity = '0';
+    setTimeout(() => {
+      canvas.style.opacity = '1';
+      renderPotatoThumbs();
+      updatePeelProgress(0);
+      // Update instructions
+      const inst = document.querySelector('.peel-instructions');
+      if (inst) inst.innerHTML = `<strong>🥔 Peel Potato ${gameState.currentPotatoIndex+1} of ${TOTAL_POTATOES}</strong><br>Click and drag across the potato to peel it!<br>Peel at least 88% to move to the next one.`;
+    }, 220);
+  }
+}
+
+// ---- RENDERING ----
+function renderPeelFrame() {
+  peelState.animRAF = requestAnimationFrame(renderPeelFrame);
+  const { ctx, w, h, cx, cy, rx, ry, rotX, rotY, peelMap } = peelState;
+  if (!ctx) return;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Draw potato with 3D peel effect
+  drawPotato3D(ctx, cx, cy, rx, ry, rotX, rotY, peelMap);
+}
+
+function drawPotato3D(ctx, cx, cy, rx, ry, rotX, rotY, peelMap) {
+  // We rasterize the potato surface by projecting a sphere
+  // Each pixel: determine surface coordinates, look up peel map
+
+  const W = Math.ceil(rx*2)+10;
+  const H = Math.ceil(ry*2)+10;
+  const startX = cx - rx - 5;
+  const startY = cy - ry - 5;
+
+  // Create imagedata for the potato
+  const imgData = ctx.createImageData(W, H);
+  const data = imgData.data;
+
+  const cosX = Math.cos(rotX);
+  const sinX = Math.sin(rotX);
+
+  for (let py=0; py<H; py++) {
+    for (let px=0; px<W; px++) {
+      const nx = (px + startX - cx) / rx;
+      const ny = (py + startY - cy) / ry;
+      const d2 = nx*nx + ny*ny;
+      if (d2 > 1) continue;
+
+      const nz = Math.sqrt(1 - d2);
+
+      // Rotate by rotX (vertical tilt)
+      const oy = ny*cosX - nz*sinX;
+      const oz = ny*sinX + nz*cosX;
+
+      // Row in peel map
+      const rowF = (oy + 1) / 2 * PEEL_ROWS;
+      const row = Math.max(0, Math.min(PEEL_ROWS-1, Math.floor(rowF)));
+
+      // Angle for section
+      const angle = Math.atan2(nx, oz) + rotY;
+      const normalAngle = ((angle % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
+      const section = Math.max(0, Math.min(PEEL_SECTIONS-1, Math.floor(normalAngle / (Math.PI*2) * PEEL_SECTIONS)));
+
+      const peeled = peelMap[row][section];
+
+      // Lighting: simple diffuse from top-left
+      // Light direction in world space
+      const lx=0.5, ly=-0.6, lz=0.6;
+      // Surface normal in world space (inverse rotation)
+      const wnx = nx;
+      const wny = ny * cosX + nz * sinX;  // approximate
+      const wnz = -ny * sinX + nz * cosX;
+      const diff = Math.max(0, lx*wnx + ly*wny + lz*wnz);
+      const spec = Math.pow(Math.max(0, wnz), 16) * 0.4;
+      const ambient = 0.25;
+      const light = ambient + diff*0.7 + spec;
+
+      let r, g, b;
+      if (peeled) {
+        // Peeled: creamy flesh
+        r = Math.min(255, 245*light + 8);
+        g = Math.min(255, 225*light + 5);
+        b = Math.min(255, 185*light);
+        // Add subtle skin-edge effect near peel boundary
+        // Check if adjacent sections are unpeeled
+        const adjS1 = (section+1)%PEEL_SECTIONS;
+        const adjS2 = (section-1+PEEL_SECTIONS)%PEEL_SECTIONS;
+        const adjR1 = Math.max(0,row-1), adjR2 = Math.min(PEEL_ROWS-1,row+1);
+        if (!peelMap[row][adjS1]||!peelMap[row][adjS2]||!peelMap[adjR1][section]||!peelMap[adjR2][section]) {
+          // Edge of peel — slightly darker/tan
+          r = Math.min(255, r*0.88 + 20);
+          g = Math.min(255, g*0.82 + 10);
+          b = Math.min(255, b*0.65);
+        }
+      } else {
+        // Unpeeled: brown potato skin
+        // Add texture variation using row/section patterning
+        const noise = (Math.sin(row*3.7+section*2.3)*0.5+0.5)*0.15;
+        const brown = 0.85 + noise;
+        r = Math.min(255, 165*brown*light);
+        g = Math.min(255, 105*brown*light);
+        b = Math.min(255, 30*brown*light);
+        // Add skin speckles
+        const speckle = Math.sin(row*11.3)*Math.cos(section*7.7);
+        if (speckle > 0.85) {
+          r = Math.min(255, r * 0.6);
+          g = Math.min(255, g * 0.55);
+          b = Math.min(255, b * 0.5);
+        }
+        if (speckle < -0.88) {
+          r = Math.min(255, r * 1.3);
+          g = Math.min(255, g * 1.2);
+          b = Math.min(255, b * 0.9);
+        }
+      }
+
+      const idx = (py*W + px)*4;
+      data[idx]   = r;
+      data[idx+1] = g;
+      data[idx+2] = b;
+      data[idx+3] = 255;
+    }
+  }
+
+  ctx.putImageData(imgData, startX, startY);
+
+  // Draw silhouette stroke for depth
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(80,50,10,0.35)';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  ctx.restore();
+
+  // Draw subtle peel-strip effect when peeling
+  if (peelState.isPeeling && peelState.peelStrokePoints.length > 1) {
+    ctx.save();
+    ctx.beginPath();
+    const pts = peelState.peelStrokePoints;
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.strokeStyle = 'rgba(245,230,200,0.5)';
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Draw rotation hint arrows
+  const prog = peelState.peelCount / TOTAL_PEELS;
+  if (prog < 0.15) {
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    // Left arrow
+    ctx.fillStyle = '#fff8e7';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText('←', startX - 28, cy + 8);
+    ctx.fillText('→', startX + W + 4, cy + 8);
+    ctx.restore();
+  }
+}
+
+// ============================================================
+//  STEP: CUT POTATOES (CUBING)
+// ============================================================
+// Each potato: 4 horizontal cuts + 4 vertical cuts = 8 cuts per potato
+// The potato is shown flat as a peeled oval on a cutting board.
+// Ghost lines appear when hovering — click to make the cut.
+// Cut lines accumulate; once all 8 are done, potato splits into chunks.
+
+const CUT_H_NEEDED = 4;  // horizontal
+const CUT_V_NEEDED = 4;  // vertical
+
+let cutState = {
+  canvas: null, ctx: null,
+  animRAF: null,
+  currentPotatoIdx: 0,
+  potatosDone: 0,
+  // Cuts made (sorted positions 0..1 as fraction of potato dimension)
+  hCuts: [],   // y fractions
+  vCuts: [],   // x fractions
+  // Knife position for ghost line
+  mouseX: -1, mouseY: -1,
+  // Board geometry (set on init)
+  boardX: 0, boardY: 0, boardW: 0, boardH: 0,
+  // Potato geometry (oval on board)
+  potX: 0, potY: 0, potW: 0, potH: 0,
+  // Animated chunks after cut-complete
+  chunks: [],
+  chunksAnimating: false,
+  chunksDone: false,
+  // Knife animation state
+  knifeAnim: null,   // {x,y,t,dir}  t=0..1
+  cutLines: [],      // [{dir,pos,t}] for flash-in
+  // Drag for cut gesture
+  dragStart: null,
+  isDragging: false,
+};
+
+function loadCutStep() {
+  document.getElementById('hud-step-label').textContent = 'Step 2/6';
+  document.getElementById('hud-step-name').textContent = 'Cube the Potatoes';
+
+  const area = document.getElementById('game-area');
+  area.innerHTML = `
+    <div class="cut-workspace">
+      <div class="cut-top-row">
+        <div class="cut-board-wrap" id="cut-board-wrap">
+          <canvas id="cutCanvas" width="420" height="320"></canvas>
+        </div>
+        <div class="cut-panel">
+          <div class="cut-potato-thumbs" id="cut-potato-thumbs"></div>
+          <div class="cut-counts">
+            <div class="cut-count-row">
+              <span>↔ Horizontal</span>
+              <span class="cut-count-val" id="cut-h-count">0 / ${CUT_H_NEEDED}</span>
+            </div>
+            <div class="cut-count-row">
+              <span>↕ Vertical</span>
+              <span class="cut-count-val" id="cut-v-count">0 / ${CUT_V_NEEDED}</span>
+            </div>
+          </div>
+          <div class="cut-instructions">
+            <strong>🔪 Potato ${1} of ${TOTAL_POTATOES}</strong><br>
+            <span id="cut-inst-text">Draw a line across the potato to cut!<br>Need 4 horizontal + 4 vertical cuts.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Init cut state
+  cutState.currentPotatoIdx = 0;
+  cutState.potatosDone = 0;
+  resetCutPotato();
+  initCutCanvas();
+  renderCutPotatoThumbs();
+}
+
+function resetCutPotato() {
+  cutState.hCuts = [];
+  cutState.vCuts = [];
+  cutState.chunks = [];
+  cutState.chunksAnimating = false;
+  cutState.chunksDone = false;
+  cutState.cutLines = [];
+  cutState.knifeAnim = null;
+  cutState.dragStart = null;
+  cutState.isDragging = false;
+}
+
+function initCutCanvas() {
+  const canvas = document.getElementById('cutCanvas');
+  if (!canvas) return;
+
+  // Responsive sizing
+  const maxW = Math.min(420, window.innerWidth - 200);
+  const scale = maxW / 420;
+  canvas.style.width = maxW + 'px';
+  canvas.style.height = (320 * scale) + 'px';
+
+  cutState.canvas = canvas;
+  cutState.ctx = canvas.getContext('2d');
+
+  // Board geometry
+  cutState.boardX = 10; cutState.boardY = 10;
+  cutState.boardW = 400; cutState.boardH = 300;
+
+  // Potato oval geometry (centred on board)
+  cutState.potX = 70;  cutState.potY = 60;
+  cutState.potW = 280; cutState.potH = 190;
+
+  canvas.addEventListener('mousedown',  onCutMouseDown);
+  canvas.addEventListener('mousemove',  onCutMouseMove);
+  canvas.addEventListener('mouseup',    onCutMouseUp);
+  canvas.addEventListener('mouseleave', onCutMouseLeave);
+  canvas.addEventListener('touchstart', onCutTouchStart, {passive:false});
+  canvas.addEventListener('touchmove',  onCutTouchMove,  {passive:false});
+  canvas.addEventListener('touchend',   onCutTouchEnd);
+
+  if (cutState.animRAF) cancelAnimationFrame(cutState.animRAF);
+  cutAnimLoop();
+}
+
+// ---- canvas coordinate helpers ----
+function getCutCanvasPos(e) {
+  const canvas = cutState.canvas;
+  const rect = canvas.getBoundingClientRect();
+  const sx = 420 / rect.width;
+  const sy = 320 / rect.height;
+  const cx = (e.clientX ?? e.touches?.[0]?.clientX ?? 0) - rect.left;
+  const cy = (e.clientY ?? e.touches?.[0]?.clientY ?? 0) - rect.top;
+  return { x: cx * sx, y: cy * sy };
+}
+
+function isOverPotato(x, y) {
+  const { potX, potY, potW, potH } = cutState;
+  const cx = potX + potW/2, cy = potY + potH/2;
+  const dx = (x - cx) / (potW/2);
+  const dy = (y - cy) / (potH/2);
+  return dx*dx + dy*dy <= 1.04;
+}
+
+// Determine cut direction from drag vector
+function dragDirection(start, end) {
+  const dx = Math.abs(end.x - start.x);
+  const dy = Math.abs(end.y - start.y);
+  if (dx < 8 && dy < 8) return null; // too small
+  return dx >= dy ? 'h' : 'v';  // h=horizontal line, v=vertical line
+}
+
+// ---- event handlers ----
+function onCutMouseDown(e) {
+  if (cutState.chunksAnimating || cutState.chunksDone) return;
+  const pos = getCutCanvasPos(e);
+  cutState.dragStart = pos;
+  cutState.isDragging = true;
+}
+
+function onCutMouseMove(e) {
+  if (cutState.chunksAnimating) return;
+  const pos = getCutCanvasPos(e);
+  cutState.mouseX = pos.x;
+  cutState.mouseY = pos.y;
+
+  // Update cursor
+  const cursor = document.getElementById('cursor');
+  if (isOverPotato(pos.x, pos.y)) {
+    cursor.textContent = '🔪';
+    cursor.style.transform = 'translate(-50%,-50%) rotate(-45deg)';
+  } else {
+    cursor.textContent = '🤚';
+    cursor.style.transform = 'translate(-50%,-50%) rotate(0deg)';
+  }
+}
+
+function onCutMouseUp(e) {
+  if (!cutState.isDragging || cutState.chunksAnimating || cutState.chunksDone) { cutState.isDragging = false; return; }
+  const pos = getCutCanvasPos(e);
+  finaliseCutGesture(cutState.dragStart, pos);
+  cutState.isDragging = false;
+  cutState.dragStart = null;
+}
+
+function onCutMouseLeave() {
+  cutState.mouseX = -1; cutState.mouseY = -1;
+  const cur = document.getElementById('cursor');
+  cur.style.transform = 'translate(-50%,-50%) rotate(0deg)';
+  cur.textContent = '🥔';
+  if (cutState.isDragging && cutState.dragStart) {
+    cutState.isDragging = false; cutState.dragStart = null;
+  }
+}
+
+function onCutTouchStart(e) { e.preventDefault(); onCutMouseDown(e.touches[0]); }
+function onCutTouchMove(e)  { e.preventDefault(); onCutMouseMove(e.touches[0]); }
+function onCutTouchEnd(e)   { onCutMouseUp(e.changedTouches[0]); }
+
+// ---- cut logic ----
+function finaliseCutGesture(start, end) {
+  if (!start) return;
+  const dir = dragDirection(start, end);
+  if (!dir) return;
+
+  // Check that the line actually crosses the potato
+  const { potX, potY, potW, potH } = cutState;
+  const cx = potX + potW/2, cy = potY + potH/2;
+
+  let fraction, tooClose = false;
+
+  if (dir === 'h') {
+    // Horizontal cut — y position as fraction of potato height
+    const midY = (start.y + end.y) / 2;
+    fraction = (midY - potY) / potH;
+    // Must be within potato bounds
+    if (fraction < 0.05 || fraction > 0.95) return;
+    // Check not too close to existing cuts
+    for (const c of cutState.hCuts) {
+      if (Math.abs(c - fraction) < 0.1) { tooClose = true; break; }
+    }
+    if (tooClose) { toast('Too close to another cut! 🔪'); return; }
+    if (cutState.hCuts.length >= CUT_H_NEEDED) { toast(`Already have ${CUT_H_NEEDED} horizontal cuts!`); return; }
+    cutState.hCuts.push(fraction);
+    cutState.hCuts.sort((a,b)=>a-b);
+    triggerKnifeAnim(dir, potX, midY, potX + potW, midY);
+    addCutLine(dir, fraction);
+  } else {
+    // Vertical cut — x position as fraction of potato width
+    const midX = (start.x + end.x) / 2;
+    fraction = (midX - potX) / potW;
+    if (fraction < 0.05 || fraction > 0.95) return;
+    for (const c of cutState.vCuts) {
+      if (Math.abs(c - fraction) < 0.1) { tooClose = true; break; }
+    }
+    if (tooClose) { toast('Too close to another cut! 🔪'); return; }
+    if (cutState.vCuts.length >= CUT_V_NEEDED) { toast(`Already have ${CUT_V_NEEDED} vertical cuts!`); return; }
+    cutState.vCuts.push(fraction);
+    cutState.vCuts.sort((a,b)=>a-b);
+    triggerKnifeAnim(dir, midX, potY, midX, potY + potH);
+    addCutLine(dir, fraction);
+  }
+
+  updateCutCountUI();
+
+  // Check completion
+  if (cutState.hCuts.length >= CUT_H_NEEDED && cutState.vCuts.length >= CUT_V_NEEDED) {
+    setTimeout(() => triggerChunkExplosion(), 250);
+  }
+}
+
+function addCutLine(dir, fraction) {
+  cutState.cutLines.push({ dir, fraction, t: 0, age: 0 });
+}
+
+function triggerKnifeAnim(dir, x1, y1, x2, y2) {
+  cutState.knifeAnim = { dir, x1, y1, x2, y2, t: 0 };
+}
+
+function updateCutCountUI() {
+  const hEl = document.getElementById('cut-h-count');
+  const vEl = document.getElementById('cut-v-count');
+  if (hEl) {
+    hEl.textContent = `${cutState.hCuts.length} / ${CUT_H_NEEDED}`;
+    hEl.className = 'cut-count-val' + (cutState.hCuts.length >= CUT_H_NEEDED ? ' done' : '');
+  }
+  if (vEl) {
+    vEl.textContent = `${cutState.vCuts.length} / ${CUT_V_NEEDED}`;
+    vEl.className = 'cut-count-val' + (cutState.vCuts.length >= CUT_V_NEEDED ? ' done' : '');
+  }
+}
+
+// ---- chunk explosion after all cuts done ----
+function triggerChunkExplosion() {
+  const { potX, potY, potW, potH, hCuts, vCuts } = cutState;
+  cutState.chunksAnimating = true;
+
+  // Build grid of chunks from cut lines
+  // Add boundary fractions
+  const hBounds = [0, ...hCuts, 1];
+  const vBounds = [0, ...vCuts, 1];
+
+  cutState.chunks = [];
+  for (let row = 0; row < hBounds.length - 1; row++) {
+    for (let col = 0; col < vBounds.length - 1; col++) {
+      const x = potX + vBounds[col] * potW;
+      const y = potY + hBounds[row] * potH;
+      const w = (vBounds[col+1] - vBounds[col]) * potW;
+      const h = (hBounds[row+1] - hBounds[row]) * potH;
+      // Centre of chunk
+      const cx = x + w/2;
+      const cy = y + h/2;
+      // Potato centre
+      const pcx = potX + potW/2;
+      const pcy = potY + potH/2;
+      // Scatter direction
+      const angle = Math.atan2(cy - pcy, cx - pcx) + (Math.random()-0.5)*0.8;
+      const speed = 2 + Math.random() * 3;
+      cutState.chunks.push({
+        x, y, w, h,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1,
+        rot: (Math.random()-0.5) * 0.3,
+        rotV: (Math.random()-0.5) * 0.08,
+        alpha: 1,
+        originX: x, originY: y,
+        t: 0,
+        // fraction positions for oval clip
+        fracX: vBounds[col], fracY: hBounds[row],
+        fracW: vBounds[col+1]-vBounds[col], fracH: hBounds[row+1]-hBounds[row],
+      });
+    }
+  }
+
+  toast('✂️ Potato cubed!');
+
+  // After scatter anim, advance
+  setTimeout(() => {
+    cutState.chunksAnimating = false;
+    cutState.chunksDone = true;
+    cutState.potatosDone++;
+    renderCutPotatoThumbs();
+
+    if (cutState.potatosDone >= TOTAL_POTATOES) {
+      // All done!
+      document.getElementById('cursor').style.transform = 'translate(-50%,-50%) rotate(0deg)';
+      document.getElementById('cursor').textContent = '🥔';
+      if (cutState.animRAF) { cancelAnimationFrame(cutState.animRAF); cutState.animRAF = null; }
+      setTimeout(() => {
+        if (practiceMode) {
+          toast('Great cubing! Starting again... 🔪');
+          // Reset and restart the cut step
+          cutState.currentPotatoIdx = 0;
+          cutState.potatosDone = 0;
+          resetCutPotato();
+          initCutCanvas();
+          renderCutPotatoThumbs();
+          updateCutCountUI();
+          const titleEl = document.querySelector('.cut-instructions strong');
+          if (titleEl) titleEl.textContent = `🔪 Potato 1 of ${TOTAL_POTATOES}`;
+        } else {
+          toast('All potatoes cubed! 🎉 More steps coming soon...');
+          broadcastMyProgress(0.667, 2);
+          onRaceFinished();   // Placeholder — next steps will hook in here
+        }
+      }, 700);
+      return;
+    }
+
+    // Next potato
+    cutState.currentPotatoIdx++;
+    resetCutPotato();
+    updateCutCountUI();
+
+    const instEl = document.getElementById('cut-inst-text');
+    const titleEl = document.querySelector('.cut-instructions strong');
+    if (titleEl) titleEl.textContent = `🔪 Potato ${cutState.currentPotatoIdx+1} of ${TOTAL_POTATOES}`;
+    if (instEl)  instEl.textContent = 'Draw a line across the potato to cut!';
+    broadcastMyProgress((0.333 + 0.333 * cutState.potatosDone / TOTAL_POTATOES), 2);
+  }, 1200);
+}
+
+function renderCutPotatoThumbs() {
+  const el = document.getElementById('cut-potato-thumbs');
+  if (!el) return;
+  el.innerHTML = '';
+  for (let i=0; i<TOTAL_POTATOES; i++) {
+    const th = document.createElement('div');
+    th.className = 'potato-thumb' +
+      (i < cutState.potatosDone ? ' done' : '') +
+      (i === cutState.currentPotatoIdx && i >= cutState.potatosDone ? ' active' : '');
+    th.textContent = i < cutState.potatosDone ? '✅' : '🥔';
+    el.appendChild(th);
+  }
+}
+
+// ---- animation loop ----
+function cutAnimLoop() {
+  cutState.animRAF = requestAnimationFrame(cutAnimLoop);
+  drawCutScene();
+  // Advance knife animation
+  if (cutState.knifeAnim) {
+    cutState.knifeAnim.t += 0.07;
+    if (cutState.knifeAnim.t >= 1) cutState.knifeAnim = null;
+  }
+  // Advance cut line flash age
+  for (const cl of cutState.cutLines) { cl.age += 0.04; }
+  // Advance chunk scatter
+  if (cutState.chunksAnimating) {
+    for (const chunk of cutState.chunks) {
+      chunk.t += 0.04;
+      chunk.x = chunk.originX + chunk.vx * chunk.t * 18;
+      chunk.y = chunk.originY + chunk.vy * chunk.t * 18 + chunk.t*chunk.t * 8;
+      chunk.rot += chunk.rotV;
+      chunk.alpha = Math.max(0, 1 - (chunk.t - 0.6) * 2.5);
+    }
+  }
+}
+
+// ---- main draw ----
+function drawCutScene() {
+  const { ctx, canvas, boardX, boardY, boardW, boardH,
+          potX, potY, potW, potH,
+          hCuts, vCuts, mouseX, mouseY,
+          chunks, chunksAnimating, chunksDone,
+          knifeAnim, cutLines, isDragging, dragStart } = cutState;
+  if (!ctx) return;
+
+  const W = 420, H = 320;
+  ctx.clearRect(0, 0, W, H);
+
+  // ---- Cutting board ----
+  drawCuttingBoard(ctx, boardX, boardY, boardW, boardH);
+
+  if (chunksDone && !chunksAnimating) {
+    // Just show empty board between potatoes
+    return;
+  }
+
+  if (chunksAnimating && chunks.length) {
+    // Draw scattered chunks
+    drawScatteringChunks(ctx, chunks);
+    return;
+  }
+
+  // ---- Potato oval ----
+  drawPotatoFlat(ctx, potX, potY, potW, potH);
+
+  // ---- Existing cut lines on potato ----
+  drawMadeCuts(ctx, potX, potY, potW, potH, hCuts, vCuts, cutLines);
+
+  // ---- Ghost line under cursor ----
+  if (mouseX > 0 && mouseY > 0 && isOverPotato(mouseX, mouseY) && !chunksAnimating) {
+    drawGhostLine(ctx, potX, potY, potW, potH, mouseX, mouseY, isDragging, dragStart);
+  }
+
+  // ---- Knife sweep animation ----
+  if (knifeAnim) {
+    drawKnifeSwipe(ctx, knifeAnim);
+  }
+}
+
+function drawCuttingBoard(ctx, bx, by, bw, bh) {
+  // Board body — light pine wood
+  const grad = ctx.createLinearGradient(bx, by, bx+bw, by+bh);
+  grad.addColorStop(0,   '#c8a96b');
+  grad.addColorStop(0.4, '#d4b47a');
+  grad.addColorStop(1,   '#b8944f');
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 18);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Wood grain lines
+  ctx.strokeStyle = 'rgba(160,110,50,0.25)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 12; i++) {
+    const y = by + (bh / 12) * i + bh/24;
+    ctx.beginPath();
+    ctx.moveTo(bx + 8, y);
+    ctx.bezierCurveTo(bx + bw*0.3, y + (Math.sin(i*1.7)*4), bx + bw*0.7, y - (Math.sin(i*2.3)*3), bx + bw - 8, y);
+    ctx.stroke();
+  }
+
+  // Board edge
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 18);
+  ctx.strokeStyle = 'rgba(120,80,20,0.5)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Handle grip hint
+  ctx.beginPath();
+  ctx.roundRect(bx - 30, by + bh/2 - 20, 28, 40, 8);
+  ctx.fillStyle = '#a07040';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(80,50,15,0.5)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // grip lines
+  for (let i=0; i<4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(bx - 26, by + bh/2 - 14 + i*8);
+    ctx.lineTo(bx - 6,  by + bh/2 - 14 + i*8);
+    ctx.strokeStyle = 'rgba(60,35,10,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawPotatoFlat(ctx, px, py, pw, ph) {
+  ctx.save();
+  const cx = px + pw/2, cy = py + ph/2;
+
+  // Shadow
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + 6, pw/2 + 4, ph/2 - 2, 0, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.fill();
+
+  // Potato body — creamy peeled flesh
+  const grad = ctx.createRadialGradient(cx - pw*0.15, cy - ph*0.2, 0, cx, cy, pw*0.6);
+  grad.addColorStop(0,   '#fff8e0');
+  grad.addColorStop(0.5, '#f5e6c4');
+  grad.addColorStop(1,   '#e0c890');
+
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, pw/2, ph/2, 0, 0, Math.PI*2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Subtle surface texture
+  for (let i=0; i<12; i++) {
+    const tx = cx + (Math.random()-0.5)*pw*0.7;
+    const ty = cy + (Math.random()-0.5)*ph*0.7;
+    const dx = (tx-cx)/(pw/2), dy=(ty-cy)/(ph/2);
+    if (dx*dx+dy*dy > 0.75) continue;
+    ctx.beginPath();
+    ctx.ellipse(tx, ty, 2+Math.random()*4, 1+Math.random()*2, Math.random()*Math.PI, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(180,140,80,0.12)';
+    ctx.fill();
+  }
+
+  // Outline
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, pw/2, ph/2, 0, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(140,100,40,0.4)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawMadeCuts(ctx, px, py, pw, ph, hCuts, vCuts, cutLines) {
+  ctx.save();
+  // Clip to potato oval
+  ctx.beginPath();
+  ctx.ellipse(px+pw/2, py+ph/2, pw/2, ph/2, 0, 0, Math.PI*2);
+  ctx.clip();
+
+  // Draw each completed cut line
+  const allCuts = [
+    ...hCuts.map(f => ({ dir:'h', f })),
+    ...vCuts.map(f => ({ dir:'v', f })),
+  ];
+
+  for (const cut of allCuts) {
+    const lineAge = cutLines.find(cl => cl.dir===cut.dir && Math.abs(cl.fraction - cut.f) < 0.01);
+    const flash = lineAge ? Math.max(0, 1 - lineAge.age) : 0;
+
+    if (cut.dir === 'h') {
+      const y = py + cut.f * ph;
+      // Draw cut gap
+      ctx.beginPath();
+      ctx.moveTo(px, y);
+      ctx.lineTo(px + pw, y);
+      ctx.strokeStyle = flash > 0
+        ? `rgba(255,255,255,${0.4 + flash*0.5})`
+        : 'rgba(200,160,90,0.7)';
+      ctx.lineWidth = flash > 0 ? 3 + flash*3 : 2;
+      ctx.stroke();
+      // Shadow below cut
+      ctx.beginPath();
+      ctx.moveTo(px, y+2);
+      ctx.lineTo(px+pw, y+2);
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else {
+      const x = px + cut.f * pw;
+      ctx.beginPath();
+      ctx.moveTo(x, py);
+      ctx.lineTo(x, py + ph);
+      ctx.strokeStyle = flash > 0
+        ? `rgba(255,255,255,${0.4 + flash*0.5})`
+        : 'rgba(200,160,90,0.7)';
+      ctx.lineWidth = flash > 0 ? 3 + flash*3 : 2;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x+2, py);
+      ctx.lineTo(x+2, py+ph);
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawGhostLine(ctx, px, py, pw, ph, mx, my, isDragging, dragStart) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(px+pw/2, py+ph/2, pw/2, ph/2, 0, 0, Math.PI*2);
+  ctx.clip();
+
+  let dir, pos;
+  if (isDragging && dragStart) {
+    const dx = Math.abs(mx - dragStart.x);
+    const dy = Math.abs(my - dragStart.y);
+    dir = dx >= dy ? 'h' : 'v';
+  } else {
+    // Snap to nearest axis based on proximity to centre
+    const distH = Math.abs(my - (py + ph/2));
+    const distV = Math.abs(mx - (px + pw/2));
+    dir = distH <= distV ? 'h' : 'v';
+  }
+
+  ctx.setLineDash([8, 6]);
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = 'rgba(255,220,100,0.65)';
+
+  if (dir === 'h') {
+    const snapY = isDragging && dragStart ? (my + dragStart.y)/2 : my;
+    ctx.beginPath();
+    ctx.moveTo(px, snapY);
+    ctx.lineTo(px + pw, snapY);
+    ctx.stroke();
+    // Arrow indicators
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,220,100,0.7)';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText('←', px - 22, snapY + 5);
+    ctx.fillText('→', px + pw + 4, snapY + 5);
+  } else {
+    const snapX = isDragging && dragStart ? (mx + dragStart.x)/2 : mx;
+    ctx.beginPath();
+    ctx.moveTo(snapX, py);
+    ctx.lineTo(snapX, py + ph);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,220,100,0.7)';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText('↑', snapX - 5, py - 6);
+    ctx.fillText('↓', snapX - 5, py + ph + 14);
+  }
+
+  ctx.restore();
+}
+
+function drawKnifeSwipe(ctx, anim) {
+  const t = Math.min(1, anim.t);
+  // Ease in-out
+  const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+
+  const x = anim.x1 + (anim.x2 - anim.x1) * ease;
+  const y = anim.y1 + (anim.y2 - anim.y1) * ease;
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  if (anim.dir === 'h') {
+    // Knife horizontal sweep — blade points right
+    ctx.rotate(-Math.PI / 8);
+    // Blade
+    ctx.beginPath();
+    ctx.moveTo(-50, -4);
+    ctx.lineTo(20, -8);
+    ctx.lineTo(22, -1);
+    ctx.lineTo(20, 6);
+    ctx.lineTo(-50, 4);
+    ctx.closePath();
+    const bladeGrad = ctx.createLinearGradient(-50,0,22,0);
+    bladeGrad.addColorStop(0, '#ccc');
+    bladeGrad.addColorStop(0.6, '#eee');
+    bladeGrad.addColorStop(1, '#bbb');
+    ctx.fillStyle = bladeGrad;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(80,80,80,0.6)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Handle
+    ctx.beginPath();
+    ctx.roundRect(-80, -7, 32, 14, 4);
+    ctx.fillStyle = '#5a3210';
+    ctx.fill();
+    ctx.strokeStyle = '#3a2008';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Shine on blade
+    ctx.beginPath();
+    ctx.moveTo(-40, -5);
+    ctx.lineTo(18, -7);
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  } else {
+    // Knife vertical sweep — blade points down
+    ctx.rotate(Math.PI * 3/8);
+    ctx.beginPath();
+    ctx.moveTo(-4, -50);
+    ctx.lineTo(-8, 20);
+    ctx.lineTo(-1, 22);
+    ctx.lineTo(6,  20);
+    ctx.lineTo(4, -50);
+    ctx.closePath();
+    const bladeGrad2 = ctx.createLinearGradient(0,-50,0,22);
+    bladeGrad2.addColorStop(0, '#ccc');
+    bladeGrad2.addColorStop(0.6, '#eee');
+    bladeGrad2.addColorStop(1, '#bbb');
+    ctx.fillStyle = bladeGrad2;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(80,80,80,0.6)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.roundRect(-7, -80, 14, 32, 4);
+    ctx.fillStyle = '#5a3210';
+    ctx.fill();
+    ctx.strokeStyle = '#3a2008';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-5, -40);
+    ctx.lineTo(-7, 18);
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  // Motion trail behind knife
+  const alpha = Math.max(0, 1 - t * 1.5);
+  if (alpha > 0 && anim.t < 0.7) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(anim.x1, anim.y1);
+    ctx.lineTo(x, y);
+    ctx.strokeStyle = `rgba(255,255,255,${alpha * 0.3})`;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawScatteringChunks(ctx, chunks) {
+  for (const chunk of chunks) {
+    if (chunk.alpha <= 0) continue;
+    ctx.save();
+    ctx.globalAlpha = chunk.alpha;
+    ctx.translate(chunk.x + chunk.w/2, chunk.y + chunk.h/2);
+    ctx.rotate(chunk.rot);
+
+    // Chunk body — creamy flesh
+    const cw = chunk.w * 0.9, ch = chunk.h * 0.9;
+    ctx.beginPath();
+    ctx.roundRect(-cw/2, -ch/2, cw, ch, 4);
+
+    const grad = ctx.createRadialGradient(-cw*0.1, -ch*0.1, 0, 0, 0, Math.max(cw,ch)*0.6);
+    grad.addColorStop(0, '#fff8e0');
+    grad.addColorStop(1, '#e0c880');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Cut face edges (slightly darker)
+    ctx.strokeStyle = 'rgba(180,140,60,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Highlight
+    ctx.beginPath();
+    ctx.moveTo(-cw*0.3, -ch*0.4);
+    ctx.lineTo(cw*0.25, -ch*0.4);
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+}
+
+// ============================================================
+//  RACE FINISH
+// ============================================================
+function onRaceFinished() {
+  if (gameState.finished) return;
+  gameState.finished = true;
+  clearInterval(gameState.timerInterval);
+  gameState.raceEnd = performance.now();
+  const elapsed = gameState.raceEnd - gameState.raceStart;
+
+  // Broadcast finish
+  broadcast('PLAYER_FINISHED', {
+    playerName: gameState.myName,
+    finishTime: elapsed,
+    rank: 1
+  });
+
+  spawnConfetti();
+  showFinishScreen(elapsed);
+}
+
+function showFinishScreen(elapsed) {
+  const me = gameState.players.find(p=>p.id===gameState.myId);
+  const isSolo = gameState.mode === 'solo';
+
+  document.getElementById('finish-message').textContent = isSolo 
+    ? `${gameState.myName}'s Time:`
+    : `🏆 You finished!`;
+  document.getElementById('finish-time').textContent = fmt(elapsed);
+
+  const list = document.getElementById('results-list');
+  list.innerHTML = '';
+  const finishedPlayers = gameState.players
+    .filter(p=>p.finishTime)
+    .sort((a,b)=>a.finishTime - b.finishTime);
+  
+  finishedPlayers.forEach((p,i) => {
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i===0?' first-place':'');
+    const medals = ['🥇','🥈','🥉','4️⃣'];
+    row.innerHTML = `
+      <span class="result-rank">${medals[i]||'  '}</span>
+      <span>${p.avatar}</span>
+      <span style="flex:1;font-size:0.9rem;">${p.name}</span>
+      <span style="font-family:var(--display-font);color:${p.color};">${fmt(p.finishTime)}</span>
+    `;
+    list.appendChild(row);
+  });
+
+  if (isSolo || finishedPlayers.length === 0) {
+    const row = document.createElement('div');
+    row.className = 'result-row first-place';
+    row.innerHTML = `
+      <span class="result-rank">🥇</span>
+      <span>${me?.avatar||'🥔'}</span>
+      <span style="flex:1;">${gameState.myName}</span>
+      <span style="font-family:var(--display-font);color:${me?.color||'#e8c97a'}">${fmt(elapsed)}</span>
+    `;
+    list.appendChild(row);
+  }
+
+  showScreen('screen-finish');
+}
+
+function playAgain() {
+  if (gameState.mode === 'host' || gameState.mode === 'solo') {
+    if (gameState.mode === 'solo') {
+      startSolo();
+    } else {
+      // Reset game state but keep lobby
+      gameState.players.forEach(p => { p.progress=0; p.step=0; p.finishTime=undefined; });
+      broadcast('LOBBY_STATE', { players: gameState.players });
+      updateLobbyUI();
+      showScreen('screen-lobby-host');
+    }
+  } else {
+    showScreen('screen-lobby-player');
+  }
+}
+
+function spawnConfetti() {
+  const colors = ['#e8c97a','#a8e6a0','#ff6b9d','#87CEEB','#FFB347'];
+  for (let i=0; i<60; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.cssText = `
+      left: ${Math.random()*100}vw;
+      top: -10px;
+      background: ${colors[Math.floor(Math.random()*colors.length)]};
+      border-radius: ${Math.random()>0.5?'50%':'2px'};
+      width: ${6+Math.random()*10}px;
+      height: ${6+Math.random()*10}px;
+      animation-duration: ${1.5+Math.random()*2.5}s;
+      animation-delay: ${Math.random()*0.8}s;
+    `;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(), 4000);
+  }
+}
+
+// ============================================================
+//  CURSOR TRACKING
+// ============================================================
+document.addEventListener('mousemove', e => {
+  const cursor = document.getElementById('cursor');
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+});
+document.addEventListener('mouseleave', () => {
+  document.getElementById('cursor').style.opacity = '0';
+});
+document.addEventListener('mouseenter', () => {
+  document.getElementById('cursor').style.opacity = '1';
+});
+
+// ============================================================
+//  INPUT HELPERS
+// ============================================================
+document.getElementById('join-code-input').addEventListener('input', function() {
+  this.value = this.value.toUpperCase();
+});
+
+// Room rejoin on host lobby code copy helper
+function copyRoomCode() {
+  const code = gameState.roomCode;
+  navigator.clipboard?.writeText(code)
+    .then(()=>toast(`Room code ${code} copied! 📋`))
+    .catch(()=>toast(`Room code: ${code}`));
+}
+</script>
+</body>
+</html>
