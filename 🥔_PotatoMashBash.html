@@ -1261,6 +1261,171 @@
     pointer-events: none;
     animation: steamRise ease-out forwards;
   }
+  /* ========== LIVE ORDER PANEL (in-game multiplayer) ========== */
+  .live-order-panel {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    pointer-events: none;
+  }
+  .live-order-title {
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255,243,208,0.4);
+    margin-bottom: 1px;
+  }
+  .live-order-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,0,0,0.52);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    padding: 4px 8px 4px 5px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    transition: background 0.3s, border-color 0.3s;
+    min-width: 130px;
+  }
+  .live-order-row.is-you {
+    background: rgba(232,201,122,0.12);
+    border-color: rgba(232,201,122,0.3);
+  }
+  .live-order-row.finished {
+    background: rgba(76,175,80,0.12);
+    border-color: rgba(76,175,80,0.3);
+  }
+  .live-order-pos {
+    font-family: var(--display-font);
+    font-size: 0.8rem;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .live-order-avatar { font-size: 0.9rem; flex-shrink: 0; }
+  .live-order-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(255,243,208,0.85);
+  }
+  .live-order-status {
+    font-size: 0.65rem;
+    color: rgba(255,243,208,0.45);
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .live-order-status.done { color: #a8e6a0; }
+
+  /* ========== FINISH SCREEN SCOREBOARD ========== */
+  .finish-scoreboard {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .finish-sb-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 10px 14px;
+    font-weight: 700;
+    transition: background 0.5s, border-color 0.5s;
+    position: relative;
+    overflow: hidden;
+    min-height: 52px;
+  }
+  .finish-sb-row.finished-row {
+    background: rgba(76,175,80,0.1);
+    border-color: rgba(76,175,80,0.35);
+  }
+  .finish-sb-row.me-row {
+    border-color: rgba(232,201,122,0.45);
+  }
+  .finish-sb-row.first-row {
+    background: rgba(241,196,15,0.1);
+    border-color: rgba(241,196,15,0.4);
+  }
+  /* Progress fill behind the row */
+  .finish-sb-progress-bg {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    border-radius: 14px;
+    opacity: 0.18;
+    transition: width 0.6s ease;
+    pointer-events: none;
+  }
+  .finish-sb-rank {
+    font-family: var(--display-font);
+    font-size: 1.2rem;
+    width: 28px;
+    text-align: center;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .finish-sb-avatar {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .finish-sb-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+  }
+  .finish-sb-name {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .finish-sb-substatus {
+    font-size: 0.72rem;
+    color: rgba(255,243,208,0.45);
+    font-weight: 600;
+  }
+  .finish-sb-substatus.active { color: #87ceeb; }
+  .finish-sb-substatus.done   { color: #a8e6a0; }
+  .finish-sb-time {
+    font-family: var(--display-font);
+    font-size: 1rem;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  @keyframes sbRowIn {
+    from { opacity: 0.4; transform: scale(0.97); }
+    to   { opacity: 1;   transform: scale(1); }
+  }
+  .finish-sb-row.just-finished {
+    animation: sbRowIn 0.4s ease;
+  }
+  .finish-waiting-msg {
+    text-align: center;
+    font-size: 0.82rem;
+    color: rgba(255,243,208,0.4);
+    font-weight: 600;
+    margin-top: 4px;
+  }
 </style>
 </head>
 <body>
@@ -1457,15 +1622,19 @@
   </div>
   <!-- Race sidebar -->
   <div class="race-sidebar" id="race-sidebar"></div>
+  <!-- Live order panel (multiplayer only) -->
+  <div class="live-order-panel" id="live-order-panel" style="display:none;"></div>
 </div>
 
 <!-- ===== SCREEN: FINISH ===== -->
 <div class="screen hidden" id="screen-finish">
-  <div style="display:flex;flex-direction:column;align-items:center;gap:20px;">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:18px;padding:20px;width:100%;max-width:440px;">
     <div class="finish-title">🥔 MASH COMPLETE! 🥔</div>
-    <div id="finish-message" style="font-size:1.1rem;color:rgba(255,243,208,0.7);font-weight:700;"></div>
+    <div id="finish-message" style="font-size:1.1rem;color:rgba(255,243,208,0.7);font-weight:700;text-align:center;"></div>
     <div class="finish-time" id="finish-time">0:00.0</div>
-    <div class="results-list" id="results-list"></div>
+    <div class="finish-scoreboard" id="finish-scoreboard"></div>
+    <div class="finish-waiting-msg" id="finish-waiting-msg"></div>
+    <div class="results-list" id="results-list" style="display:none;"></div>
     <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
       <button class="btn btn-primary" onclick="playAgain()">🔄 Play Again</button>
       <button class="btn btn-ghost" onclick="showScreen('screen-landing')">🏠 Main Menu</button>
@@ -1775,9 +1944,13 @@ function handleEvent(msg) {
   switch (msg.type) {
     case 'PLAYER_FINISHED':
       const fp = gameState.players.find(pl => pl.id === msg.from);
-      if (fp) { fp.finishTime = msg.finishTime; }
+      if (fp) { fp.finishTime = msg.finishTime; fp.step = 99; fp.progress = 1; }
       updateRaceSidebar();
       if (msg.from !== gameState.myId) toast(`${msg.playerName} finished! ${fmt(msg.finishTime)} 🏁`);
+      // If we're on the finish screen, re-render the scoreboard immediately
+      if (!document.getElementById('screen-finish').classList.contains('hidden')) {
+        renderFinishScoreboard();
+      }
       break;
   }
 }
@@ -2142,6 +2315,9 @@ function buildRaceSidebar() {
     `;
     sb.appendChild(el);
   });
+
+  // Show live order panel in multiplayer
+  updateLiveOrder();
 }
 
 function updateRaceSidebar() {
@@ -2149,6 +2325,144 @@ function updateRaceSidebar() {
     const bar = document.getElementById(`race-bar-${p.id}`);
     if (bar) bar.style.width = Math.min(100, (p.progress||0)*100)+'%';
   });
+  updateLiveOrder();
+  // If we're on the finish screen, refresh the scoreboard too
+  if (!document.getElementById('screen-finish').classList.contains('hidden')) {
+    renderFinishScoreboard();
+  }
+}
+
+// Step number → human-readable "still ___" label
+function stepStatusLabel(step, progress) {
+  if (step === undefined || step === null) return 'just started';
+  const s = Number(step);
+  if (s >= 99) return null; // finished — handled separately
+  const labels = [
+    'just started',
+    'still peeling',
+    'still cubing',
+    'still filling',
+    'still boiling',
+    'still seasoning',
+    'still mashing',
+  ];
+  return labels[s] || `on step ${s}`;
+}
+
+// Sort all players by effective progress (finished = 1, others by progress)
+function getPlayerOrder() {
+  return [...gameState.players].sort((a, b) => {
+    const pa = a.finishTime ? 1 : (a.progress || 0);
+    const pb = b.finishTime ? 1 : (b.progress || 0);
+    if (pb !== pa) return pb - pa;
+    // Tiebreak: finished earlier wins
+    if (a.finishTime && b.finishTime) return a.finishTime - b.finishTime;
+    return 0;
+  });
+}
+
+function updateLiveOrder() {
+  const panel = document.getElementById('live-order-panel');
+  if (!panel) return;
+  // Only show in multiplayer with 2+ players
+  if (gameState.mode === 'solo' || practiceMode || gameState.players.length < 2) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'flex';
+
+  const ordered = getPlayerOrder();
+  const medals = ['🥇','🥈','🥉','4️⃣'];
+
+  panel.innerHTML = `<div class="live-order-title">standings</div>` +
+    ordered.map((p, i) => {
+      const isMe = p.id === gameState.myId;
+      const done = !!p.finishTime;
+      const statusStr = done
+        ? `✅ ${fmt(p.finishTime)}`
+        : (stepStatusLabel(p.step, p.progress) || 'just started');
+      return `<div class="live-order-row${isMe?' is-you':''}${done?' finished':''}">
+        <span class="live-order-pos">${medals[i] || (i+1)}</span>
+        <span class="live-order-avatar">${p.avatar||'🥔'}</span>
+        <span class="live-order-name">${p.name.slice(0,10)}${isMe?' (you)':''}</span>
+        <span class="live-order-status${done?' done':''}">${statusStr}</span>
+      </div>`;
+    }).join('');
+}
+
+// ---- Finish-screen live scoreboard ----
+let _sbRefreshInterval = null;
+
+function renderFinishScoreboard() {
+  const board = document.getElementById('finish-scoreboard');
+  const waitMsg = document.getElementById('finish-waiting-msg');
+  if (!board) return;
+
+  const isSolo = gameState.mode === 'solo';
+  const me = gameState.players.find(p => p.id === gameState.myId);
+
+  if (isSolo) {
+    // Solo: just show own result
+    board.innerHTML = `
+      <div class="finish-sb-row me-row first-row just-finished">
+        <div class="finish-sb-progress-bg" style="width:100%;background:#f1c40f;"></div>
+        <span class="finish-sb-rank">🥇</span>
+        <span class="finish-sb-avatar">${me?.avatar||'🥔'}</span>
+        <div class="finish-sb-info">
+          <div class="finish-sb-name">${gameState.myName}</div>
+          <div class="finish-sb-substatus done">Finished!</div>
+        </div>
+        <span class="finish-sb-time" style="color:${me?.color||'#e8c97a'}">${fmt(me?.finishTime||0)}</span>
+      </div>`;
+    if (waitMsg) waitMsg.textContent = '';
+    return;
+  }
+
+  const medals = ['🥇','🥈','🥉','4️⃣'];
+  const ordered = getPlayerOrder();
+  const finishedCount = ordered.filter(p => p.finishTime).length;
+  const totalCount = ordered.length;
+
+  board.innerHTML = ordered.map((p, i) => {
+    const isMe = p.id === gameState.myId;
+    const done = !!p.finishTime;
+    const isFirst = done && ordered.filter(o=>o.finishTime).sort((a,b)=>a.finishTime-b.finishTime)[0]?.id === p.id;
+    const prog = done ? 1 : (p.progress || 0);
+    const statusLabel = done
+      ? `Finished! ${fmt(p.finishTime)}`
+      : (stepStatusLabel(p.step, p.progress) || 'just started');
+    const statusClass = done ? 'done' : 'active';
+    const rowClass = [
+      'finish-sb-row',
+      done && i === 0 ? 'first-row' : '',
+      done ? 'finished-row' : '',
+      isMe ? 'me-row' : '',
+    ].filter(Boolean).join(' ');
+
+    const rankLabel = done ? (medals[i] || `${i+1}`) : '⏳';
+
+    return `<div class="${rowClass}" id="sb-row-${p.id}">
+      <div class="finish-sb-progress-bg" id="sb-prog-${p.id}" style="width:${Math.round(prog*100)}%;background:${p.color||'#e8c97a'};"></div>
+      <span class="finish-sb-rank">${rankLabel}</span>
+      <span class="finish-sb-avatar">${p.avatar||'🥔'}</span>
+      <div class="finish-sb-info">
+        <div class="finish-sb-name">${p.name}${isMe?' (you)':''}</div>
+        <div class="finish-sb-substatus ${statusClass}">${done ? 'Finished!' : statusLabel}</div>
+      </div>
+      <span class="finish-sb-time" style="color:${done?(p.color||'#e8c97a'):'rgba(255,243,208,0.3)'}">
+        ${done ? fmt(p.finishTime) : (Math.round(prog*100)+'%')}
+      </span>
+    </div>`;
+  }).join('');
+
+  if (waitMsg) {
+    const remaining = totalCount - finishedCount;
+    if (remaining > 0) {
+      waitMsg.textContent = `Waiting for ${remaining} more player${remaining > 1 ? 's' : ''}...`;
+    } else {
+      waitMsg.textContent = '';
+    }
+  }
 }
 
 
@@ -4500,48 +4814,41 @@ function onRaceFinished() {
 
 function showFinishScreen(elapsed) {
   const me = gameState.players.find(p=>p.id===gameState.myId);
+  if (me) me.finishTime = elapsed; // make sure my own record is set
+
   const isSolo = gameState.mode === 'solo';
 
-  document.getElementById('finish-message').textContent = isSolo 
+  document.getElementById('finish-message').textContent = isSolo
     ? `${gameState.myName}'s Time:`
     : `🏆 You finished!`;
   document.getElementById('finish-time').textContent = fmt(elapsed);
 
-  const list = document.getElementById('results-list');
-  list.innerHTML = '';
-  const finishedPlayers = gameState.players
-    .filter(p=>p.finishTime)
-    .sort((a,b)=>a.finishTime - b.finishTime);
-  
-  finishedPlayers.forEach((p,i) => {
-    const row = document.createElement('div');
-    row.className = 'result-row' + (i===0?' first-place':'');
-    const medals = ['🥇','🥈','🥉','4️⃣'];
-    row.innerHTML = `
-      <span class="result-rank">${medals[i]||'  '}</span>
-      <span>${p.avatar}</span>
-      <span style="flex:1;font-size:0.9rem;">${p.name}</span>
-      <span style="font-family:var(--display-font);color:${p.color};">${fmt(p.finishTime)}</span>
-    `;
-    list.appendChild(row);
-  });
+  // Hide the old results-list (keep for solo compat, now unused in MP)
+  const oldList = document.getElementById('results-list');
+  if (oldList) oldList.style.display = 'none';
 
-  if (isSolo || finishedPlayers.length === 0) {
-    const row = document.createElement('div');
-    row.className = 'result-row first-place';
-    row.innerHTML = `
-      <span class="result-rank">🥇</span>
-      <span>${me?.avatar||'🥔'}</span>
-      <span style="flex:1;">${gameState.myName}</span>
-      <span style="font-family:var(--display-font);color:${me?.color||'#e8c97a'}">${fmt(elapsed)}</span>
-    `;
-    list.appendChild(row);
-  }
+  // Initial render
+  renderFinishScoreboard();
 
   showScreen('screen-finish');
+
+  // In multiplayer: poll for updates while others are still playing
+  if (!isSolo) {
+    if (_sbRefreshInterval) clearInterval(_sbRefreshInterval);
+    _sbRefreshInterval = setInterval(() => {
+      renderFinishScoreboard();
+      // Stop polling once everyone is done
+      const allDone = gameState.players.every(p => !!p.finishTime);
+      if (allDone) {
+        clearInterval(_sbRefreshInterval);
+        _sbRefreshInterval = null;
+      }
+    }, 1000);
+  }
 }
 
 function playAgain() {
+  if (_sbRefreshInterval) { clearInterval(_sbRefreshInterval); _sbRefreshInterval = null; }
   if (gameState.mode === 'host' || gameState.mode === 'solo') {
     if (gameState.mode === 'solo') {
       startSolo();
