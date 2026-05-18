@@ -5504,7 +5504,7 @@ const MASH_TAP_RADIUS = 55; // radius of mash circle when tapping
 const MASH_STIRS_NEEDED = 10;
 
 let mashState = {
-  phase: 'tapping',    // 'tapping' | 'stirCW' | 'stirCCW' | 'done'
+  phase: 'tapping',    // 'tapping' | 'pouring' | 'stirCW' | 'stirCCW' | 'done'
   potatoes: [],        // [{x, y, mashed: bool, size}]
   stirCWCount: 0,
   stirCCWCount: 0,
@@ -5515,6 +5515,14 @@ let mashState = {
   tapX: null,
   tapY: null,
   tapAnimFrame: 0,
+  // pouring state
+  pourProgress: 0,
+  pourActive: false,
+  pourJugAngle: 0,
+  pourJugTarget: 0,
+  pourDrops: [],
+  pourLastDrop: 0,
+  pourCheckEl: null,
   // refs
   canvasEl: null,
   ctx: null,
@@ -5545,10 +5553,13 @@ function loadMashStep() {
           <div class="mash-check-item">
             <span id="mash-check-tap">⬜</span> Mash all potatoes (<span id="mash-tap-count">0/${MASH_POTATOES}</span>)
           </div>
-          <div class="mash-check-item">
+          <div class="mash-check-item" id="mash-pour-item" style="opacity:0.35;">
+            <span id="mash-check-pour">⬜</span> Pour in the cream
+          </div>
+          <div class="mash-check-item" id="mash-cw-item" style="opacity:0.35;">
             <span id="mash-check-cw">⬜</span> Stir clockwise (<span id="mash-cw-count">0/10</span>)
           </div>
-          <div class="mash-check-item">
+          <div class="mash-check-item" id="mash-ccw-item" style="opacity:0.35;">
             <span id="mash-check-ccw">⬜</span> Stir counter-clockwise (<span id="mash-ccw-count">0/10</span>)
           </div>
           <div style="font-size:0.9rem;color:#888;margin-top:8px;" id="mash-debug">
@@ -5619,7 +5630,8 @@ function loadMashStep() {
   mashState.checkTapEl = document.getElementById('mash-check-tap');
   mashState.checkCWEl = document.getElementById('mash-check-cw');
   mashState.checkCCWEl = document.getElementById('mash-check-ccw');
-  
+  mashState.pourCheckEl = document.getElementById('mash-check-pour');
+
   mashState.phase = 'tapping';
   mashState.stirCWCount = 0;
   mashState.stirCCWCount = 0;
@@ -5630,6 +5642,12 @@ function loadMashStep() {
   mashState.tapX = null;
   mashState.tapY = null;
   mashState.tapAnimFrame = 0;
+  mashState.pourProgress = 0;
+  mashState.pourActive = false;
+  mashState.pourJugAngle = 0;
+  mashState.pourJugTarget = 0;
+  mashState.pourDrops = [];
+  mashState.pourLastDrop = 0;
 
   // Generate potato positions inside the pot
   mashState.potatoes = [];
@@ -5844,10 +5862,115 @@ function checkMashTappingComplete() {
   const allMashed = mashState.potatoes.every(p => p.mashed);
   if (allMashed) {
     mashState.checkTapEl.textContent = '✅';
-    mashState.phase = 'stirCW';
-    mashState.statusEl.textContent = '🔄 Stir clockwise 10 times!';
-    mashState.canvasEl.style.cursor = 'grab';
+    mashState.phase = 'pouring';
+    mashState.pourProgress = 0;
+    mashState.pourActive = false;
+    mashState.pourJugAngle = 0;
+    mashState.pourDrops = [];
+    mashState.statusEl.textContent = '🥛 Hold and tilt the cream jug to pour!';
+    mashState.canvasEl.style.cursor = 'default';
+    const pourItem = document.getElementById('mash-pour-item');
+    if (pourItem) pourItem.style.opacity = '1';
+    // Attach pour events
+    mashState.canvasEl.addEventListener('mousedown',  onPourDown);
+    mashState.canvasEl.addEventListener('mousemove',  onPourMove);
+    mashState.canvasEl.addEventListener('mouseup',    onPourUp);
+    mashState.canvasEl.addEventListener('mouseleave', onPourUp);
+    mashState.canvasEl.addEventListener('touchstart', onPourTouchStart, {passive:false});
+    mashState.canvasEl.addEventListener('touchmove',  onPourTouchMove,  {passive:false});
+    mashState.canvasEl.addEventListener('touchend',   onPourUp);
+    renderMashCanvas();
   }
+}
+
+// ---- POURING PHASE ----
+const POUR_TOTAL_NEEDED = 3000; // ms of hold-time to pour full jug
+let _pourRAF = null;
+let _pourLastFrame = null;
+
+function onPourDown(e) {
+  e.preventDefault();
+  if (mashState.phase !== 'pouring' || mashState.pourProgress >= 1) return;
+  mashState.pourActive = true;
+  mashState.pourJugTarget = 110;
+  _pourLastFrame = performance.now();
+  if (!_pourRAF) _pourRAF = requestAnimationFrame(pourAnimTick);
+}
+function onPourMove(e) { /* keep active */ }
+function onPourUp(e) {
+  if (!mashState.pourActive) return;
+  mashState.pourActive = false;
+  mashState.pourJugTarget = 0;
+}
+function onPourTouchStart(e) { e.preventDefault(); onPourDown(e.touches[0]); }
+function onPourTouchMove(e)  { e.preventDefault(); }
+
+function pourAnimTick(ts) {
+  if (mashState.phase !== 'pouring') { _pourRAF = null; return; }
+  _pourRAF = requestAnimationFrame(pourAnimTick);
+  const dt = Math.min(ts - (_pourLastFrame || ts), 80);
+  _pourLastFrame = ts;
+
+  // Animate jug angle
+  mashState.pourJugAngle += (mashState.pourJugTarget - mashState.pourJugAngle) * 0.18;
+
+  // Accumulate pour while tilted enough
+  const isTilted = mashState.pourJugAngle > 55;
+  if (mashState.pourActive && isTilted) {
+    mashState.pourProgress = Math.min(1, mashState.pourProgress + dt / POUR_TOTAL_NEEDED);
+    // Spawn cream drops
+    if (ts - mashState.pourLastDrop > 60) {
+      mashState.pourLastDrop = ts;
+      mashState.pourDrops.push({
+        x: 290 + (Math.random() - 0.5) * 10,
+        y: 80,
+        vy: 2 + Math.random() * 2,
+        vx: (Math.random() - 0.5) * 1.5,
+        r: 4 + Math.random() * 4,
+        life: 1,
+      });
+    }
+  }
+
+  // Update drops
+  mashState.pourDrops = mashState.pourDrops.filter(d => d.life > 0.05);
+  mashState.pourDrops.forEach(d => {
+    d.x += d.vx; d.y += d.vy; d.vy += 0.4; d.life -= 0.025;
+  });
+
+  const pct = Math.round(mashState.pourProgress * 100);
+  mashState.statusEl.textContent = mashState.pourActive && isTilted
+    ? `🥛 Pouring… ${pct}%`
+    : (mashState.pourProgress > 0
+        ? `🥛 Keep holding to pour! (${pct}%)`
+        : '🥛 Hold and tilt the cream jug to pour!');
+
+  renderMashCanvas();
+
+  if (mashState.pourProgress >= 1) onPourComplete();
+}
+
+function onPourComplete() {
+  _pourRAF = null;
+  mashState.pourActive = false;
+  mashState.pourJugTarget = 0;
+  mashState.pourJugAngle = 0;
+  mashState.pourDrops = [];
+  if (mashState.pourCheckEl) mashState.pourCheckEl.textContent = '✅';
+  mashState.canvasEl.removeEventListener('mousedown',  onPourDown);
+  mashState.canvasEl.removeEventListener('mousemove',  onPourMove);
+  mashState.canvasEl.removeEventListener('mouseup',    onPourUp);
+  mashState.canvasEl.removeEventListener('mouseleave', onPourUp);
+  mashState.canvasEl.removeEventListener('touchstart', onPourTouchStart);
+  mashState.canvasEl.removeEventListener('touchmove',  onPourTouchMove);
+  mashState.canvasEl.removeEventListener('touchend',   onPourUp);
+  mashState.phase = 'stirCW';
+  mashState.statusEl.textContent = '🔄 Stir clockwise 10 times!';
+  mashState.canvasEl.style.cursor = 'grab';
+  const cwItem = document.getElementById('mash-cw-item');
+  if (cwItem) cwItem.style.opacity = '1';
+  toast('🥛 Cream in! Now stir it clockwise!');
+  renderMashCanvas();
 }
 
 function onStirCWComplete() {
@@ -5855,6 +5978,8 @@ function onStirCWComplete() {
   mashState.phase = 'stirCCW';
   mashState.statusEl.textContent = '🔄 Now stir counter-clockwise 10 times!';
   mashState.totalRotation = 0;
+  const ccwItem = document.getElementById('mash-ccw-item');
+  if (ccwItem) ccwItem.style.opacity = '1';
 }
 
 function onMashComplete() {
@@ -6102,6 +6227,154 @@ function renderMashCanvas() {
   ctx.ellipse(potCenterX, potCenterY - 3, potRadius - 2, potRadius - 2, 0, -Math.PI, 0);
   ctx.stroke();
   ctx.restore();
+
+  // ---- CREAM POOL (builds as you pour) ----
+  if (mashState.pourProgress > 0) {
+    const poolAlpha = Math.min(1, mashState.pourProgress * 1.2);
+    const poolR = 30 + mashState.pourProgress * 90;
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(potCenterX, potCenterY, poolR, poolR * 0.55, 0, 0, Math.PI * 2);
+    const creamGrad = ctx.createRadialGradient(potCenterX - 10, potCenterY - 10, 4, potCenterX, potCenterY, poolR);
+    creamGrad.addColorStop(0,   `rgba(255,252,235,${poolAlpha * 0.9})`);
+    creamGrad.addColorStop(0.6, `rgba(240,230,200,${poolAlpha * 0.7})`);
+    creamGrad.addColorStop(1,   `rgba(220,200,160,0)`);
+    ctx.fillStyle = creamGrad;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ---- POUR DROPS ----
+  mashState.pourDrops.forEach(d => {
+    ctx.save();
+    ctx.globalAlpha = d.life;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+    ctx.fillStyle = '#fffce8';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(200,180,140,0.4)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  // ---- CREAM JUG ----
+  if (mashState.phase === 'pouring' && mashState.pourProgress < 1) {
+    const jugCX = 300;
+    const jugCY = 70;
+    const angle = (mashState.pourJugAngle * Math.PI) / 180;
+
+    ctx.save();
+    ctx.translate(jugCX, jugCY);
+    ctx.rotate(angle);
+
+    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 3;
+    ctx.shadowOffsetY = 4;
+
+    // Jug body
+    ctx.beginPath();
+    ctx.moveTo(-18, -48);
+    ctx.lineTo(-22, 32);
+    ctx.quadraticCurveTo(-22, 42, -10, 42);
+    ctx.lineTo(18, 42);
+    ctx.quadraticCurveTo(26, 42, 24, 30);
+    ctx.lineTo(18, -48);
+    ctx.closePath();
+    const jugGrad = ctx.createLinearGradient(-22, 0, 26, 0);
+    jugGrad.addColorStop(0,    '#d4cfc8');
+    jugGrad.addColorStop(0.35, '#f5f2ee');
+    jugGrad.addColorStop(0.7,  '#e8e4de');
+    jugGrad.addColorStop(1,    '#b8b4ae');
+    ctx.fillStyle = jugGrad;
+    ctx.fill();
+    ctx.strokeStyle = '#aaa8a0';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Spout
+    ctx.beginPath();
+    ctx.moveTo(-18, -40);
+    ctx.lineTo(-32, -52);
+    ctx.lineTo(-28, -56);
+    ctx.lineTo(-14, -44);
+    ctx.closePath();
+    ctx.fillStyle = '#e0dcd6';
+    ctx.fill();
+    ctx.strokeStyle = '#aaa8a0';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Handle
+    ctx.beginPath();
+    ctx.moveTo(22, -20);
+    ctx.quadraticCurveTo(46, -20, 46, 10);
+    ctx.quadraticCurveTo(46, 34, 22, 34);
+    ctx.strokeStyle = '#c0bdb8';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+
+    // Cream fill level (depletes as you pour)
+    const fillH = 70 * (1 - mashState.pourProgress);
+    ctx.beginPath();
+    ctx.rect(-17, 42 - fillH, 35, fillH);
+    const creamFillGrad = ctx.createLinearGradient(0, 42 - fillH, 0, 42);
+    creamFillGrad.addColorStop(0, 'rgba(255,250,225,0.5)');
+    creamFillGrad.addColorStop(1, 'rgba(255,245,210,0.9)');
+    ctx.fillStyle = creamFillGrad;
+    ctx.fill();
+
+    // Cream surface ripple line
+    ctx.beginPath();
+    ctx.moveTo(-17, 42 - fillH);
+    ctx.quadraticCurveTo(-8, 42 - fillH - 3, 0, 42 - fillH);
+    ctx.quadraticCurveTo(10, 42 - fillH + 3, 18, 42 - fillH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Rim / top of jug
+    ctx.beginPath();
+    ctx.ellipse(0, -48, 19, 6, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#d8d4ce';
+    ctx.fill();
+    ctx.strokeStyle = '#aaa8a0';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Label
+    ctx.font = 'bold 8px Arial';
+    ctx.fillStyle = '#887766';
+    ctx.textAlign = 'center';
+    ctx.fillText('CREAM', 2, 8);
+
+    // Pour stream when tilted
+    if (mashState.pourJugAngle > 55 && mashState.pourActive) {
+      ctx.beginPath();
+      ctx.moveTo(-28, -52);
+      ctx.quadraticCurveTo(-50 - mashState.pourJugAngle * 0.3, -20, -60 - mashState.pourJugAngle * 0.4, 40);
+      ctx.strokeStyle = 'rgba(255,252,230,0.78)';
+      ctx.lineWidth = 5 + Math.random() * 2;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+
+    ctx.restore();
+
+    // "Hold to pour" pulsing hint
+    if (!mashState.pourActive) {
+      const pulse = 0.4 + 0.4 * Math.sin(Date.now() * 0.004);
+      ctx.save();
+      ctx.font = 'bold 13px Arial';
+      ctx.fillStyle = `rgba(255,243,180,${pulse})`;
+      ctx.textAlign = 'center';
+      ctx.fillText('Hold & tilt ↑', 300, 148);
+      ctx.restore();
+      requestAnimationFrame(renderMashCanvas);
+    }
+  }
 }
 
 // ============================================================
