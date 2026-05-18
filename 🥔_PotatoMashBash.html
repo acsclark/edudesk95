@@ -1631,14 +1631,15 @@
         <span class="ps-arrow">›</span>
       </button>
 
-      <button class="practice-step-btn disabled" onclick="comingSoon('Mashing')">
+      <button class="practice-step-btn" onclick="startPractice('mash')">
         <span class="ps-icon">🥣</span>
         <div class="ps-text">
-          <div class="ps-title">Mashing <span class="ps-soon">Coming Soon</span></div>
-          <div class="ps-desc">Mash until fluffy! The final and most satisfying step.</div>
+          <div class="ps-title">Mashing</div>
+          <div class="ps-desc">Tap to mash areas, then stir clockwise, then counter-clockwise!</div>
         </div>
         <span class="ps-arrow">›</span>
       </button>
+
 
     </div>
   </div>
@@ -2357,13 +2358,18 @@ function startPractice(step) {
     document.getElementById('hud-timer').style.fontSize = '1rem';
     document.getElementById('hud-timer').style.color = '#a8e6a0';
     loadSeasonStep();
+  } else if (step === 'mash') {
+    document.getElementById('hud-timer').textContent = 'PRACTICE';
+    document.getElementById('hud-timer').style.fontSize = '1rem';
+    document.getElementById('hud-timer').style.color = '#a8e6a0';
+    loadMashStep();
   }
 }
 
 function injectPracticeBanner(step) {
   // Remove any existing
   document.querySelectorAll('.practice-banner').forEach(e=>e.remove());
-  const stepNames = { peel: 'Peeling', cut: 'Cubing', fill: 'Filling the Pot', boil: 'Boiling', season: 'Seasoning' };
+  const stepNames = { peel: 'Peeling', cut: 'Cubing', fill: 'Filling the Pot', boil: 'Boiling', season: 'Seasoning', mash: 'Mashing' };
   const banner = document.createElement('div');
   banner.className = 'practice-banner';
   banner.innerHTML = `
@@ -5431,7 +5437,7 @@ function onButterDone() {
     } else {
       toast('Seasoned! 🥣 Time to mash!');
       broadcastMyProgress(0.92, 5);
-      onRaceFinished(); // placeholder until mashing step
+      loadMashStep();
     }
   }, 900);
 }
@@ -5488,6 +5494,614 @@ function spawnButterSmear(clientX, clientY) {
   el.style.cssText = `position:absolute;left:${lx-8}px;top:${ly-4}px;width:${16+Math.random()*12}px;height:${5+Math.random()*4}px;background:rgba(255,220,30,0.45);border-radius:50%;pointer-events:none;filter:blur(2px);`;
   seasonState.particleEl.appendChild(el);
   setTimeout(() => el.remove(), 1200);
+}
+
+// ============================================================
+//  STEP: MASHING  (tap to mash → stir clockwise → stir counter-clockwise)
+// ============================================================
+const MASH_POTATOES = 20; // number of potato chunks to mash
+const MASH_TAP_RADIUS = 55; // radius of mash circle when tapping
+const MASH_STIRS_NEEDED = 10;
+
+let mashState = {
+  phase: 'tapping',    // 'tapping' | 'stirCW' | 'stirCCW' | 'done'
+  potatoes: [],        // [{x, y, mashed: bool, size}]
+  stirCWCount: 0,
+  stirCCWCount: 0,
+  lastAngle: null,
+  totalRotation: 0,
+  isDragging: false,
+  done: false,
+  tapX: null,
+  tapY: null,
+  tapAnimFrame: 0,
+  // refs
+  canvasEl: null,
+  ctx: null,
+  statusEl: null,
+  mashProgressEl: null,
+  stirProgressEl: null,
+  checkTapEl: null,
+  checkCWEl: null,
+  checkCCWEl: null,
+};
+
+function loadMashStep() {
+  document.getElementById('hud-step-label').textContent = 'Step 6/6';
+  document.getElementById('hud-step-name').textContent = 'Mash the Potatoes';
+  if (!practiceMode) broadcastMyProgress(0.94, 6);
+
+  const area = document.getElementById('game-area');
+  area.innerHTML = `
+    <div class="mash-workspace">
+      <div class="mash-status" id="mash-status">🥔 Tap on potatoes to mash them!</div>
+      
+      <div style="position:relative;display:inline-block;">
+        <canvas id="mash-canvas" width="400" height="400" style="border-radius:12px;cursor:crosshair;"></canvas>
+      </div>
+
+      <div class="mash-progress" id="mash-progress">
+        <div class="mash-checklist">
+          <div class="mash-check-item">
+            <span id="mash-check-tap">⬜</span> Mash all potatoes (<span id="mash-tap-count">0/${MASH_POTATOES}</span>)
+          </div>
+          <div class="mash-check-item">
+            <span id="mash-check-cw">⬜</span> Stir clockwise (<span id="mash-cw-count">0/10</span>)
+          </div>
+          <div class="mash-check-item">
+            <span id="mash-check-ccw">⬜</span> Stir counter-clockwise (<span id="mash-ccw-count">0/10</span>)
+          </div>
+          <div style="font-size:0.9rem;color:#888;margin-top:8px;" id="mash-debug">
+            Rotation: 0°
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Add CSS for mashing
+  if (!document.getElementById('mash-style')) {
+    const style = document.createElement('style');
+    style.id = 'mash-style';
+    style.textContent = `
+      .mash-workspace {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding: 20px;
+      }
+      .mash-status {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--text-light);
+        text-align: center;
+        padding: 12px 24px;
+        background: var(--panel-bg);
+        border-radius: 12px;
+        border: 2px solid var(--panel-border);
+      }
+      .mash-status.ok {
+        background: rgba(76,175,80,0.25);
+        border-color: var(--accent-green);
+        color: #90ee90;
+      }
+      .mash-progress {
+        width: 100%;
+        max-width: 350px;
+      }
+      .mash-checklist {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .mash-check-item {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-light);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      #mash-canvas {
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        background: #2d1a00;
+        max-width: 90vw;
+        height: auto;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  mashState.canvasEl = document.getElementById('mash-canvas');
+  mashState.ctx = mashState.canvasEl.getContext('2d');
+  mashState.statusEl = document.getElementById('mash-status');
+  mashState.checkTapEl = document.getElementById('mash-check-tap');
+  mashState.checkCWEl = document.getElementById('mash-check-cw');
+  mashState.checkCCWEl = document.getElementById('mash-check-ccw');
+  
+  mashState.phase = 'tapping';
+  mashState.stirCWCount = 0;
+  mashState.stirCCWCount = 0;
+  mashState.lastAngle = null;
+  mashState.totalRotation = 0;
+  mashState.isDragging = false;
+  mashState.done = false;
+  mashState.tapX = null;
+  mashState.tapY = null;
+  mashState.tapAnimFrame = 0;
+
+  // Generate potato positions inside the pot
+  mashState.potatoes = [];
+  const potCenterX = 200;
+  const potCenterY = 200;
+  const potRadius = 140;
+  
+  for (let i = 0; i < MASH_POTATOES; i++) {
+    let x, y, valid;
+    let attempts = 0;
+    
+    do {
+      // Random position within circular pot
+      const angle = Math.random() * Math.PI * 2;
+      const radius = Math.sqrt(Math.random()) * (potRadius - 25);
+      x = potCenterX + Math.cos(angle) * radius;
+      y = potCenterY + Math.sin(angle) * radius;
+      
+      // Check if too close to other potatoes
+      valid = true;
+      for (let p of mashState.potatoes) {
+        const dist = Math.sqrt((x - p.x) ** 2 + (y - p.y) ** 2);
+        if (dist < 30) {
+          valid = false;
+          break;
+        }
+      }
+      attempts++;
+    } while (!valid && attempts < 50);
+    
+    mashState.potatoes.push({
+      x: x,
+      y: y,
+      mashed: false,
+      size: 15 + Math.random() * 8,
+      rotation: Math.random() * Math.PI * 2
+    });
+  }
+
+  // Event listeners
+  mashState.canvasEl.addEventListener('mousedown', onMashMouseDown);
+  mashState.canvasEl.addEventListener('mousemove', onMashMouseMove);
+  mashState.canvasEl.addEventListener('mouseup', onMashMouseUp);
+  mashState.canvasEl.addEventListener('mouseleave', onMashMouseUp);
+  
+  mashState.canvasEl.addEventListener('touchstart', onMashTouchStart, {passive: false});
+  mashState.canvasEl.addEventListener('touchmove', onMashTouchMove, {passive: false});
+  mashState.canvasEl.addEventListener('touchend', onMashTouchEnd);
+
+  renderMashCanvas();
+}
+
+function onMashMouseDown(e) {
+  e.preventDefault();
+  const rect = mashState.canvasEl.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (mashState.canvasEl.width / rect.width);
+  const y = (e.clientY - rect.top) * (mashState.canvasEl.height / rect.height);
+  
+  if (mashState.phase === 'tapping') {
+    handleMashTap(x, y);
+  } else if (mashState.phase === 'stirCW' || mashState.phase === 'stirCCW') {
+    mashState.isDragging = true;
+    mashState.lastAngle = Math.atan2(y - 200, x - 200);
+    mashState.totalRotation = 0;
+  }
+}
+
+function onMashMouseMove(e) {
+  if (!mashState.isDragging) return;
+  const rect = mashState.canvasEl.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (mashState.canvasEl.width / rect.width);
+  const y = (e.clientY - rect.top) * (mashState.canvasEl.height / rect.height);
+  handleStir(x, y);
+}
+
+function onMashMouseUp(e) {
+  mashState.isDragging = false;
+  mashState.lastAngle = null;
+  mashState.totalRotation = 0;
+}
+
+function onMashTouchStart(e) {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = mashState.canvasEl.getBoundingClientRect();
+  const x = (touch.clientX - rect.left) * (mashState.canvasEl.width / rect.width);
+  const y = (touch.clientY - rect.top) * (mashState.canvasEl.height / rect.height);
+  
+  if (mashState.phase === 'tapping') {
+    handleMashTap(x, y);
+  } else if (mashState.phase === 'stirCW' || mashState.phase === 'stirCCW') {
+    mashState.isDragging = true;
+    mashState.lastAngle = Math.atan2(y - 200, x - 200);
+    mashState.totalRotation = 0;
+  }
+}
+
+function onMashTouchMove(e) {
+  e.preventDefault();
+  if (!mashState.isDragging) return;
+  const touch = e.touches[0];
+  const rect = mashState.canvasEl.getBoundingClientRect();
+  const x = (touch.clientX - rect.left) * (mashState.canvasEl.width / rect.width);
+  const y = (touch.clientY - rect.top) * (mashState.canvasEl.height / rect.height);
+  handleStir(x, y);
+}
+
+function onMashTouchEnd(e) {
+  mashState.isDragging = false;
+  mashState.lastAngle = null;
+  mashState.totalRotation = 0;
+}
+
+function handleMashTap(x, y) {
+  // Show tap animation
+  mashState.tapX = x;
+  mashState.tapY = y;
+  mashState.tapAnimFrame = 15;
+  
+  // Mark potatoes within radius as mashed
+  let anyNew = false;
+
+  for (let potato of mashState.potatoes) {
+    if (potato.mashed) continue;
+    
+    const dist = Math.sqrt((x - potato.x) ** 2 + (y - potato.y) ** 2);
+    
+    if (dist < MASH_TAP_RADIUS) {
+      potato.mashed = true;
+      anyNew = true;
+    }
+  }
+
+  if (anyNew) {
+    updateMashCount();
+    checkMashTappingComplete();
+  }
+  
+  renderMashCanvas();
+}
+
+function updateMashCount() {
+  const mashed = mashState.potatoes.filter(p => p.mashed).length;
+  document.getElementById('mash-tap-count').textContent = `${mashed}/${MASH_POTATOES}`;
+}
+
+function handleStir(x, y) {
+  const currentAngle = Math.atan2(y - 200, x - 200);
+  
+  if (mashState.lastAngle !== null) {
+    let delta = currentAngle - mashState.lastAngle;
+    
+    // Normalize delta to [-π, π]
+    if (delta > Math.PI) delta -= 2 * Math.PI;
+    if (delta < -Math.PI) delta += 2 * Math.PI;
+    
+    // Only count significant movements (reduces jitter)
+    if (Math.abs(delta) > 0.05) {
+      mashState.totalRotation += delta;
+    }
+    
+    // Update debug display
+    const degrees = Math.round((mashState.totalRotation / Math.PI) * 180);
+    const progressPercent = Math.round((Math.abs(mashState.totalRotation) / (Math.PI * 1.8)) * 100);
+    document.getElementById('mash-debug').textContent = `Rotation: ${degrees}° (${progressPercent}%)`;
+    
+    // Check for completed rotation (more lenient - 1.8π instead of 2π)
+    const rotationThreshold = Math.PI * 1.8;
+    
+    if (mashState.phase === 'stirCW' && mashState.totalRotation >= rotationThreshold) {
+      mashState.stirCWCount++;
+      mashState.totalRotation = 0;
+      document.getElementById('mash-cw-count').textContent = `${mashState.stirCWCount}/10`;
+      
+      // Visual feedback
+      const ctx = mashState.ctx;
+      ctx.save();
+      ctx.fillStyle = 'rgba(76, 175, 80, 0.3)';
+      ctx.beginPath();
+      ctx.arc(200, 200, 160, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      if (mashState.stirCWCount >= MASH_STIRS_NEEDED) {
+        onStirCWComplete();
+      }
+    } else if (mashState.phase === 'stirCCW' && mashState.totalRotation <= -rotationThreshold) {
+      mashState.stirCCWCount++;
+      mashState.totalRotation = 0;
+      document.getElementById('mash-ccw-count').textContent = `${mashState.stirCCWCount}/10`;
+      
+      // Visual feedback
+      const ctx = mashState.ctx;
+      ctx.save();
+      ctx.fillStyle = 'rgba(76, 175, 80, 0.3)';
+      ctx.beginPath();
+      ctx.arc(200, 200, 160, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      if (mashState.stirCCWCount >= MASH_STIRS_NEEDED) {
+        onMashComplete();
+      }
+    }
+  }
+  
+  mashState.lastAngle = currentAngle;
+  renderMashCanvas();
+}
+
+function checkMashTappingComplete() {
+  const allMashed = mashState.potatoes.every(p => p.mashed);
+  if (allMashed) {
+    mashState.checkTapEl.textContent = '✅';
+    mashState.phase = 'stirCW';
+    mashState.statusEl.textContent = '🔄 Stir clockwise 10 times!';
+    mashState.canvasEl.style.cursor = 'grab';
+  }
+}
+
+function onStirCWComplete() {
+  mashState.checkCWEl.textContent = '✅';
+  mashState.phase = 'stirCCW';
+  mashState.statusEl.textContent = '🔄 Now stir counter-clockwise 10 times!';
+  mashState.totalRotation = 0;
+}
+
+function onMashComplete() {
+  if (mashState.done) return;
+  mashState.done = true;
+  mashState.checkCCWEl.textContent = '✅';
+  mashState.statusEl.textContent = '🎉 Perfect fluffy mash!';
+  mashState.statusEl.className = 'mash-status ok';
+  
+  // Remove event listeners
+  mashState.canvasEl.removeEventListener('mousedown', onMashMouseDown);
+  mashState.canvasEl.removeEventListener('mousemove', onMashMouseMove);
+  mashState.canvasEl.removeEventListener('mouseup', onMashMouseUp);
+  mashState.canvasEl.removeEventListener('mouseleave', onMashMouseUp);
+  mashState.canvasEl.removeEventListener('touchstart', onMashTouchStart);
+  mashState.canvasEl.removeEventListener('touchmove', onMashTouchMove);
+  mashState.canvasEl.removeEventListener('touchend', onMashTouchEnd);
+
+  renderMashCanvas(); // Final fluffy render
+  
+  setTimeout(() => {
+    if (practiceMode) {
+      toast('Deliciously fluffy! Starting again... 🥔');
+      loadMashStep();
+    } else {
+      toast('Mashed to perfection! 🏁');
+      broadcastMyProgress(1.0, 6);
+      onRaceFinished();
+    }
+  }, 900);
+}
+
+function renderMashCanvas() {
+  const ctx = mashState.ctx;
+  const w = mashState.canvasEl.width;
+  const h = mashState.canvasEl.height;
+  
+  // Clear
+  ctx.fillStyle = '#2d1a00';
+  ctx.fillRect(0, 0, w, h);
+  
+  const potCenterX = 200;
+  const potCenterY = 200;
+  const potRadius = 140;
+  
+  // Calculate fluffiness based on completion
+  const mashedCount = mashState.potatoes.filter(p => p.mashed).length;
+  const tapProgress = mashedCount / MASH_POTATOES;
+  const cwProgress = mashState.stirCWCount / MASH_STIRS_NEEDED;
+  const ccwProgress = mashState.stirCCWCount / MASH_STIRS_NEEDED;
+  const fluffiness = (tapProgress * 0.4 + cwProgress * 0.3 + ccwProgress * 0.3);
+  
+  // Draw pot shadow
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(potCenterX, potCenterY + 175, potRadius * 0.9, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  
+  // Draw pot body
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(potCenterX, potCenterY, potRadius, potRadius, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#e8e0d0';
+  ctx.fill();
+  ctx.strokeStyle = '#bdb0a0';
+  ctx.lineWidth = 5;
+  ctx.stroke();
+  ctx.restore();
+  
+  // Clip to pot
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(potCenterX, potCenterY, potRadius - 5, potRadius - 5, 0, 0, Math.PI * 2);
+  ctx.clip();
+  
+  // Draw base mash color
+  ctx.fillStyle = '#f0d88a';
+  ctx.beginPath();
+  ctx.ellipse(potCenterX, potCenterY, potRadius - 5, potRadius - 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Draw individual potato chunks
+  for (let potato of mashState.potatoes) {
+    if (potato.mashed) {
+      // Mashed potato - smooth blob
+      const mashSize = potato.size * (1.3 + fluffiness * 0.5);
+      ctx.save();
+      ctx.translate(potato.x, potato.y);
+      ctx.rotate(potato.rotation);
+      
+      // Create fluffy texture
+      const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, mashSize);
+      gradient.addColorStop(0, `rgba(255, 248, ${200 + fluffiness * 30}, ${0.9 + fluffiness * 0.1})`);
+      gradient.addColorStop(1, `rgba(240, 216, ${138 + fluffiness * 40}, ${0.7 + fluffiness * 0.2})`);
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, mashSize, mashSize * 0.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Add highlight for fluffiness
+      if (fluffiness > 0.3) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.2 * fluffiness})`;
+        ctx.beginPath();
+        ctx.ellipse(-mashSize * 0.3, -mashSize * 0.3, mashSize * 0.5, mashSize * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      ctx.restore();
+    } else {
+      // Unmashed potato chunk - lumpy shape
+      ctx.save();
+      ctx.translate(potato.x, potato.y);
+      ctx.rotate(potato.rotation);
+      
+      // Draw potato chunk shape
+      ctx.fillStyle = '#d4a84b';
+      ctx.beginPath();
+      ctx.moveTo(-potato.size * 0.8, -potato.size * 0.5);
+      ctx.bezierCurveTo(
+        -potato.size * 0.9, -potato.size * 0.9,
+        potato.size * 0.3, -potato.size,
+        potato.size * 0.8, -potato.size * 0.4
+      );
+      ctx.bezierCurveTo(
+        potato.size, potato.size * 0.2,
+        potato.size * 0.5, potato.size * 0.9,
+        0, potato.size * 0.8
+      );
+      ctx.bezierCurveTo(
+        -potato.size * 0.6, potato.size * 0.7,
+        -potato.size, potato.size * 0.2,
+        -potato.size * 0.8, -potato.size * 0.5
+      );
+      ctx.closePath();
+      ctx.fill();
+      
+      // Add some texture
+      ctx.strokeStyle = '#c4922a';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      
+      // Highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.beginPath();
+      ctx.ellipse(-potato.size * 0.3, -potato.size * 0.3, potato.size * 0.3, potato.size * 0.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.restore();
+    }
+  }
+  
+  // Add extra fluff texture when fully mashed and stirred
+  if (fluffiness > 0.6) {
+    for (let i = 0; i < 30; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = Math.random() * (potRadius - 20);
+      const fx = potCenterX + Math.cos(angle) * radius;
+      const fy = potCenterY + Math.sin(angle) * radius;
+      
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.15 * fluffiness})`;
+      ctx.beginPath();
+      ctx.ellipse(fx, fy, 8 + Math.random() * 6, 4 + Math.random() * 3, Math.random() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  
+  ctx.restore(); // End clip
+  
+  // Draw tap circle animation
+  if (mashState.tapAnimFrame > 0) {
+    const alpha = mashState.tapAnimFrame / 15;
+    const radius = MASH_TAP_RADIUS * (1 + (1 - alpha) * 0.3);
+    
+    ctx.save();
+    ctx.strokeStyle = `rgba(76, 175, 80, ${alpha * 0.6})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(mashState.tapX, mashState.tapY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    
+    mashState.tapAnimFrame--;
+    if (mashState.tapAnimFrame > 0) {
+      requestAnimationFrame(renderMashCanvas);
+    }
+  }
+  
+  // Show stir direction indicator
+  if (mashState.phase === 'stirCW' || mashState.phase === 'stirCCW') {
+    const arrowCount = 8;
+    const radius = potRadius - 20;
+    const direction = mashState.phase === 'stirCW' ? 1 : -1;
+    
+    // Draw rotation progress arc
+    const rotationProgress = Math.abs(mashState.totalRotation) / (Math.PI * 1.8);
+    if (rotationProgress > 0.05) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(76, 175, 80, 0.6)';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      const startAngle = -Math.PI / 2;
+      const endAngle = startAngle + (direction * rotationProgress * Math.PI * 2);
+      ctx.arc(potCenterX, potCenterY, radius + 10, startAngle, endAngle);
+      ctx.stroke();
+      ctx.restore();
+    }
+    
+    ctx.save();
+    ctx.strokeStyle = 'rgba(76, 175, 80, 0.6)';
+    ctx.fillStyle = 'rgba(76, 175, 80, 0.6)';
+    ctx.lineWidth = 3;
+    
+    for (let i = 0; i < arrowCount; i++) {
+      const angle = (i / arrowCount) * Math.PI * 2;
+      const x = potCenterX + Math.cos(angle) * radius;
+      const y = potCenterY + Math.sin(angle) * radius;
+      
+      // Arrow
+      ctx.beginPath();
+      const arrowAngle = angle + direction * Math.PI / 2;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(arrowAngle) * 15, y + Math.sin(arrowAngle) * 15);
+      ctx.lineTo(x + Math.cos(arrowAngle - 0.5 * direction) * 10, y + Math.sin(arrowAngle - 0.5 * direction) * 10);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  
+  // Draw pot rim (on top)
+  ctx.save();
+  ctx.strokeStyle = '#c8bba8';
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.ellipse(potCenterX, potCenterY, potRadius, potRadius, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  
+  // Rim highlight
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(potCenterX, potCenterY - 3, potRadius - 2, potRadius - 2, 0, -Math.PI, 0);
+  ctx.stroke();
+  ctx.restore();
 }
 
 // ============================================================
