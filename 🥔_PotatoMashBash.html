@@ -5731,6 +5731,10 @@ function onMashMouseUp(e) {
 
 function onMashTouchStart(e) {
   e.preventDefault();
+  if (mashState.phase === 'pouring') {
+    onPourDown(null);
+    return;
+  }
   const touch = e.touches[0];
   const rect = mashState.canvasEl.getBoundingClientRect();
   const x = (touch.clientX - rect.left) * (mashState.canvasEl.width / rect.width);
@@ -5747,6 +5751,7 @@ function onMashTouchStart(e) {
 
 function onMashTouchMove(e) {
   e.preventDefault();
+  if (mashState.phase === 'pouring') return;
   if (!mashState.isDragging) return;
   const touch = e.touches[0];
   const rect = mashState.canvasEl.getBoundingClientRect();
@@ -5756,6 +5761,10 @@ function onMashTouchMove(e) {
 }
 
 function onMashTouchEnd(e) {
+  if (mashState.phase === 'pouring') {
+    onPourUp(null);
+    return;
+  }
   mashState.isDragging = false;
   mashState.lastAngle = null;
   mashState.totalRotation = 0;
@@ -5876,10 +5885,7 @@ function checkMashTappingComplete() {
     mashState.canvasEl.addEventListener('mousemove',   onPourMove);
     mashState.canvasEl.addEventListener('mouseup',     onPourUp);
     mashState.canvasEl.addEventListener('mouseleave',  onPourUp);
-    mashState.canvasEl.addEventListener('touchstart',  onPourTouchStart,  {passive:false});
-    mashState.canvasEl.addEventListener('touchmove',   onPourTouchMove,   {passive:false});
-    mashState.canvasEl.addEventListener('touchend',    onPourUp);
-    mashState.canvasEl.addEventListener('touchcancel', onPourUp);
+    // Note: touchstart/touchend are handled by the always-active onMashTouch* handlers
     renderMashCanvas();
   }
 }
@@ -5962,10 +5968,7 @@ function onPourComplete() {
   mashState.canvasEl.removeEventListener('mousemove',   onPourMove);
   mashState.canvasEl.removeEventListener('mouseup',     onPourUp);
   mashState.canvasEl.removeEventListener('mouseleave',  onPourUp);
-  mashState.canvasEl.removeEventListener('touchstart',  onPourTouchStart);
-  mashState.canvasEl.removeEventListener('touchmove',   onPourTouchMove);
-  mashState.canvasEl.removeEventListener('touchend',    onPourUp);
-  mashState.canvasEl.removeEventListener('touchcancel', onPourUp);
+  // touch listeners are the shared onMashTouch* handlers — leave them in place
   mashState.phase = 'stirCW';
   mashState.statusEl.textContent = '🔄 Stir clockwise 10 times!';
   mashState.canvasEl.style.cursor = 'grab';
