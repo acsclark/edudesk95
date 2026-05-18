@@ -5872,13 +5872,14 @@ function checkMashTappingComplete() {
     const pourItem = document.getElementById('mash-pour-item');
     if (pourItem) pourItem.style.opacity = '1';
     // Attach pour events
-    mashState.canvasEl.addEventListener('mousedown',  onPourDown);
-    mashState.canvasEl.addEventListener('mousemove',  onPourMove);
-    mashState.canvasEl.addEventListener('mouseup',    onPourUp);
-    mashState.canvasEl.addEventListener('mouseleave', onPourUp);
-    mashState.canvasEl.addEventListener('touchstart', onPourTouchStart, {passive:false});
-    mashState.canvasEl.addEventListener('touchmove',  onPourTouchMove,  {passive:false});
-    mashState.canvasEl.addEventListener('touchend',   onPourUp);
+    mashState.canvasEl.addEventListener('mousedown',   onPourDown);
+    mashState.canvasEl.addEventListener('mousemove',   onPourMove);
+    mashState.canvasEl.addEventListener('mouseup',     onPourUp);
+    mashState.canvasEl.addEventListener('mouseleave',  onPourUp);
+    mashState.canvasEl.addEventListener('touchstart',  onPourTouchStart,  {passive:false});
+    mashState.canvasEl.addEventListener('touchmove',   onPourTouchMove,   {passive:false});
+    mashState.canvasEl.addEventListener('touchend',    onPourUp);
+    mashState.canvasEl.addEventListener('touchcancel', onPourUp);
     renderMashCanvas();
   }
 }
@@ -5889,7 +5890,7 @@ let _pourRAF = null;
 let _pourLastFrame = null;
 
 function onPourDown(e) {
-  e.preventDefault();
+  if (e && e.preventDefault) e.preventDefault();
   if (mashState.phase !== 'pouring' || mashState.pourProgress >= 1) return;
   mashState.pourActive = true;
   mashState.pourJugTarget = 110;
@@ -5902,7 +5903,7 @@ function onPourUp(e) {
   mashState.pourActive = false;
   mashState.pourJugTarget = 0;
 }
-function onPourTouchStart(e) { e.preventDefault(); onPourDown(e.touches[0]); }
+function onPourTouchStart(e) { e.preventDefault(); onPourDown(null); }
 function onPourTouchMove(e)  { e.preventDefault(); }
 
 function pourAnimTick(ts) {
@@ -5957,13 +5958,14 @@ function onPourComplete() {
   mashState.pourJugAngle = 0;
   mashState.pourDrops = [];
   if (mashState.pourCheckEl) mashState.pourCheckEl.textContent = '✅';
-  mashState.canvasEl.removeEventListener('mousedown',  onPourDown);
-  mashState.canvasEl.removeEventListener('mousemove',  onPourMove);
-  mashState.canvasEl.removeEventListener('mouseup',    onPourUp);
-  mashState.canvasEl.removeEventListener('mouseleave', onPourUp);
-  mashState.canvasEl.removeEventListener('touchstart', onPourTouchStart);
-  mashState.canvasEl.removeEventListener('touchmove',  onPourTouchMove);
-  mashState.canvasEl.removeEventListener('touchend',   onPourUp);
+  mashState.canvasEl.removeEventListener('mousedown',   onPourDown);
+  mashState.canvasEl.removeEventListener('mousemove',   onPourMove);
+  mashState.canvasEl.removeEventListener('mouseup',     onPourUp);
+  mashState.canvasEl.removeEventListener('mouseleave',  onPourUp);
+  mashState.canvasEl.removeEventListener('touchstart',  onPourTouchStart);
+  mashState.canvasEl.removeEventListener('touchmove',   onPourTouchMove);
+  mashState.canvasEl.removeEventListener('touchend',    onPourUp);
+  mashState.canvasEl.removeEventListener('touchcancel', onPourUp);
   mashState.phase = 'stirCW';
   mashState.statusEl.textContent = '🔄 Stir clockwise 10 times!';
   mashState.canvasEl.style.cursor = 'grab';
