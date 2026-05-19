@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greed's Dozen - Action Edition</title>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel for in-browser JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+      @keyframes shake-animation {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+        20%, 40%, 60%, 80% { transform: translateX(8px); }
+      }
+      .shake-screen {
+        animation: shake-animation 0.5s cubic-bezier(.36,.07,.19,.97) both;
+      }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- UTILITY FUNCTIONS ---
+
+        const generateDeck = (isDouble = false) => {
+          const deck = [];
+          const m = isDouble ? 2 : 1;
+          
+          for (let i = 1; i <= 12; i++) {
+            for (let j = 0; j < (i * m); j++) {
+              deck.push({ type: 'number', value: i, label: i.toString() });
+            }
+          }
+          for (let i = 0; i < (3 * m); i++) deck.push({ type: 'action', action: 'freeze', label: 'Freeze', desc: 'Force a player to STOP.' });
+          for (let i = 0; i < (3 * m); i++) deck.push({ type: 'action', action: 'flip3', label: 'Flip 3', desc: 'Force a player to deal 3 times.' });
+          for (let i = 0; i < (3 * m); i++) deck.push({ type: 'action', action: 'secondChance', label: '2nd Chance', desc: 'Prevents 1 bust.' });
+          
+          for (let i = 0; i < m; i++) {
+            deck.push({ type: 'modifier', value: 2, label: '+2', desc: 'Adds 2 points' });
+            deck.push({ type: 'modifier', value: 4, label: '+4', desc: 'Adds 4 points' });
+            deck.push({ type: 'modifier', value: 6, label: '+6', desc: 'Adds 6 points' });
+            deck.push({ type: 'modifier', value: 8, label: '+8', desc: 'Adds 8 points' });
+            deck.push({ type: 'modifier', value: 10, label: '+10', desc: 'Adds 10 points' });
+            deck.push({ type: 'modifier', isMultiplier: true, label: 'x2', desc: 'Doubles score' });
+            deck.push({ type: 'number', value: 0, label: '0', desc: 'Counts towards 7, worth 0' });
+            deck.push({ type: 'number', value: 7, isUnlucky: true, label: 'Unlucky 7', desc: 'Discard all other cards' });
+          }
+
+          return deck;
+        };
+
+        const shuffleArray = (array) => {
+          const newArray = [...array];
+          for (let i = newArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+          }
+          return newArray;
+        };
+
+        const getCardColor = (card) => {
+          if (card.type === 'modifier') return 'bg-fuchsia-600 text-white border-fuchsia-400';
+          if (card.type === 'action') return 'bg-violet-600 text-white border-violet-400';
+          
+          const val = card.value;
+          if (val === 0) return 'bg-slate-500 text-white border-slate-400';
+          if (card.isUnlucky) return 'bg-lime-600 text-black border-lime-400';
+
+          const colors = {
+            12: 'bg-red-600 text-white border-red-400',
+            11: 'bg-rose-500 text-white border-rose-400',
+            10: 'bg-orange-500 text-white border-orange-400',
+            9: 'bg-amber-500 text-black border-amber-300',
+            8: 'bg-yellow-400 text-black border-yellow-300',
+            7: 'bg-lime-500 text-black border-lime-300',
+            6: 'bg-green-500 text-white border-green-400',
+            5: 'bg-emerald-500 text-white border-emerald-400',
+            4: 'bg-teal-500 text-white border-teal-400',
+            3: 'bg-cyan-500 text-black border-cyan-300',
+            2: 'bg-blue-500 text-white border-blue-400',
+            1: 'bg-indigo-600 text-white border-indigo-400',
+          };
+          return colors[val] || 'bg-gray-200 text-black border-white';
+        };
+
+        const calculatePot = (player) => {
+          if (player.roundStatus === 'busted') return 0;
+          
+          let base = player.currentCards.reduce((sum, c) => sum + (c.value || 0), 0);
+          
+          player.modifiers.forEach(m => {
+            if (!m.isMultiplier) base += m.value;
+          });
+          
+          player.modifiers.forEach(m => {
+            if (m.isMultiplier) base *= 2;
+          });
+
+          return base;
+        };
+
+        // --- COMPONENTS ---
+
+        const Card = ({ card, busted = false, animate = true, size = 'normal' }) => {
+          const isSmall = size === 'small';
+          const dimensions = isSmall ? 'w-16 h-24 border-2' : 'w-28 h-40 border-4';
+          const display = card.label;
+          const isText = display.length > 2;
+          const textSize = isSmall 
+            ? (isText ? 'text-xs' : 'text-3xl') 
+            : (isText ? 'text-lg' : 'text-6xl');
+          
+          const cornerText = isSmall ? 'text-[9px] top-1 left-1.5' : 'text-sm top-2 left-2';
+          const cornerTextRight = isSmall ? 'text-[9px] bottom-1 right-1.5' : 'text-sm bottom-2 right-2';
+          const rounded = isSmall ? 'rounded-lg' : 'rounded-xl';
+
+          return (
+            <div
+              className={`relative flex items-center justify-center shadow-lg font-bold text-center leading-tight overflow-hidden
+              ${dimensions} ${rounded} ${textSize} ${getCardColor(card)}
+              ${animate ? 'animate-in zoom-in fade-in duration-300' : ''}
+              ${busted ? 'opacity-60 grayscale brightness-75' : ''}
+              transition-all transform hover:-translate-y-1`}
+            >
+              {busted && (
+                <div className="absolute inset-0 bg-red-900/40 pointer-events-none"></div>
+              )}
+              <span className="px-1 relative z-10">{display}</span>
+              {!isText && <div className={`absolute font-semibold opacity-75 relative z-10 ${cornerText}`}>{display}</div>}
+              {!isText && <div className={`absolute font-semibold opacity-75 rotate-180 relative z-10 ${cornerTextRight}`}>{display}</div>}
+            </div>
+          );
+        };
+
+        function App() {
+          const playerRefs = useRef([]);
+          
+          const [gameState, setGameState] = useState({
+            phase: 'setup', 
+            isTeamMode: false,
+            isDoubleDeck: false,
+            deck: [],
+            discardPile: [],
+            players: [], 
+            currentPlayerIndex: 0,
+            currentRound: 1,
+            pendingAction: null, 
+          });
+          const [isShaking, setIsShaking] = useState(false);
+          const [gameMode, setGameMode] = useState('individual'); 
+          
+          const [setupPlayers, setSetupPlayers] = useState([
+            { id: 'p1', name: 'Player 1' },
+            { id: 'p2', name: 'Player 2' }
+          ]);
+          const [setupTeams, setSetupTeams] = useState([
+            { id: 't1', name: 'Team 1', players: [{ id: 'p1', name: 'Player 1' }] },
+            { id: 't2', name: 'Team 2', players: [{ id: 'p2', name: 'Player 2' }] }
+          ]);
+
+          const MAX_ROUNDS = 5;
+
+          useEffect(() => {
+            if ((gameState.phase === 'playing' || gameState.phase === 'targeting') && playerRefs.current[gameState.currentPlayerIndex]) {
+              setTimeout(() => {
+                playerRefs.current[gameState.currentPlayerIndex]?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'center', 
+                });
+              }, 50);
+            }
+          }, [gameState.currentPlayerIndex, gameState.phase]);
+
+          const drawCard = (currentDeck, currentDiscard) => {
+            let deck = [...currentDeck];
+            let discard = [...currentDiscard];
+            if (deck.length === 0) {
+              if (discard.length === 0) return [null, deck, discard]; 
+              deck = shuffleArray(discard);
+              discard = [];
+            }
+            const card = deck.pop();
+            return [card, deck, discard];
+          };
+
+          const getNextPlayerIndex = (players, currentIndex) => {
+            if (players.every((p) => p.roundStatus !== 'playing')) return -1;
+            let nextIndex = (currentIndex + 1) % players.length;
+            while (players[nextIndex].roundStatus !== 'playing') {
+              nextIndex = (nextIndex + 1) % players.length;
+            }
+            return nextIndex;
+          };
+
+          const addSetupPlayer = () => {
+            if (setupPlayers.length >= 24) return;
+            setSetupPlayers([...setupPlayers, { id: `p${Date.now()}`, name: `Player ${setupPlayers.length + 1}` }]);
+          };
+          const removeSetupPlayer = (pId) => setSetupPlayers(setupPlayers.filter(p => p.id !== pId));
+          const updateSetupPlayerName = (pId, name) => setSetupPlayers(setupPlayers.map(p => p.id === pId ? { ...p, name } : p));
+
+          const addTeam = () => setSetupTeams([...setupTeams, { id: `t${Date.now()}`, name: `Team ${setupTeams.length + 1}`, players: [] }]);
+          const removeTeam = (tId) => setSetupTeams(setupTeams.filter(t => t.id !== tId));
+          const updateTeamName = (tId, name) => setSetupTeams(setupTeams.map(t => t.id === tId ? { ...t, name } : t));
+          const addPlayerToTeam = (tId) => {
+            const totalTeamPlayers = setupTeams.reduce((sum, t) => sum + t.players.length, 0);
+            if (totalTeamPlayers >= 24) return;
+            setSetupTeams(setupTeams.map(t => t.id === tId ? { ...t, players: [...t.players, { id: `p${Date.now()}`, name: `Player ${t.players.length + 1}` }] } : t));
+          };
+          const removePlayerFromTeam = (tId, pId) => {
+            setSetupTeams(setupTeams.map(t => t.id === tId ? { ...t, players: t.players.filter(p => p.id !== pId) } : t));
+          };
+          const updatePlayerName = (tId, pId, name) => {
+            setSetupTeams(setupTeams.map(t => t.id === tId ? { ...t, players: t.players.map(p => p.id === pId ? { ...p, name } : p) } : t));
+          };
+
+          const handleStartGame = () => {
+            const allPlayers = gameMode === 'team'
+              ? setupTeams.flatMap(t => t.players.map(p => ({ ...p, teamId: t.id, teamName: t.name })))
+              : setupPlayers.map(p => ({ ...p, teamId: p.id, teamName: p.name }));
+              
+            if (allPlayers.length < 2 || allPlayers.length > 24) return; 
+
+            const isDoubleDeck = allPlayers.length > 16;
+            let currentDeck = shuffleArray(generateDeck(isDoubleDeck));
+            let currentDiscard = [];
+
+            const players = allPlayers.map((p) => {
+              let card = null;
+              while(currentDeck.length > 0) {
+                card = currentDeck.pop();
+                if (card.type === 'number') break;
+                currentDiscard.push(card);
+                card = null;
+              }
+              return {
+                id: p.id,
+                name: p.name,
+                teamId: p.teamId,
+                teamName: p.teamName,
+                score: 0,
+                currentCards: card ? [card] : [],
+                modifiers: [],
+                secondChanceCard: null,
+                forcedFlips: 0,
+                roundStatus: 'playing',
+              };
+            });
+
+            if (currentDiscard.length > 0) {
+              currentDeck = shuffleArray([...currentDeck, ...currentDiscard]);
+              currentDiscard = [];
+            }
+
+            setGameState((prev) => ({
+              ...prev,
+              phase: 'playing',
+              isTeamMode: gameMode === 'team',
+              isDoubleDeck,
+              players,
+              deck: currentDeck,
+              discardPile: currentDiscard,
+              currentRound: 1,
+              currentPlayerIndex: 0,
+              pendingAction: null,
+            }));
+          };
+
+          const handleDeal = () => {
+            setGameState((prev) => {
+              const [drawnCard, newDeck, newDiscard] = drawCard(prev.deck, prev.discardPile);
+              if (!drawnCard) return prev; 
+
+              const newPlayers = [...prev.players];
+              const pIdx = prev.currentPlayerIndex;
+              const player = { ...newPlayers[pIdx] };
+              
+              let nextPhase = prev.phase;
+              let newPendingAction = prev.pendingAction;
+              let isBust = false;
+              let autoStop = false;
+
+              if (player.forcedFlips > 0) {
+                player.forcedFlips -= 1;
+              }
+
+              if (drawnCard.type === 'number') {
+                const isDuplicate = player.currentCards.some(c => c.value === drawnCard.value && c.value !== 0);
+
+                if (isDuplicate) {
+                  if (player.secondChanceCard) {
+                    newDiscard.push(drawnCard);
+                    newDiscard.push(player.secondChanceCard);
+                    player.secondChanceCard = null;
+                  } else {
+                    isBust = true;
+                    player.roundStatus = 'busted';
+                    player.currentCards = [...player.currentCards, drawnCard];
+                    
+                    setIsShaking(true);
+                    setTimeout(() => setIsShaking(false), 500);
+                  }
+                } else {
+                  if (drawnCard.isUnlucky) {
+                    newDiscard.push(...player.currentCards);
+                    player.currentCards = [drawnCard];
+                  } else {
+                    player.currentCards = [...player.currentCards, drawnCard];
+                  }
+                }
+              } else if (drawnCard.type === 'modifier') {
+                player.modifiers = [...player.modifiers, drawnCard];
+              } else if (drawnCard.type === 'action') {
+                if (drawnCard.action === 'secondChance') {
+                  if (player.secondChanceCard) {
+                    newDiscard.push(drawnCard); 
+                  } else {
+                    player.secondChanceCard = drawnCard;
+                  }
+                } else {
+                  nextPhase = 'targeting';
+                  newPendingAction = { card: drawnCard, sourcePlayerIndex: pIdx };
+                }
+              }
+
+              if (!isBust && nextPhase !== 'targeting' && player.currentCards.length >= 7) {
+                player.roundStatus = 'won_perfect_7';
+                player.score += calculatePot(player) + 15;
+                autoStop = true;
+                
+                for (let i = 0; i < newPlayers.length; i++) {
+                  if (i !== pIdx && newPlayers[i].roundStatus === 'playing') {
+                    newPlayers[i].roundStatus = 'auto_banked';
+                    newPlayers[i].score += calculatePot(newPlayers[i]);
+                  }
+                }
+              }
+
+              newPlayers[pIdx] = player;
+
+              let nextIndex = pIdx;
+              
+              if (nextPhase === 'targeting') {
+                // Keep turn on current player until target selected
+              } else if (isBust || autoStop) {
+                player.forcedFlips = 0; 
+                nextIndex = getNextPlayerIndex(newPlayers, pIdx);
+              } else {
+                if (player.forcedFlips > 0) {
+                  nextIndex = pIdx; 
+                } else {
+                  nextIndex = getNextPlayerIndex(newPlayers, pIdx);
+                }
+              }
+
+              if (nextIndex === -1 && nextPhase !== 'targeting') {
+                nextPhase = 'round_end';
+              }
+
+              return {
+                ...prev,
+                deck: newDeck,
+                discardPile: newDiscard,
+                players: newPlayers,
+                phase: nextPhase,
+                pendingAction: newPendingAction,
+                currentPlayerIndex: nextIndex === -1 ? prev.currentPlayerIndex : nextIndex,
+              };
+            });
+          };
+
+          const handleActionTarget = (targetPlayerId) => {
+            setGameState(prev => {
+              const newPlayers = [...prev.players];
+              const targetIdx = newPlayers.findIndex(p => p.id === targetPlayerId);
+              const target = { ...newPlayers[targetIdx] };
+              
+              const actionCard = prev.pendingAction.card;
+              const sourceIdx = prev.pendingAction.sourcePlayerIndex;
+              const sourcePlayer = newPlayers[sourceIdx];
+
+              let newDiscard = [...prev.discardPile, actionCard]; 
+
+              if (actionCard.action === 'freeze') {
+                target.roundStatus = 'stopped';
+                target.score += calculatePot(target);
+                target.forcedFlips = 0; 
+              } else if (actionCard.action === 'flip3') {
+                target.forcedFlips += 3;
+              }
+              newPlayers[targetIdx] = target;
+
+              let nextIndex = sourceIdx;
+              
+              if (sourcePlayer.roundStatus === 'playing') {
+                if (sourcePlayer.forcedFlips > 0) {
+                  nextIndex = sourceIdx; 
+                } else {
+                  nextIndex = getNextPlayerIndex(newPlayers, sourceIdx);
+                }
+              } else {
+                nextIndex = getNextPlayerIndex(newPlayers, sourceIdx);
+              }
+
+              return {
+                ...prev,
+                discardPile: newDiscard,
+                players: newPlayers,
+                phase: nextIndex === -1 ? 'round_end' : 'playing',
+                pendingAction: null,
+                currentPlayerIndex: nextIndex === -1 ? prev.currentPlayerIndex : nextIndex,
+              };
+            });
+          };
+
+          const handleStop = () => {
+            setGameState((prev) => {
+              const newPlayers = [...prev.players];
+              const player = { ...newPlayers[prev.currentPlayerIndex] };
+              
+              player.roundStatus = 'stopped';
+              player.score += calculatePot(player);
+              newPlayers[prev.currentPlayerIndex] = player;
+              
+              const nextIndex = getNextPlayerIndex(newPlayers, prev.currentPlayerIndex);
+
+              return {
+                ...prev,
+                players: newPlayers,
+                currentPlayerIndex: Math.max(0, nextIndex),
+                phase: nextIndex === -1 ? 'round_end' : 'playing',
+              };
+            });
+          };
+
+          const handleNextRound = () => {
+            setGameState((prev) => {
+              let nextRound = prev.currentRound + 1;
+              if (nextRound > MAX_ROUNDS) {
+                return { ...prev, phase: 'gameover' };
+              }
+
+              let currentDeck = [...prev.deck];
+              let currentDiscard = [...prev.discardPile];
+
+              prev.players.forEach(p => {
+                currentDiscard.push(...p.currentCards, ...p.modifiers);
+                if (p.secondChanceCard) currentDiscard.push(p.secondChanceCard);
+              });
+
+              const newPlayers = prev.players.map(p => {
+                let card = null;
+                while(currentDeck.length > 0) {
+                  card = currentDeck.pop();
+                  if (card.type === 'number') break;
+                  currentDiscard.push(card);
+                  card = null;
+                }
+                return {
+                  ...p,
+                  currentCards: card ? [card] : [],
+                  modifiers: [],
+                  secondChanceCard: null,
+                  forcedFlips: 0,
+                  roundStatus: 'playing'
+                };
+              });
+
+              if (currentDiscard.length > 0) {
+                currentDeck = shuffleArray([...currentDeck, ...currentDiscard]);
+                currentDiscard = [];
+              }
+
+              const startPlayerIndex = prev.currentRound % prev.players.length;
+
+              return {
+                ...prev,
+                deck: currentDeck,
+                discardPile: currentDiscard,
+                players: newPlayers,
+                currentRound: nextRound,
+                currentPlayerIndex: startPlayerIndex,
+                phase: 'playing',
+              };
+            });
+          };
+
+          if (gameState.phase === 'setup') {
+            const totalPlayers = gameMode === 'team' 
+              ? setupTeams.reduce((sum, t) => sum + t.players.length, 0)
+              : setupPlayers.length;
+            const canStart = totalPlayers >= 2 && totalPlayers <= 24;
+            const canAddPlayer = totalPlayers < 24;
+
+            return (
+              <div className="min-h-screen bg-slate-900 flex items-start justify-center p-4 md:p-8 font-sans text-slate-100 overflow-y-auto">
+                <div className="bg-slate-800 p-8 rounded-3xl shadow-2xl max-w-4xl w-full border border-slate-700 mt-8 mb-16">
+                  <div className="mb-6 flex justify-center">
+                    <div className="bg-gradient-to-tr from-violet-600 to-fuchsia-500 p-4 rounded-xl shadow-lg transform -rotate-6">
+                      <span className="text-4xl font-black text-white">x2</span>
+                    </div>
+                    <div className="bg-gradient-to-tr from-rose-500 to-orange-500 p-4 rounded-xl shadow-lg transform rotate-6 -ml-4 z-10">
+                      <span className="text-4xl font-black text-white">12</span>
+                    </div>
+                  </div>
+                  <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight text-center">Greed's Dozen <br/><span className="text-2xl text-fuchsia-400">Action Edition</span></h1>
+                  <p className="text-slate-400 mb-8 mt-2 text-center text-lg">
+                    Push your luck. Watch for actions.<br/>
+                    <span className="text-sm font-semibold text-violet-400/80">Supports 2 to 24 players. (17+ players activates Double Deck mode)</span>
+                  </p>
+                  
+                  <div className="flex justify-center mb-8 bg-slate-900 rounded-2xl p-1.5 max-w-sm mx-auto border border-slate-700 shadow-inner">
+                    <button
+                      onClick={() => setGameMode('individual')}
+                      className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${gameMode === 'individual' ? 'bg-violet-600 text-white shadow-md transform scale-[1.02]' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
+                    >
+                      <i className="fas fa-user text-lg"></i> Individual
+                    </button>
+                    <button
+                      onClick={() => setGameMode('team')}
+                      className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${gameMode === 'team' ? 'bg-violet-600 text-white shadow-md transform scale-[1.02]' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
+                    >
+                      <i className="fas fa-users text-lg"></i> Teams
+                    </button>
+                  </div>
+
+                  {gameMode === 'individual' ? (
+                    <div className="bg-slate-900/50 p-6 md:p-8 rounded-3xl border-2 border-slate-700 max-w-lg mx-auto mb-10 shadow-inner">
+                      <h2 className="text-xl font-black text-white mb-6 text-center tracking-wide">Player Roster</h2>
+                      <div className="flex flex-col gap-3 mb-6">
+                        {setupPlayers.map(player => (
+                          <div key={player.id} className="flex items-center gap-3 bg-slate-800 p-3 rounded-2xl border border-slate-700/50 shadow-sm">
+                            <i className="fas fa-user text-lg text-slate-500 ml-2"></i>
+                            <input
+                              type="text"
+                              value={player.name}
+                              onChange={(e) => updateSetupPlayerName(player.id, e.target.value)}
+                              className="bg-transparent flex-1 text-slate-200 font-bold focus:outline-none text-lg"
+                              placeholder="Player Name"
+                            />
+                            {setupPlayers.length > 2 && (
+                              <button onClick={() => removeSetupPlayer(player.id)} className="text-slate-500 hover:text-red-400 p-2 mr-1 transition-colors">
+                                <i className="fas fa-trash-alt text-xl"></i>
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <button 
+                        onClick={addSetupPlayer} 
+                        disabled={!canAddPlayer}
+                        className={`w-full py-4 font-bold rounded-2xl border flex justify-center items-center gap-2 transition-colors text-lg
+                          ${canAddPlayer 
+                            ? 'bg-slate-800 hover:bg-slate-700 text-violet-400 border-slate-700' 
+                            : 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
+                          }`}
+                      >
+                        <i className="fas fa-plus text-xl"></i> {canAddPlayer ? 'Add Player' : 'Max Players Reached (24)'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                      {setupTeams.map(team => (
+                        <div key={team.id} className="bg-slate-900/50 p-6 rounded-3xl border-2 border-slate-700 relative shadow-inner">
+                          {setupTeams.length > 1 && (
+                            <button onClick={() => removeTeam(team.id)} className="absolute top-5 right-5 text-slate-500 hover:text-red-400 transition-colors bg-slate-800 p-2 rounded-lg">
+                              <i className="fas fa-trash-alt text-lg"></i>
+                            </button>
+                          )}
+                          <input
+                            type="text"
+                            value={team.name}
+                            onChange={(e) => updateTeamName(team.id, e.target.value)}
+                            className="bg-transparent border-b-2 border-slate-600 focus:border-violet-500 text-2xl font-black text-white w-[80%] mb-6 focus:outline-none placeholder-slate-600"
+                            placeholder="Team Name"
+                          />
+                          
+                          <div className="flex flex-col gap-3 mb-6">
+                            {team.players.map(player => (
+                              <div key={player.id} className="flex items-center gap-3 bg-slate-800 p-3 rounded-2xl border border-slate-700/50 shadow-sm">
+                                <i className="fas fa-users text-base text-slate-500 ml-1"></i>
+                                <input
+                                  type="text"
+                                  value={player.name}
+                                  onChange={(e) => updatePlayerName(team.id, player.id, e.target.value)}
+                                  className="bg-transparent flex-1 text-slate-200 font-bold focus:outline-none"
+                                  placeholder="Player Name"
+                                />
+                                <button onClick={() => removePlayerFromTeam(team.id, player.id)} className="text-slate-500 hover:text-red-400 p-1 mr-1">
+                                  <i className="fas fa-trash-alt text-lg"></i>
+                                </button>
+                              </div>
+                            ))}
+                            {team.players.length === 0 && <p className="text-slate-500 text-sm italic text-center my-2">No players on this team.</p>}
+                          </div>
+                          
+                          <button 
+                            onClick={() => addPlayerToTeam(team.id)} 
+                            disabled={!canAddPlayer}
+                            className={`w-full py-3 font-bold rounded-2xl border flex justify-center items-center gap-2 transition-colors
+                              ${canAddPlayer 
+                                ? 'bg-slate-800 hover:bg-slate-700 text-violet-400 border-slate-700' 
+                                : 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'
+                              }`}
+                          >
+                            <i className="fas fa-plus text-lg"></i> {canAddPlayer ? 'Add Player' : 'Max Reached'}
+                          </button>
+                        </div>
+                      ))}
+                      
+                      <div className="bg-slate-900/30 p-6 rounded-3xl border-2 border-dashed border-slate-700 flex items-center justify-center min-h-[250px]">
+                        <button 
+                          onClick={addTeam} 
+                          className="py-4 px-8 bg-violet-600/20 hover:bg-violet-600/40 text-violet-400 font-black rounded-2xl flex justify-center items-center gap-2 transition-all hover:scale-105 active:scale-95 text-lg"
+                        >
+                          <i className="fas fa-plus text-2xl"></i> Add Team
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleStartGame}
+                    disabled={!canStart}
+                    className={`w-full py-5 px-6 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all transform text-2xl font-black
+                      ${canStart 
+                        ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-[0_0_30px_rgba(139,92,246,0.4)] hover:scale-105 active:scale-95' 
+                        : 'bg-slate-800 text-slate-500 border-2 border-slate-700 cursor-not-allowed'
+                      }`}
+                  >
+                    <i className="fas fa-play text-3xl"></i> {canStart ? (totalPlayers > 16 ? 'Start Game (Double Deck)' : 'Start Game') : `Need 2-24 players to start`}
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          if (gameState.phase === 'gameover') {
+            const sortedPlayers = [...gameState.players].sort((a, b) => b.score - a.score);
+
+            const teamScores = {};
+            gameState.players.forEach(p => {
+              if (!teamScores[p.teamId]) teamScores[p.teamId] = { name: p.teamName, score: 0 };
+              teamScores[p.teamId].score += p.score;
+            });
+            const sortedTeams = Object.values(teamScores).sort((a, b) => b.score - a.score);
+            const winningTeam = sortedTeams[0];
+
+            return (
+              <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 md:p-8 font-sans text-slate-100 pb-20">
+                <div className="bg-slate-800 p-8 md:p-12 rounded-3xl shadow-2xl max-w-4xl w-full text-center border border-slate-700 flex flex-col md:flex-row gap-10">
+                  
+                  <div className="flex-1 flex flex-col justify-center items-center border-b md:border-b-0 md:border-r border-slate-700 pb-8 md:pb-0 md:pr-10">
+                    <i className="fas fa-trophy text-[7rem] text-yellow-400 mx-auto mb-6 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)] block"></i>
+                    <h1 className="text-5xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
+                      {winningTeam.name} Wins!
+                    </h1>
+                    <p className="text-slate-400 mb-8 text-xl">with {winningTeam.score} total points</p>
+                    
+                    <button
+                      onClick={() => setGameState({ ...gameState, phase: 'setup' })}
+                      className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-4 px-6 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-105 mt-auto text-lg"
+                    >
+                      <i className="fas fa-sync-alt text-2xl"></i> Play Again
+                    </button>
+                  </div>
+
+                  <div className="flex-1 flex flex-col gap-8">
+                    <div>
+                      <h3 className="text-left text-slate-400 font-black uppercase tracking-widest text-sm mb-4 flex items-center gap-2">
+                        <i className="fas fa-users text-base"></i> {gameState.isTeamMode ? 'Team Standings' : 'Final Standings'}
+                      </h3>
+                      <div className="bg-slate-900/50 rounded-2xl p-4 border border-slate-700">
+                        {sortedTeams.map((t, idx) => (
+                          <div key={idx} className="flex justify-between items-center py-3 border-b border-slate-800 last:border-0">
+                            <span className={`font-black text-xl flex items-center gap-3 ${idx === 0 ? 'text-yellow-400' : 'text-slate-200'}`}>
+                              <span className="text-slate-500 text-sm">#{idx + 1}</span> {t.name}
+                            </span>
+                            <span className={`font-black text-2xl ${idx === 0 ? 'text-yellow-400' : 'text-fuchsia-400'}`}>{t.score}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {gameState.isTeamMode && (
+                      <div>
+                        <h3 className="text-left text-slate-400 font-black uppercase tracking-widest text-sm mb-4">Player Standings</h3>
+                        <div className="bg-slate-900/50 rounded-2xl p-4 border border-slate-700 max-h-64 overflow-y-auto">
+                          {sortedPlayers.map((p, idx) => (
+                            <div key={p.id} className="flex justify-between items-center py-3 border-b border-slate-800 last:border-0">
+                              <div className="flex flex-col text-left">
+                                <span className="font-bold text-lg text-slate-200 flex items-center gap-2">
+                                  <span className="text-slate-500 text-sm">#{idx + 1}</span> {p.name}
+                                </span>
+                                <span className="text-slate-500 text-xs ml-7 font-semibold">{p.teamName}</span>
+                              </div>
+                              <span className="font-bold text-xl text-fuchsia-400">{p.score}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                </div>
+              </div>
+            );
+          }
+
+          const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+
+          const getRoundScore = (p) => {
+            let s = calculatePot(p);
+            if (p.roundStatus === 'won_perfect_7') s += 15;
+            return s;
+          };
+
+          return (
+            <div className={`min-h-screen bg-slate-900 text-slate-100 font-sans flex flex-col p-4 md:p-8 relative pb-48 md:pb-56 overflow-x-hidden ${isShaking ? 'shake-screen' : ''}`}>
+              
+              {gameState.phase === 'targeting' && (
+                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                  <div className="bg-slate-800 p-8 rounded-3xl border-4 border-violet-500 max-w-lg w-full text-center shadow-[0_0_50px_rgba(139,92,246,0.5)] animate-in zoom-in-95 duration-200">
+                    <h2 className="text-3xl font-black text-white mb-2">Target Player</h2>
+                    <div className="text-violet-300 mb-6 text-xl">
+                      {currentPlayer?.name} played <span className="font-black text-white bg-violet-600/30 px-3 py-1 rounded-lg ml-1">{gameState.pendingAction?.card.label}</span>
+                    </div>
+                    <p className="text-slate-300 mb-8 font-medium bg-slate-900/50 p-4 rounded-xl">{gameState.pendingAction?.card.desc}</p>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      {gameState.players.filter(p => p.roundStatus === 'playing').map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => handleActionTarget(p.id)}
+                          className="px-6 py-4 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold shadow-lg transition-transform hover:scale-105 active:scale-95 text-lg border border-violet-400"
+                        >
+                          {p.name} 
+                          {gameState.isTeamMode && <span className="opacity-75 text-sm font-normal block">{p.teamName}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col md:flex-row justify-between items-center mb-8 bg-slate-800 p-4 md:px-8 rounded-3xl shadow-xl border border-slate-700">
+                <div className="text-2xl font-black text-violet-500 mb-2 md:mb-0">
+                  Round {gameState.currentRound} <span className="text-slate-500">/ {MAX_ROUNDS}</span>
+                </div>
+                <div className="text-2xl md:text-3xl font-black text-white text-center flex items-center gap-3">
+                  {gameState.phase === 'playing' || gameState.phase === 'targeting' ? (
+                    <>
+                      <span><span className="text-violet-400">{currentPlayer?.name}'s</span> Turn</span>
+                      {currentPlayer?.forcedFlips > 0 && (
+                        <span className="bg-red-600 text-white text-sm px-3 py-1 rounded-full flex items-center gap-1 animate-pulse">
+                          <i className="fas fa-exclamation-triangle text-base"></i> Forced Flips: {currentPlayer.forcedFlips}
+                        </span>
+                      )}
+                    </>
+                  ) : 'Round Over!'}
+                </div>
+                <div className="text-slate-400 flex flex-col items-center md:items-end gap-1 mt-3 md:mt-0 font-bold">
+                  <div className="flex items-center gap-2"><i className="fas fa-square text-xl"></i> Deck: {gameState.deck.length}</div>
+                  {gameState.isDoubleDeck && <span className="text-[10px] text-violet-400 uppercase tracking-widest bg-violet-900/30 px-2 py-0.5 rounded-full border border-violet-500/30">Double Deck Mode</span>}
+                </div>
+              </div>
+
+            <div className="flex flex-col gap-4 max-w-6xl mx-auto w-full">
+              {gameState.players.map((p, idx) => {
+                const isActive = idx === gameState.currentPlayerIndex && (gameState.phase === 'playing' || gameState.phase === 'targeting');
+                const isBusted = p.roundStatus === 'busted';
+                const pot = calculatePot(p);
+                const teamScore = gameState.players
+                  .filter(tPlayer => tPlayer.teamId === p.teamId)
+                  .reduce((sum, tPlayer) => sum + tPlayer.score, 0);
+
+                return (
+                  <div 
+                    key={p.id} 
+                    ref={(el) => (playerRefs.current[idx] = el)}
+                    className={`flex flex-col lg:flex-row items-stretch bg-slate-800 rounded-3xl p-4 border-4 transition-all duration-300
+                      ${isActive ? 'border-violet-500 shadow-[0_0_30px_rgba(139,92,246,0.3)] transform scale-[1.02] bg-slate-800/90 z-10' : 'border-slate-700/30'}
+                      ${isBusted ? 'opacity-50' : ''}
+                    `}
+                  >
+                    <div className="flex flex-col justify-between w-full lg:w-1/4 mb-4 lg:mb-0 lg:pr-6 lg:border-r border-slate-700/50">
+                      <div>
+                        <div className="flex justify-between items-start mb-1">
+                          <h3 className={`font-black text-2xl ${isActive ? 'text-white' : 'text-slate-300'}`}>{p.name}</h3>
+                          <div className="text-3xl font-black text-fuchsia-400">{gameState.isTeamMode ? teamScore : p.score}</div>
+                        </div>
+                        <div className="text-slate-500 text-xs font-semibold tracking-widest uppercase mb-4 text-right w-full">
+                          {gameState.isTeamMode ? `${p.teamName} • Team Score` : 'Total Score'}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-start items-center">
+                        {p.roundStatus === 'busted' && <span className="text-red-500 font-bold bg-red-500/10 px-4 py-2 rounded-xl text-sm w-full text-center tracking-widest border border-red-500/20">BUSTED (0 pts)</span>}
+                        {p.roundStatus === 'stopped' && <span className="text-green-400 font-bold bg-green-500/10 px-4 py-2 rounded-xl text-sm w-full text-center tracking-widest border border-green-500/20">BANKED {pot} pts</span>}
+                        {p.roundStatus === 'won_perfect_7' && <span className="text-yellow-400 font-bold bg-yellow-400/10 px-4 py-2 rounded-xl text-sm w-full text-center tracking-widest border border-yellow-400/20">PERFECT 7! BANKED {pot} + 15 pts</span>}
+                        {p.roundStatus === 'auto_banked' && <span className="text-blue-400 font-bold bg-blue-500/10 px-4 py-2 rounded-xl text-sm w-full text-center tracking-widest border border-blue-500/20">ROUND ENDED! BANKED {pot} pts</span>}
+                        {p.roundStatus === 'playing' && <span className="text-fuchsia-400 font-bold bg-fuchsia-500/10 px-4 py-2 rounded-xl text-lg w-full text-center tracking-widest border border-fuchsia-500/20 shadow-inner">POT: {pot}</span>}
+                      </div>
+                    </div>
+
+                    <div className="w-full lg:w-3/4 flex flex-col gap-3 lg:pl-6">
+                      
+                      {(p.modifiers.length > 0 || p.secondChanceCard) && (
+                        <div className="flex flex-wrap gap-2 justify-start min-h-[70px] items-center bg-slate-900/40 p-2 rounded-2xl border border-slate-700/50 relative">
+                          <span className="absolute -top-3 left-3 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-widest px-2">Buffs</span>
+                          
+                          {p.secondChanceCard && <Card card={p.secondChanceCard} animate size="small" busted={isBusted} />}
+                          {p.modifiers.map((m, cIdx) => (
+                            <Card key={`mod-${cIdx}`} card={m} animate size="small" busted={isBusted} />
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-3 justify-start min-h-[110px] items-center bg-slate-900/40 p-3 rounded-2xl border border-slate-700/50 relative">
+                        <span className="absolute -top-3 left-3 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-widest px-2">
+                          Number Row ({p.currentCards.length}/7)
+                        </span>
+                        
+                        {p.currentCards.length === 0 && <span className="text-slate-600 font-semibold italic text-sm ml-2">No cards dealt</span>}
+                        {p.currentCards.map((card, cIdx) => {
+                          const isDuplicate = isBusted && cIdx === p.currentCards.length - 1;
+                          return (
+                            <Card 
+                              key={cIdx} 
+                              card={card} 
+                              busted={isBusted && !isDuplicate} 
+                              animate={true}
+                              size="small"
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {gameState.phase === 'playing' && (
+              <div className="fixed bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur-xl p-6 border-t-2 border-slate-800 flex justify-center gap-4 md:gap-6 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+                 <button
+                  onClick={handleDeal}
+                  className="bg-violet-600 hover:bg-violet-500 text-white font-black py-4 px-8 md:px-12 rounded-2xl shadow-[0_0_20px_rgba(139,92,246,0.4)] flex items-center gap-3 transition-all hover:scale-105 active:scale-95 text-xl border border-violet-400"
+                >
+                  <i className="fas fa-plus-square text-2xl"></i> DEAL
+                </button>
+                
+                <button
+                  onClick={handleStop}
+                  disabled={currentPlayer?.forcedFlips > 0}
+                  className={`font-black py-4 px-8 md:px-12 rounded-2xl shadow-lg border-2 flex items-center gap-3 transition-all text-xl
+                    ${currentPlayer?.forcedFlips > 0 
+                      ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed' 
+                      : 'bg-slate-700 hover:bg-slate-600 text-white border-slate-500 hover:scale-105 active:scale-95'
+                    }`}
+                >
+                  <i className="fas fa-square text-2xl"></i> STOP
+                </button>
+              </div>
+            )}
+
+            {gameState.phase === 'round_end' && (
+              <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-300">
+                <div className="bg-slate-800 p-6 md:p-10 rounded-3xl border-4 border-slate-700 w-full max-w-2xl text-center shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-y-auto max-h-[90vh]">
+                  <h2 className="text-4xl md:text-5xl font-black text-white mb-2">Round {gameState.currentRound} Summary</h2>
+                  <p className="text-slate-400 mb-8 text-lg uppercase tracking-widest font-semibold">
+                    {gameState.isTeamMode ? 'Team Standings' : 'Player Standings'}
+                  </p>
+
+                  <div className="flex flex-col gap-4 mb-8">
+                    {(() => {
+                      const teamStats = {};
+                      gameState.players.forEach(p => {
+                        if (!teamStats[p.teamId]) {
+                          teamStats[p.teamId] = { id: p.teamId, name: p.teamName, score: 0, roundScore: 0 };
+                        }
+                        teamStats[p.teamId].score += p.score;
+                        teamStats[p.teamId].roundScore += getRoundScore(p);
+                      });
+                      
+                      const sortedTeamsSummary = Object.values(teamStats).sort((a, b) => b.score - a.score);
+                      const maxRoundScore = Math.max(...sortedTeamsSummary.map(t => t.roundScore));
+
+                      return sortedTeamsSummary.map((t, idx) => {
+                        const isRoundWinner = t.roundScore === maxRoundScore && maxRoundScore > 0;
+
+                        return (
+                          <div 
+                            key={t.id} 
+                            className={`flex justify-between items-center p-4 md:p-5 rounded-2xl transition-all ${
+                              isRoundWinner 
+                                ? 'bg-yellow-500/20 border-2 border-yellow-400 transform scale-[1.03] shadow-[0_0_20px_rgba(250,204,21,0.2)]' 
+                                : 'bg-slate-900/50 border border-slate-700/50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-4">
+                              <span className="text-slate-500 font-bold w-6 text-left">#{idx + 1}</span>
+                              <span className={`font-black ${isRoundWinner ? 'text-2xl md:text-3xl text-yellow-400' : 'text-xl text-slate-300'}`}>
+                                {t.name} {isRoundWinner && <i className="fas fa-trophy text-2xl inline mb-1 ml-2"></i>}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <div className={`font-black ${isRoundWinner ? 'text-3xl md:text-4xl text-yellow-400' : 'text-2xl text-fuchsia-400'}`}>
+                                {t.score} <span className="text-sm font-bold text-slate-500">pts</span>
+                              </div>
+                              <div className={`text-sm font-bold ${t.roundScore > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {t.roundScore > 0 ? `+${t.roundScore} this round` : '0 points this round'}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+
+                  <button
+                    onClick={handleNextRound}
+                    className="w-full bg-gradient-to-r from-fuchsia-600 to-rose-500 hover:from-fuchsia-500 hover:to-rose-400 text-white font-black py-5 px-10 rounded-2xl shadow-[0_0_30px_rgba(217,70,239,0.4)] flex items-center justify-center gap-3 transition-all hover:scale-105 active:scale-95 text-xl md:text-2xl"
+                  >
+                    Start Next Round <i className="fas fa-arrow-right text-3xl"></i>
+                  </button>
+                </div>
+              </div>
+            )}
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
