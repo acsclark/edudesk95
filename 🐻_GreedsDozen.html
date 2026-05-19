@@ -27,6 +27,25 @@
       .shake-screen {
         animation: shake-animation 0.5s cubic-bezier(.36,.07,.19,.97) both;
       }
+      
+      @keyframes warning-shake {
+        0%, 100% { transform: translate(0, 0); }
+        25% { transform: translate(-3px, 1px); }
+        50% { transform: translate(3px, -1px); }
+        75% { transform: translate(-1px, -1px); }
+      }
+      .warning-active {
+        animation: warning-shake 0.12s infinite;
+      }
+
+      @keyframes scale-up-down {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.25); }
+      }
+      .rapid-pulse {
+        display: inline-block;
+        animation: scale-up-down 0.4s ease-in-out infinite;
+      }
     </style>
 </head>
 <body>
@@ -219,9 +238,11 @@
             currentPlayerIndex: 0,
             currentRound: 1,
             pendingAction: null, 
+            isTransitioning: false,
           });
           const [isShaking, setIsShaking] = useState(false);
           const [gameMode, setGameMode] = useState('individual'); 
+          const [targetingTimer, setTargetingTimer] = useState(10);
           
           const [setupPlayers, setSetupPlayers] = useState([
             { id: 'p1', name: 'Player 1' },
@@ -234,6 +255,7 @@
 
           const MAX_ROUNDS = 5;
 
+          // Auto-scroll to the current player when their turn starts
           useEffect(() => {
             if ((gameState.phase === 'playing' || gameState.phase === 'targeting') && playerRefs.current[gameState.currentPlayerIndex]) {
               setTimeout(() => {
@@ -244,6 +266,29 @@
               }, 50);
             }
           }, [gameState.currentPlayerIndex, gameState.phase]);
+
+          // Countdown Timer Effect for Action Targeting Phase
+          useEffect(() => {
+            let interval = null;
+            if (gameState.phase === 'targeting' && gameState.pendingAction) {
+              setTargetingTimer(10);
+              interval = setInterval(() => {
+                setTargetingTimer(prev => {
+                  if (prev <= 1) {
+                    clearInterval(interval);
+                    // Automatic default targeting: current player targets themselves
+                    const selfId = gameState.players[gameState.currentPlayerIndex].id;
+                    handleActionTarget(selfId);
+                    return 0;
+                  }
+                  return prev - 1;
+                });
+              }, 1000);
+            }
+            return () => {
+              if (interval) clearInterval(interval);
+            };
+          }, [gameState.phase, gameState.pendingAction, gameState.currentPlayerIndex]);
 
           const addSetupPlayer = () => {
             if (setupPlayers.length >= 24) return;
@@ -316,6 +361,7 @@
               currentRound: 1,
               currentPlayerIndex: 0,
               pendingAction: null,
+              isTransitioning: false,
             }));
           };
 
@@ -392,6 +438,7 @@
               newPlayers[pIdx] = player;
 
               let nextIndex = pIdx;
+              let finalPhase = nextPhase;
               
               if (nextPhase === 'targeting') {
                 // Keep turn on current player until target selected
@@ -407,27 +454,58 @@
               }
 
               if (nextIndex === -1 && nextPhase !== 'targeting') {
-                nextPhase = 'round_end';
+                finalPhase = 'round_end';
               }
 
-              return {
-                ...prev,
-                deck: newDeck,
-                discardPile: newDiscard,
-                players: newPlayers,
-                phase: nextPhase,
-                pendingAction: newPendingAction,
-                currentPlayerIndex: nextIndex === -1 ? prev.currentPlayerIndex : nextIndex,
-              };
+              const isTargetingTriggered = nextPhase === 'targeting';
+              const shouldDelay = !isTargetingTriggered;
+
+              if (shouldDelay) {
+                setTimeout(() => {
+                  setGameState(current => {
+                    if (current.phase !== 'playing') return current; 
+                    
+                    return {
+                      ...current,
+                      phase: finalPhase,
+                      pendingAction: newPendingAction,
+                      currentPlayerIndex: nextIndex === -1 ? current.currentPlayerIndex : nextIndex,
+                      isTransitioning: false
+                    };
+                  });
+                }, 2000); 
+
+                return {
+                  ...prev,
+                  deck: newDeck,
+                  discardPile: newDiscard,
+                  players: newPlayers,
+                  isTransitioning: true
+                };
+              } else {
+                return {
+                  ...prev,
+                  deck: newDeck,
+                  discardPile: newDiscard,
+                  players: newPlayers,
+                  phase: finalPhase,
+                  pendingAction: newPendingAction,
+                  currentPlayerIndex: nextIndex === -1 ? prev.currentPlayerIndex : nextIndex,
+                  isTransitioning: false
+                };
+              }
             });
           };
 
           const handleActionTarget = (targetPlayerId) => {
             setGameState(prev => {
+              if (prev.phase !== 'targeting') return prev; 
+
               const newPlayers = [...prev.players];
               const targetIdx = newPlayers.findIndex(p => p.id === targetPlayerId);
+              if (targetIdx === -1) return prev; 
+
               const target = { ...newPlayers[targetIdx] };
-              
               const actionCard = prev.pendingAction.card;
               const sourceIdx = prev.pendingAction.sourcePlayerIndex;
               const sourcePlayer = newPlayers[sourceIdx];
@@ -476,12 +554,24 @@
               newPlayers[prev.currentPlayerIndex] = player;
               
               const nextIndex = getNextPlayerIndex(newPlayers, prev.currentPlayerIndex, prev.isTeamMode);
+              const finalPhase = nextIndex === -1 ? 'round_end' : 'playing';
+
+              setTimeout(() => {
+                setGameState(current => {
+                  if (current.phase !== 'playing') return current;
+                  return {
+                    ...current,
+                    currentPlayerIndex: Math.max(0, nextIndex),
+                    phase: finalPhase,
+                    isTransitioning: false
+                  };
+                });
+              }, 1500); 
 
               return {
                 ...prev,
                 players: newPlayers,
-                currentPlayerIndex: Math.max(0, nextIndex),
-                phase: nextIndex === -1 ? 'round_end' : 'playing',
+                isTransitioning: true
               };
             });
           };
@@ -770,218 +860,252 @@
             return s;
           };
 
-          return (
-            <div className={`min-h-screen bg-slate-900 text-slate-100 font-sans flex flex-col p-4 md:p-8 relative pb-48 md:pb-56 overflow-x-hidden ${isShaking ? 'shake-screen' : ''}`}>
-              
-              {gameState.phase === 'targeting' && (
-                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                  <div className="bg-slate-800 p-8 rounded-3xl border-4 border-violet-500 max-w-lg w-full text-center shadow-[0_0_50px_rgba(139,92,246,0.5)] animate-in zoom-in-95 duration-200">
-                    <h2 className="text-3xl font-black text-white mb-2">Target Player</h2>
-                    <div className="text-violet-300 mb-6 text-xl">
-                      {currentPlayer?.name} played <span className="font-black text-white bg-violet-600/30 px-3 py-1 rounded-lg ml-1">{gameState.pendingAction?.card.label}</span>
-                    </div>
-                    <p className="text-slate-300 mb-8 font-medium bg-slate-900/50 p-4 rounded-xl">{gameState.pendingAction?.card.desc}</p>
+          const isWarningActive = gameState.phase === 'targeting' && targetingTimer <= 4;
 
-                    <div className="grid grid-cols-2 gap-3">
-                      {gameState.players.filter(p => p.roundStatus === 'playing').map(p => (
-                        <button
-                          key={p.id}
-                          onClick={() => handleActionTarget(p.id)}
-                          className="px-6 py-4 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold shadow-lg transition-transform hover:scale-105 active:scale-95 text-lg border border-violet-400"
-                        >
-                          {p.name} 
-                          {gameState.isTeamMode && <span className="opacity-75 text-sm font-normal block">{p.teamName}</span>}
-                        </button>
-                      ))}
+          return (
+            <div className="min-h-screen bg-slate-900 text-slate-100 font-sans relative overflow-x-hidden">
+              
+              {/* Glowing red flash/warning vignette border when timer gets to 4s or below */}
+              {isWarningActive && (
+                <div className="fixed inset-0 pointer-events-none z-[120] border-[16px] border-red-500/40 bg-red-600/5 animate-pulse"></div>
+              )}
+
+              {/* Sticky Top Interactive Targeting Banner - Kept outside of shaking container */}
+              {gameState.phase === 'targeting' && (
+                <div className={`fixed top-0 left-0 right-0 border-b-4 z-[100] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)] text-center transition-all duration-300 animate-in slide-in-from-top ${isWarningActive ? 'bg-red-950 border-red-500' : 'bg-violet-900 border-violet-500'}`}>
+                  <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="text-left">
+                      <h2 className="text-xl md:text-2xl font-black text-white flex items-center gap-2">
+                        <i className={`fas fa-crosshairs animate-pulse ${isWarningActive ? 'text-red-500' : 'text-rose-400'}`}></i>
+                        {currentPlayer?.name} is targeting with {gameState.pendingAction?.card.label}!
+                      </h2>
+                      <p className={`text-sm md:text-base font-semibold mt-0.5 ${isWarningActive ? 'text-red-300' : 'text-violet-200'}`}>
+                        Scroll below & click directly on any active player's hand to apply: <span className="italic">"{gameState.pendingAction?.card.desc}"</span>
+                      </p>
+                    </div>
+                    <div className={`px-6 py-3 rounded-2xl border-2 font-mono text-center shrink-0 transition-all duration-300 ${isWarningActive ? 'bg-red-900/60 border-red-500 scale-110 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-slate-950/80 border-violet-400'}`}>
+                      <div className={`text-xs uppercase tracking-widest font-bold ${isWarningActive ? 'text-red-400' : 'text-violet-400'}`}>Time Left</div>
+                      <div className={`transition-all duration-300 font-black ${isWarningActive ? 'text-5xl md:text-6xl text-red-500 rapid-pulse' : 'text-3xl text-yellow-400'}`}>
+                        {targetingTimer}s
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="flex flex-col md:flex-row justify-between items-center mb-8 bg-slate-800 p-4 md:px-8 rounded-3xl shadow-xl border border-slate-700">
-                <div className="text-2xl font-black text-violet-500 mb-2 md:mb-0">
-                  Round {gameState.currentRound} <span className="text-slate-500">/ {MAX_ROUNDS}</span>
-                </div>
-                <div className="text-2xl md:text-3xl font-black text-white text-center flex items-center gap-3">
-                  {gameState.phase === 'playing' || gameState.phase === 'targeting' ? (
-                    <>
-                      <span><span className="text-violet-400">{currentPlayer?.name}'s</span> Turn</span>
-                      {currentPlayer?.forcedFlips > 0 && (
-                        <span className="bg-red-600 text-white text-sm px-3 py-1 rounded-full flex items-center gap-1 animate-pulse">
-                          <i className="fas fa-exclamation-triangle text-base"></i> Forced Flips: {currentPlayer.forcedFlips}
-                        </span>
-                      )}
-                    </>
-                  ) : 'Round Over!'}
-                </div>
-                <div className="text-slate-400 flex flex-col items-center md:items-end gap-1 mt-3 md:mt-0 font-bold">
-                  <div className="flex items-center gap-2"><i className="fas fa-square text-xl"></i> Deck: {gameState.deck.length}</div>
-                  {gameState.isDoubleDeck && <span className="text-[10px] text-violet-400 uppercase tracking-widest bg-violet-900/30 px-2 py-0.5 rounded-full border border-violet-500/30">Double Deck Mode</span>}
-                </div>
-              </div>
-
-            <div className="flex flex-col gap-4 max-w-6xl mx-auto w-full">
-              {gameState.players.map((p, idx) => {
-                const isActive = idx === gameState.currentPlayerIndex && (gameState.phase === 'playing' || gameState.phase === 'targeting');
-                const isBusted = p.roundStatus === 'busted';
-                const pot = calculatePot(p);
-                const teamScore = gameState.players
-                  .filter(tPlayer => tPlayer.teamId === p.teamId)
-                  .reduce((sum, tPlayer) => sum + tPlayer.score, 0);
-
-                return (
-                  <div 
-                    key={p.id} 
-                    ref={(el) => (playerRefs.current[idx] = el)}
-                    className={`flex flex-col lg:flex-row items-stretch bg-slate-800 rounded-3xl p-4 border-4 transition-all duration-300
-                      ${isActive ? 'border-violet-500 shadow-[0_0_30px_rgba(139,92,246,0.3)] transform scale-[1.02] bg-slate-800/90 z-10' : 'border-slate-700/30'}
-                      ${isBusted ? 'opacity-50' : ''}
-                    `}
-                  >
-                    <div className="flex flex-col justify-between w-full lg:w-1/4 mb-4 lg:mb-0 lg:pr-6 lg:border-r border-slate-700/50">
-                      <div>
-                        <div className="flex justify-between items-start mb-1">
-                          <h3 className={`font-black text-2xl ${isActive ? 'text-white' : 'text-slate-300'}`}>{p.name}</h3>
-                          <div className="text-3xl font-black text-fuchsia-400">{gameState.isTeamMode ? teamScore : p.score}</div>
-                        </div>
-                        <div className="text-slate-500 text-xs font-semibold tracking-widest uppercase mb-4 text-right w-full">
-                          {gameState.isTeamMode ? `${p.teamName} • Team Score` : 'Total Score'}
-                        </div>
-                      </div>
-
-                      <div className="flex justify-start items-center">
-                        {p.roundStatus === 'busted' && <span className="text-red-500 font-bold bg-red-500/10 px-4 py-2 rounded-xl text-sm w-full text-center tracking-widest border border-red-500/20">BUSTED (0 pts)</span>}
-                        {p.roundStatus === 'stopped' && <span className="text-green-400 font-bold bg-green-500/10 px-4 py-2 rounded-xl text-sm w-full text-center tracking-widest border border-green-500/20">BANKED {pot} pts</span>}
-                        {p.roundStatus === 'won_perfect_7' && <span className="text-yellow-400 font-bold bg-yellow-400/10 px-4 py-2 rounded-xl text-sm w-full text-center tracking-widest border border-yellow-400/20">PERFECT 7! BANKED {pot} + 15 pts</span>}
-                        {p.roundStatus === 'auto_banked' && <span className="text-blue-400 font-bold bg-blue-500/10 px-4 py-2 rounded-xl text-sm w-full text-center tracking-widest border border-blue-500/20">ROUND ENDED! BANKED {pot} pts</span>}
-                        {p.roundStatus === 'playing' && <span className="text-fuchsia-400 font-bold bg-fuchsia-500/10 px-4 py-2 rounded-xl text-lg w-full text-center tracking-widest border border-fuchsia-500/20 shadow-inner">POT: {pot}</span>}
-                      </div>
+              {/* Shaking Game Board Wrapper containing the rest of the game scene */}
+              <div className={`flex flex-col p-4 md:p-8 pb-48 md:pb-56 min-h-screen
+                ${isShaking ? 'shake-screen' : ''} 
+                ${isWarningActive ? 'warning-active' : ''}`}
+              >
+                {/* Offset spacing when targeting banner is active */}
+                <div className={`transition-all duration-300 ${gameState.phase === 'targeting' ? 'pt-24 md:pt-20' : ''}`}>
+                  <div className="flex flex-col md:flex-row justify-between items-center mb-8 bg-slate-800 p-4 md:px-8 rounded-3xl shadow-xl border border-slate-700">
+                    <div className="text-2xl font-black text-violet-500 mb-2 md:mb-0">
+                      Round {gameState.currentRound} <span className="text-slate-500">/ {MAX_ROUNDS}</span>
                     </div>
-
-                    <div className="w-full lg:w-3/4 flex flex-col gap-3 lg:pl-6">
-                      
-                      {(p.modifiers.length > 0 || p.secondChanceCard) && (
-                        <div className="flex flex-wrap gap-2 justify-start min-h-[70px] items-center bg-slate-900/40 p-2 rounded-2xl border border-slate-700/50 relative">
-                          <span className="absolute -top-3 left-3 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-widest px-2">Buffs</span>
-                          
-                          {p.secondChanceCard && <Card card={p.secondChanceCard} animate size="small" busted={isBusted} />}
-                          {p.modifiers.map((m, cIdx) => (
-                            <Card key={`mod-${cIdx}`} card={m} animate size="small" busted={isBusted} />
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="flex flex-wrap gap-3 justify-start min-h-[110px] items-center bg-slate-900/40 p-3 rounded-2xl border border-slate-700/50 relative">
-                        <span className="absolute -top-3 left-3 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-widest px-2">
-                          Number Row ({p.currentCards.length}/7)
-                        </span>
-                        
-                        {p.currentCards.length === 0 && <span className="text-slate-600 font-semibold italic text-sm ml-2">No cards dealt</span>}
-                        {p.currentCards.map((card, cIdx) => {
-                          const isDuplicate = isBusted && cIdx === p.currentCards.length - 1;
-                          return (
-                            <Card 
-                              key={cIdx} 
-                              card={card} 
-                              busted={isBusted && !isDuplicate} 
-                              animate={true}
-                              size="small"
-                            />
-                          );
-                        })}
-                      </div>
+                    <div className="text-2xl md:text-3xl font-black text-white text-center flex items-center gap-3">
+                      {gameState.phase === 'playing' || gameState.phase === 'targeting' ? (
+                        <>
+                          <span><span className="text-violet-400">{currentPlayer?.name}'s</span> Turn</span>
+                          {currentPlayer?.forcedFlips > 0 && (
+                            <span className="bg-red-600 text-white text-sm px-3 py-1 rounded-full flex items-center gap-1 animate-pulse">
+                              <i className="fas fa-exclamation-triangle text-base"></i> Forced Flips: {currentPlayer.forcedFlips}
+                            </span>
+                          )}
+                        </>
+                      ) : 'Round Over!'}
+                    </div>
+                    <div className="text-slate-400 flex flex-col items-center md:items-end gap-1 mt-3 md:mt-0 font-bold">
+                      <div className="flex items-center gap-2"><i className="fas fa-square text-xl"></i> Deck: {gameState.deck.length}</div>
+                      {gameState.isDoubleDeck && <span className="text-[10px] text-violet-400 uppercase tracking-widest bg-violet-900/30 px-2 py-0.5 rounded-full border border-violet-500/30">Double Deck Mode</span>}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
 
-            {gameState.phase === 'playing' && (
-              <div className="fixed bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur-xl p-6 border-t-2 border-slate-800 flex justify-center gap-4 md:gap-6 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-                 <button
-                  onClick={handleDeal}
-                  className="bg-violet-600 hover:bg-violet-500 text-white font-black py-4 px-8 md:px-12 rounded-2xl shadow-[0_0_20px_rgba(139,92,246,0.4)] flex items-center gap-3 transition-all hover:scale-105 active:scale-95 text-xl border border-violet-400"
-                >
-                  <i className="fas fa-plus-square text-2xl"></i> DEAL
-                </button>
-                
-                <button
-                  onClick={handleStop}
-                  disabled={currentPlayer?.forcedFlips > 0}
-                  className={`font-black py-4 px-8 md:px-12 rounded-2xl shadow-lg border-2 flex items-center gap-3 transition-all text-xl
-                    ${currentPlayer?.forcedFlips > 0 
-                      ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed' 
-                      : 'bg-slate-700 hover:bg-slate-600 text-white border-slate-500 hover:scale-105 active:scale-95'
-                    }`}
-                >
-                  <i className="fas fa-square text-2xl"></i> STOP
-                </button>
-              </div>
-            )}
+                <div className="flex flex-col gap-4 max-w-6xl mx-auto w-full">
+                  {gameState.players.map((p, idx) => {
+                    const isActive = idx === gameState.currentPlayerIndex && (gameState.phase === 'playing' || gameState.phase === 'targeting');
+                    const isBusted = p.roundStatus === 'busted';
+                    const pot = calculatePot(p);
+                    const teamScore = gameState.players
+                      .filter(tPlayer => tPlayer.teamId === p.teamId)
+                      .reduce((sum, tPlayer) => sum + tPlayer.score, 0);
 
-            {gameState.phase === 'round_end' && (
-              <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-300">
-                <div className="bg-slate-800 p-6 md:p-10 rounded-3xl border-4 border-slate-700 w-full max-w-2xl text-center shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-y-auto max-h-[90vh]">
-                  <h2 className="text-4xl md:text-5xl font-black text-white mb-2">Round {gameState.currentRound} Summary</h2>
-                  <p className="text-slate-400 mb-8 text-lg uppercase tracking-widest font-semibold">
-                    {gameState.isTeamMode ? 'Team Standings' : 'Player Standings'}
-                  </p>
+                    const isTargetable = gameState.phase === 'targeting' && p.roundStatus === 'playing';
 
-                  <div className="flex flex-col gap-4 mb-8">
-                    {(() => {
-                      const teamStats = {};
-                      gameState.players.forEach(p => {
-                        if (!teamStats[p.teamId]) {
-                          teamStats[p.teamId] = { id: p.teamId, name: p.teamName, score: 0, roundScore: 0 };
-                        }
-                        teamStats[p.teamId].score += p.score;
-                        teamStats[p.teamId].roundScore += getRoundScore(p);
-                      });
-                      
-                      const sortedTeamsSummary = Object.values(teamStats).sort((a, b) => b.score - a.score);
-                      const maxRoundScore = Math.max(...sortedTeamsSummary.map(t => t.roundScore));
+                    return (
+                      <div 
+                        key={p.id} 
+                        ref={(el) => (playerRefs.current[idx] = el)}
+                        onClick={() => {
+                          if (isTargetable) {
+                            handleActionTarget(p.id);
+                          }
+                        }}
+                        className={`flex flex-col lg:flex-row items-stretch bg-slate-800 rounded-3xl p-4 border-4 transition-all duration-300 relative overflow-hidden
+                          ${isActive ? 'border-violet-500 shadow-[0_0_30px_rgba(139,92,246,0.3)] transform scale-[1.02] bg-slate-800/90 z-10' : 'border-slate-700/30'}
+                          ${isBusted ? 'opacity-50' : ''}
+                          ${isTargetable ? 'cursor-pointer border-rose-500 hover:border-rose-400 hover:scale-[1.01] hover:shadow-[0_0_25px_rgba(244,63,94,0.35)]' : ''}
+                        `}
+                      >
+                        {/* Visual Target Indicator overlay */}
+                        {isTargetable && (
+                          <div className="absolute inset-0 bg-rose-500/5 rounded-[22px] pointer-events-none border-2 border-dashed border-rose-500/40 flex items-center justify-end pr-8 z-30">
+                            <span className="bg-rose-600 text-white font-black px-4 py-2 rounded-xl shadow-md text-sm uppercase tracking-wider animate-bounce flex items-center gap-2">
+                              <i className="fas fa-crosshairs"></i> Target Player
+                            </span>
+                          </div>
+                        )}
 
-                      return sortedTeamsSummary.map((t, idx) => {
-                        const isRoundWinner = t.roundScore === maxRoundScore && maxRoundScore > 0;
-
-                        return (
-                          <div 
-                            key={t.id} 
-                            className={`flex justify-between items-center p-4 md:p-5 rounded-2xl transition-all ${
-                              isRoundWinner 
-                                ? 'bg-yellow-500/20 border-2 border-yellow-400 transform scale-[1.03] shadow-[0_0_20px_rgba(250,204,21,0.2)]' 
-                                : 'bg-slate-900/50 border border-slate-700/50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-4">
-                              <span className="text-slate-500 font-bold w-6 text-left">#{idx + 1}</span>
-                              <span className={`font-black ${isRoundWinner ? 'text-2xl md:text-3xl text-yellow-400' : 'text-xl text-slate-300'}`}>
-                                {t.name} {isRoundWinner && <i className="fas fa-trophy text-2xl inline mb-1 ml-2"></i>}
-                              </span>
+                        <div className="flex flex-col justify-between w-full lg:w-1/4 mb-4 lg:mb-0 lg:pr-6 lg:border-r border-slate-700/50">
+                          <div>
+                            <div className="flex justify-between items-start mb-1">
+                              <h3 className={`font-black text-2xl ${isActive ? 'text-white' : 'text-slate-300'}`}>{p.name}</h3>
+                              <div className="text-3xl font-black text-fuchsia-400">{gameState.isTeamMode ? teamScore : p.score}</div>
                             </div>
-                            <div className="text-right">
-                              <div className={`font-black ${isRoundWinner ? 'text-3xl md:text-4xl text-yellow-400' : 'text-2xl text-fuchsia-400'}`}>
-                                {t.score} <span className="text-sm font-bold text-slate-500">pts</span>
-                              </div>
-                              <div className={`text-sm font-bold ${t.roundScore > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                {t.roundScore > 0 ? `+${t.roundScore} this round` : '0 points this round'}
-                              </div>
+                            <div className="text-slate-500 text-xs font-semibold tracking-widest uppercase mb-4 text-right w-full">
+                              {gameState.isTeamMode ? `${p.teamName} • Team Score` : 'Total Score'}
                             </div>
                           </div>
-                        );
-                      });
-                    })()}
-                  </div>
 
-                  <button
-                    onClick={handleNextRound}
-                    className="w-full bg-gradient-to-r from-fuchsia-600 to-rose-500 hover:from-fuchsia-500 hover:to-rose-400 text-white font-black py-5 px-10 rounded-2xl shadow-[0_0_30px_rgba(217,70,239,0.4)] flex items-center justify-center gap-3 transition-all hover:scale-105 active:scale-95 text-xl md:text-2xl"
-                  >
-                    Start Next Round <i className="fas fa-arrow-right text-3xl"></i>
-                  </button>
+                          <div className="flex justify-start items-center">
+                            {p.roundStatus === 'busted' && <span className="text-red-500 font-bold bg-red-500/10 px-4 py-2 rounded-xl text-sm w-full text-center tracking-widest border border-red-500/20">BUSTED (0 pts)</span>}
+                            {p.roundStatus === 'stopped' && <span className="text-green-400 font-bold bg-green-500/10 px-4 py-2 rounded-xl text-sm w-full text-center tracking-widest border border-green-500/20">BANKED {pot} pts</span>}
+                            {p.roundStatus === 'won_perfect_7' && <span className="text-yellow-400 font-bold bg-yellow-400/10 px-4 py-2 rounded-xl text-sm w-full text-center tracking-widest border border-yellow-400/20">PERFECT 7! BANKED {pot} + 15 pts</span>}
+                            {p.roundStatus === 'auto_banked' && <span className="text-blue-400 font-bold bg-blue-500/10 px-4 py-2 rounded-xl text-sm w-full text-center tracking-widest border border-blue-500/20">ROUND ENDED! BANKED {pot} pts</span>}
+                            {p.roundStatus === 'playing' && <span className="text-fuchsia-400 font-bold bg-fuchsia-500/10 px-4 py-2 rounded-xl text-lg w-full text-center tracking-widest border border-fuchsia-500/20 shadow-inner">POT: {pot}</span>}
+                          </div>
+                        </div>
+
+                        <div className="w-full lg:w-3/4 flex flex-col gap-3 lg:pl-6">
+                          
+                          {(p.modifiers.length > 0 || p.secondChanceCard) && (
+                            <div className="flex flex-wrap gap-2 justify-start min-h-[70px] items-center bg-slate-900/40 p-2 rounded-2xl border border-slate-700/50 relative">
+                              <span className="absolute -top-3 left-3 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-widest px-2">Buffs</span>
+                              
+                              {p.secondChanceCard && <Card card={p.secondChanceCard} animate size="small" busted={isBusted} />}
+                              {p.modifiers.map((m, cIdx) => (
+                                <Card key={`mod-${cIdx}`} card={m} animate size="small" busted={isBusted} />
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="flex flex-wrap gap-3 justify-start min-h-[110px] items-center bg-slate-900/40 p-3 rounded-2xl border border-slate-700/50 relative">
+                            <span className="absolute -top-3 left-3 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-widest px-2">
+                              Number Row ({p.currentCards.length}/7)
+                            </span>
+                            
+                            {p.currentCards.length === 0 && <span className="text-slate-600 font-semibold italic text-sm ml-2">No cards dealt</span>}
+                            {p.currentCards.map((card, cIdx) => {
+                              const isDuplicate = isBusted && cIdx === p.currentCards.length - 1;
+                              return (
+                                <Card 
+                                  key={cIdx} 
+                                  card={card} 
+                                  busted={isBusted && !isDuplicate} 
+                                  animate={true}
+                                  size="small"
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
+
+                {gameState.phase === 'playing' && (
+                  <div className="fixed bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur-xl p-6 border-t-2 border-slate-800 flex justify-center gap-4 md:gap-6 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+                    <button
+                      onClick={handleDeal}
+                      disabled={gameState.isTransitioning}
+                      className={`bg-violet-600 hover:bg-violet-500 text-white font-black py-4 px-8 md:px-12 rounded-2xl shadow-[0_0_20px_rgba(139,92,246,0.4)] flex items-center gap-3 transition-all text-xl border border-violet-400
+                        ${gameState.isTransitioning ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
+                    >
+                      <i className="fas fa-plus-square text-2xl"></i> DEAL
+                    </button>
+                    
+                    <button
+                      onClick={handleStop}
+                      disabled={currentPlayer?.forcedFlips > 0 || gameState.isTransitioning}
+                      className={`font-black py-4 px-8 md:px-12 rounded-2xl shadow-lg border-2 flex items-center gap-3 transition-all text-xl
+                        ${(currentPlayer?.forcedFlips > 0 || gameState.isTransitioning) 
+                          ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed' 
+                          : 'bg-slate-700 hover:bg-slate-600 text-white border-slate-500 hover:scale-105 active:scale-95'
+                        }`}
+                    >
+                      <i className="fas fa-square text-2xl"></i> STOP
+                    </button>
+                  </div>
+                )}
+
+                {gameState.phase === 'round_end' && (
+                  <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-300">
+                    <div className="bg-slate-800 p-6 md:p-10 rounded-3xl border-4 border-slate-700 w-full max-w-2xl text-center shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-y-auto max-h-[90vh]">
+                      <h2 className="text-4xl md:text-5xl font-black text-white mb-2">Round {gameState.currentRound} Summary</h2>
+                      <p className="text-slate-400 mb-8 text-lg uppercase tracking-widest font-semibold">
+                        {gameState.isTeamMode ? 'Team Standings' : 'Player Standings'}
+                      </p>
+
+                      <div className="flex flex-col gap-4 mb-8">
+                        {(() => {
+                          const teamStats = {};
+                          gameState.players.forEach(p => {
+                            if (!teamStats[p.teamId]) {
+                              teamStats[p.teamId] = { id: p.teamId, name: p.teamName, score: 0, roundScore: 0 };
+                            }
+                            teamStats[p.teamId].score += p.score;
+                            teamStats[p.teamId].roundScore += getRoundScore(p);
+                          });
+                          
+                          const sortedTeamsSummary = Object.values(teamStats).sort((a, b) => b.score - a.score);
+                          const maxRoundScore = Math.max(...sortedTeamsSummary.map(t => t.roundScore));
+
+                          return sortedTeamsSummary.map((t, idx) => {
+                            const isRoundWinner = t.roundScore === maxRoundScore && maxRoundScore > 0;
+
+                            return (
+                              <div 
+                                key={t.id} 
+                                className={`flex justify-between items-center p-4 md:p-5 rounded-2xl transition-all ${
+                                  isRoundWinner 
+                                    ? 'bg-yellow-500/20 border-2 border-yellow-400 transform scale-[1.03] shadow-[0_0_20px_rgba(250,204,21,0.2)]' 
+                                    : 'bg-slate-900/50 border border-slate-700/50'
+                                }`}
+                              >
+                                <div className="flex items-center gap-4">
+                                  <span className="text-slate-500 font-bold w-6 text-left">#{idx + 1}</span>
+                                  <span className={`font-black ${isRoundWinner ? 'text-2xl md:text-3xl text-yellow-400' : 'text-xl text-slate-300'}`}>
+                                    {t.name} {isRoundWinner && <i className="fas fa-trophy text-2xl inline mb-1 ml-2"></i>}
+                                  </span>
+                                </div>
+                                <div className="text-right">
+                                  <div className={`font-black ${isRoundWinner ? 'text-3xl md:text-4xl text-yellow-400' : 'text-2xl text-fuchsia-400'}`}>
+                                    {t.score} <span className="text-sm font-bold text-slate-500">pts</span>
+                                  </div>
+                                  <div className={`text-sm font-bold ${t.roundScore > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                    {t.roundScore > 0 ? `+${t.roundScore} this round` : '0 points this round'}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+
+                      <button
+                        onClick={handleNextRound}
+                        className="w-full bg-gradient-to-r from-fuchsia-600 to-rose-500 hover:from-fuchsia-500 hover:to-rose-400 text-white font-black py-5 px-10 rounded-2xl shadow-[0_0_30px_rgba(217,70,239,0.4)] flex items-center justify-center gap-3 transition-all hover:scale-105 active:scale-95 text-xl md:text-2xl"
+                      >
+                        Start Next Round <i className="fas fa-arrow-right text-3xl"></i>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+
             </div>
           );
         }
