@@ -114,6 +114,53 @@
           return base;
         };
 
+        const getInterleavedOrder = (players, isTeamMode) => {
+          if (!isTeamMode) return players.map(p => p.id);
+          
+          const teamIds = [];
+          players.forEach(p => {
+            if (!teamIds.includes(p.teamId)) teamIds.push(p.teamId);
+          });
+          
+          const groups = {};
+          teamIds.forEach(id => { groups[id] = []; });
+          players.forEach(p => {
+            groups[p.teamId].push(p.id);
+          });
+          
+          const interleaved = [];
+          const lengths = teamIds.map(id => groups[id].length);
+          const maxLen = lengths.length > 0 ? Math.max(...lengths) : 0;
+          
+          for (let col = 0; col < maxLen; col++) {
+            for (let row = 0; row < teamIds.length; row++) {
+              const teamId = teamIds[row];
+              if (groups[teamId][col] !== undefined) {
+                interleaved.push(groups[teamId][col]);
+              }
+            }
+          }
+          return interleaved;
+        };
+
+        const getNextPlayerIndex = (players, currentIndex, isTeamMode) => {
+          if (players.every((p) => p.roundStatus !== 'playing')) return -1;
+          
+          const interleavedIds = getInterleavedOrder(players, isTeamMode);
+          const currentId = players[currentIndex].id;
+          const currentSeqIdx = interleavedIds.indexOf(currentId);
+          
+          let nextSeqIdx = (currentSeqIdx + 1) % interleavedIds.length;
+          let nextPlayer = players.find(p => p.id === interleavedIds[nextSeqIdx]);
+          
+          while (nextPlayer.roundStatus !== 'playing') {
+            nextSeqIdx = (nextSeqIdx + 1) % interleavedIds.length;
+            nextPlayer = players.find(p => p.id === interleavedIds[nextSeqIdx]);
+          }
+          
+          return players.findIndex(p => p.id === nextPlayer.id);
+        };
+
         // --- COMPONENTS ---
 
         const Card = ({ card, busted = false, animate = true, size = 'normal' }) => {
@@ -185,27 +232,6 @@
               }, 50);
             }
           }, [gameState.currentPlayerIndex, gameState.phase]);
-
-          const drawCard = (currentDeck, currentDiscard) => {
-            let deck = [...currentDeck];
-            let discard = [...currentDiscard];
-            if (deck.length === 0) {
-              if (discard.length === 0) return [null, deck, discard]; 
-              deck = shuffleArray(discard);
-              discard = [];
-            }
-            const card = deck.pop();
-            return [card, deck, discard];
-          };
-
-          const getNextPlayerIndex = (players, currentIndex) => {
-            if (players.every((p) => p.roundStatus !== 'playing')) return -1;
-            let nextIndex = (currentIndex + 1) % players.length;
-            while (players[nextIndex].roundStatus !== 'playing') {
-              nextIndex = (nextIndex + 1) % players.length;
-            }
-            return nextIndex;
-          };
 
           const addSetupPlayer = () => {
             if (setupPlayers.length >= 24) return;
@@ -359,12 +385,12 @@
                 // Keep turn on current player until target selected
               } else if (isBust || autoStop) {
                 player.forcedFlips = 0; 
-                nextIndex = getNextPlayerIndex(newPlayers, pIdx);
+                nextIndex = getNextPlayerIndex(newPlayers, pIdx, prev.isTeamMode);
               } else {
                 if (player.forcedFlips > 0) {
                   nextIndex = pIdx; 
                 } else {
-                  nextIndex = getNextPlayerIndex(newPlayers, pIdx);
+                  nextIndex = getNextPlayerIndex(newPlayers, pIdx, prev.isTeamMode);
                 }
               }
 
@@ -411,10 +437,10 @@
                 if (sourcePlayer.forcedFlips > 0) {
                   nextIndex = sourceIdx; 
                 } else {
-                  nextIndex = getNextPlayerIndex(newPlayers, sourceIdx);
+                  nextIndex = getNextPlayerIndex(newPlayers, sourceIdx, prev.isTeamMode);
                 }
               } else {
-                nextIndex = getNextPlayerIndex(newPlayers, sourceIdx);
+                nextIndex = getNextPlayerIndex(newPlayers, sourceIdx, prev.isTeamMode);
               }
 
               return {
@@ -437,7 +463,7 @@
               player.score += calculatePot(player);
               newPlayers[prev.currentPlayerIndex] = player;
               
-              const nextIndex = getNextPlayerIndex(newPlayers, prev.currentPlayerIndex);
+              const nextIndex = getNextPlayerIndex(newPlayers, prev.currentPlayerIndex, prev.isTeamMode);
 
               return {
                 ...prev,
@@ -486,7 +512,9 @@
                 currentDiscard = [];
               }
 
-              const startPlayerIndex = prev.currentRound % prev.players.length;
+              const interleavedIds = getInterleavedOrder(prev.players, prev.isTeamMode);
+              const startId = interleavedIds[prev.currentRound % interleavedIds.length];
+              const startPlayerIndex = prev.players.findIndex(p => p.id === startId);
 
               return {
                 ...prev,
