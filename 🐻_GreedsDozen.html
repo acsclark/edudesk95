@@ -114,6 +114,18 @@
           return base;
         };
 
+        const drawCard = (currentDeck, currentDiscard) => {
+          let deck = [...currentDeck];
+          let discard = [...currentDiscard];
+          if (deck.length === 0) {
+            if (discard.length === 0) return [null, deck, discard]; 
+            deck = shuffleArray(discard);
+            discard = [];
+          }
+          const card = deck.pop();
+          return [card, deck, discard];
+        };
+
         const getInterleavedOrder = (players, isTeamMode) => {
           if (!isTeamMode) return players.map(p => p.id);
           
