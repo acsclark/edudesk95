@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Handwriting Stroke Academy</title>
     <!-- Tailwind CSS for sleek utility styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -29,9 +29,22 @@
         .scrollbar-thin::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        /* Styling to prevent scrolling or selecting while tracing */
+        .prevent-select {
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        /* Critical for iframe embedding: prevents parent page scroll pulls during mobile tracing */
+        .trace-canvas {
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
     </style>
 </head>
-<body class="min-h-screen pb-12 text-slate-800">
+<body class="min-h-screen pb-12 text-slate-800 prevent-select">
 
     <!-- Top Navigation Header -->
     <header class="bg-white border-b border-slate-200 py-6 px-4 sticky top-0 z-40 shadow-sm">
@@ -175,15 +188,37 @@
                 </button>
             </div>
 
+            <!-- Interaction Toggle (Demo Mode vs Practice Mode) -->
+            <div class="bg-slate-50 border-b border-slate-100 px-6 py-3 flex items-center justify-between shrink-0">
+                <div class="bg-slate-200/70 p-1 rounded-xl flex gap-1 border border-slate-300/30">
+                    <button id="btnModeDemo" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 bg-white text-indigo-600 shadow-sm">
+                        Demo Mode
+                    </button>
+                    <button id="btnModePractice" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                        Practice Tracing
+                    </button>
+                </div>
+                <!-- Dynamic Interactive Accuracy Rating Badge -->
+                <div id="practiceStatus" class="hidden flex items-center gap-3">
+                    <span class="text-xs text-slate-500 font-semibold">Guidelines tracing:</span>
+                    <div id="accuracyBadge" class="px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 bg-slate-100 text-slate-600">
+                        Accuracy: <span id="accuracyValue">0%</span> (<span id="accuracyGrade">Ready!</span>)
+                    </div>
+                </div>
+            </div>
+
             <!-- Centered Animating Workspace -->
-            <div class="p-6 md:p-8 flex flex-col items-center justify-center bg-white overflow-hidden flex-1">
+            <div class="p-6 md:p-8 flex flex-col items-center justify-center bg-white overflow-hidden flex-1 select-none">
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-8 w-full max-w-2xl">
                     
                     <!-- Uppercase Display Box -->
                     <div id="modalUpperBox" class="flex flex-col items-center relative w-full max-w-[240px]">
                         <span class="absolute top-2 left-4 text-[10px] font-bold text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-md z-10">Uppercase</span>
                         <div class="w-full aspect-square border-2 border-slate-100 bg-slate-50 rounded-3xl flex items-center justify-center p-6 shadow-inner mt-4 relative">
-                            <div class="w-full h-full" id="modalUpperCanvasContainer"></div>
+                            <div class="w-full h-full relative" id="modalUpperCanvasContainer"></div>
+                            <!-- Canvas drawing overlays for practice -->
+                            <canvas id="canvasUpperDraw" class="absolute inset-0 w-full h-full cursor-crosshair hidden select-none touch-none pointer-events-auto trace-canvas"></canvas>
                         </div>
                     </div>
 
@@ -191,7 +226,9 @@
                     <div id="modalLowerBox" class="flex flex-col items-center relative w-full max-w-[240px]">
                         <span class="absolute top-2 left-4 text-[10px] font-bold text-rose-500 uppercase tracking-widest bg-rose-50 px-2 py-1 rounded-md z-10">Lowercase</span>
                         <div class="w-full aspect-square border-2 border-slate-100 bg-slate-50 rounded-3xl flex items-center justify-center p-6 shadow-inner mt-4 relative">
-                            <div class="w-full h-full" id="modalLowerCanvasContainer"></div>
+                            <div class="w-full h-full relative" id="modalLowerCanvasContainer"></div>
+                            <!-- Canvas drawing overlays for practice -->
+                            <canvas id="canvasLowerDraw" class="absolute inset-0 w-full h-full cursor-crosshair hidden select-none touch-none pointer-events-auto trace-canvas"></canvas>
                         </div>
                     </div>
                 </div>
@@ -205,8 +242,16 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
                         Animate Letter
                     </button>
+
+                    <button 
+                        id="btnClearPractice" 
+                        class="hidden w-full sm:w-auto px-6 py-3 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-semibold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 shrink-0"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        Clear Canvas
+                    </button>
                     
-                    <div class="w-full flex items-center justify-between gap-4 bg-white p-2 px-3 rounded-lg border border-slate-200">
+                    <div id="speedSliderContainer" class="w-full flex items-center justify-between gap-4 bg-white p-2 px-3 rounded-lg border border-slate-200">
                         <span class="text-xs font-bold text-slate-500 uppercase shrink-0">Speed</span>
                         <input 
                             type="range" 
@@ -344,7 +389,7 @@
                     { d: 'M 75,60 L 50,60', desc: 'Inward horizontal crossbar directly below starting node 1' }
                 ],
                 lower: [
-                    { d: 'M 75,72 C 75,44 25,44 25,72 C 25,100 75,100 75,72 Z', desc: 'Belly sphere' },
+                    { d: 'M 75,80 C 75,55 25,55 25,80 C 25,105 75,105 75,80 Z', desc: 'Counter-clockwise circle sitting on baseline and touching halfway line' },
                     { d: 'M 75,55 L 75,105 C 75,130 35,130 35,115', desc: 'Right hanging monkey hook down and left' }
                 ]
             },
@@ -515,15 +560,36 @@
         let carouselCenterLetter = 'A';
         let modalCaseMode = 'both'; // 'both' | 'upper' | 'lower'
         let modalSpeed = 1.5;
+        let modalAnimKey = Date.now(); 
         let runningTimeouts = [];
         let autoNavInterval = null;
+        let modalMode = 'demo'; // 'demo' | 'practice'
+
+        // Tracing Guidance Verification Metrics
+        let upperTargetPoints = [];
+        let lowerTargetPoints = [];
+        let upperDrawnPointsCount = 0;
+        let upperAccumulatedError = 0;
+        let lowerDrawnPointsCount = 0;
+        let lowerAccumulatedError = 0;
 
         // Words Mode States
         let wordInput = "HELLO";
         let caseMode = "as-typed";
         let playbackMode = "sequential";
         let wordSpeed = 1.5;
+        let wordAnimKey = Date.now();
         let showGuidelines = true;
+
+        // Drawing State for practice canvas
+        let isDrawingUpper = false;
+        let isDrawingLower = false;
+        
+        // Exponential Moving Average (EMA) Damping Filter coordinates
+        // Coefficient range (0 to 1): lower values provide more smoothing / inertia.
+        const SMOOTHING_FACTOR = 0.25; 
+        let lastX = 0;
+        let lastY = 0;
 
         // DOM elements cache
         const modeLettersBtn = document.getElementById('modeLettersBtn');
@@ -549,11 +615,27 @@
         const modalUpperCanvasContainer = document.getElementById('modalUpperCanvasContainer');
         const modalLowerCanvasContainer = document.getElementById('modalLowerCanvasContainer');
         const btnPlayModal = document.getElementById('btnPlayModal');
+        const btnClearPractice = document.getElementById('btnClearPractice');
+        const speedSliderContainer = document.getElementById('speedSliderContainer');
         const modalSpeedRange = document.getElementById('modalSpeedRange');
         const btnCarouselLeft = document.getElementById('btnCarouselLeft');
         const btnCarouselRight = document.getElementById('btnCarouselRight');
         const carouselLetterTrack = document.getElementById('carouselLetterTrack');
         const caseToggleGroup = document.getElementById('caseToggleGroup');
+
+        // Mode Toggles (Demo vs Practice)
+        const btnModeDemo = document.getElementById('btnModeDemo');
+        const btnModePractice = document.getElementById('btnModePractice');
+        const practiceStatus = document.getElementById('practiceStatus');
+        const accuracyValue = document.getElementById('accuracyValue');
+        const accuracyGrade = document.getElementById('accuracyGrade');
+        const accuracyBadge = document.getElementById('accuracyBadge');
+        
+        // Drawing Canvases
+        const canvasUpper = document.getElementById('canvasUpperDraw');
+        const canvasLower = document.getElementById('canvasLowerDraw');
+        const ctxUpper = canvasUpper.getContext('2d');
+        const ctxLower = canvasLower.getContext('2d');
 
         // Initialize grid list cards
         function initGrid() {
@@ -592,7 +674,7 @@
         }
 
         // --- SVG HELPER ENGINE (Declarative Drawing Paths) ---
-        function renderSVGMarkup(container, paths, durationPerStroke, animKey, startDelays, drawGuidelines) {
+        function renderSVGMarkup(container, paths, durationPerStroke, animKey, startDelays, drawGuidelines, forceLightGray = false) {
             container.innerHTML = '';
             
             const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -603,7 +685,7 @@
             svg.innerHTML = `
                 <defs>
                     <marker id="arrowhead" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" height="6" orient="auto-start-reverse">
-                        <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#64748b"/>
+                        <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="${forceLightGray ? '#cbd5e1' : '#64748b'}"/>
                     </marker>
                 </defs>
             `;
@@ -626,20 +708,23 @@
             paths.forEach((p, idx) => {
                 const backPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 backPath.setAttribute('d', p.d);
-                backPath.setAttribute('stroke', '#e2e8f0');
+                // Background shape is really light gray in practice mode
+                backPath.setAttribute('stroke', forceLightGray ? '#f1f5f9' : '#e2e8f0');
                 backPath.setAttribute('stroke-width', '10');
                 backPath.setAttribute('fill', 'none');
                 backPath.setAttribute('stroke-linecap', 'round');
                 backPath.setAttribute('stroke-linejoin', 'round');
+                backPath.setAttribute('class', 'guide-trace');
                 svg.appendChild(backPath);
 
                 const activePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 activePath.setAttribute('d', p.d);
-                activePath.setAttribute('stroke', '#334155');
+                activePath.setAttribute('stroke', forceLightGray ? '#cbd5e1' : '#334155');
                 activePath.setAttribute('stroke-width', '7');
                 activePath.setAttribute('fill', 'none');
                 activePath.setAttribute('stroke-linecap', 'round');
                 activePath.setAttribute('stroke-linejoin', 'round');
+                activePath.setAttribute('class', 'active-trace');
                 svg.appendChild(activePath);
 
                 activePathElements.push({ element: activePath, backElement: backPath });
@@ -709,6 +794,14 @@
                 // eslint-disable-next-line no-unused-expressions
                 svg.getBoundingClientRect();
 
+                // If in Practice mode, keep active traces faint and pre-drawn (no transition animations)
+                if (forceLightGray) {
+                    activePathElements.forEach(p => {
+                        p.element.style.strokeDashoffset = '0';
+                    });
+                    return;
+                }
+
                 // Trigger transitions sequentially based on delay schedules
                 activePathElements.forEach((p, idx) => {
                     const delay = startDelays ? startDelays[idx] : idx * (durationPerStroke + 100);
@@ -732,7 +825,9 @@
             carouselCenterLetter = char;
             modalLetterTitle.textContent = `Letter Blueprint: ${char}${char.toLowerCase()}`;
             zoomModal.classList.remove('hidden');
-            renderModalView();
+            
+            // Default back to Demo mode on opening modal
+            setModalMode('demo');
         }
 
         function closeZoomModal() {
@@ -744,6 +839,293 @@
         closeModalBtn.addEventListener('click', closeZoomModal);
         zoomModal.addEventListener('click', (e) => {
             if (e.target === zoomModal) closeZoomModal();
+        });
+
+        // Toggle Modal Interactive Modes
+        btnModeDemo.addEventListener('click', () => setModalMode('demo'));
+        btnModePractice.addEventListener('click', () => setModalMode('practice'));
+
+        function setModalMode(mode) {
+            modalMode = mode;
+            clearAllTimeouts();
+
+            if (mode === 'demo') {
+                btnModeDemo.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 bg-white text-indigo-600 shadow-sm";
+                btnModePractice.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 text-slate-600 hover:text-slate-900 flex items-center gap-1.5";
+                
+                practiceStatus.classList.add('hidden');
+                btnClearPractice.classList.add('hidden');
+                btnPlayModal.classList.remove('hidden');
+                speedSliderContainer.classList.remove('hidden');
+
+                canvasUpper.classList.add('hidden');
+                canvasLower.classList.add('hidden');
+            } else {
+                btnModePractice.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 bg-white text-indigo-600 shadow-sm flex items-center gap-1.5";
+                btnModeDemo.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 text-slate-600 hover:text-slate-900";
+                
+                practiceStatus.classList.remove('hidden');
+                btnClearPractice.classList.remove('hidden');
+                btnPlayModal.classList.add('hidden');
+                speedSliderContainer.classList.add('hidden');
+
+                // Reveal overlay drawing canvases
+                if (modalCaseMode === 'both' || modalCaseMode === 'upper') {
+                    canvasUpper.classList.remove('hidden');
+                    resetPracticeCanvas(canvasUpper, ctxUpper);
+                }
+                if (modalCaseMode === 'both' || modalCaseMode === 'lower') {
+                    canvasLower.classList.remove('hidden');
+                    resetPracticeCanvas(canvasLower, ctxLower);
+                }
+            }
+
+            renderModalView();
+        }
+
+        // Setup practice canvases and bind resizing
+        function resetPracticeCanvas(canvas, ctx) {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            // Match canvas internal resolution with its bounding coordinates
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+
+            ctx.strokeStyle = '#f43f5e'; // Bright red tracing color
+            ctx.lineWidth = 10;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+
+        // Sample exact target points from rendered SVG vector curves
+        // Ensures smooth handling even when dynamically scaled inside responsive embed environments
+        function sampleDOMPaths(container, canvas) {
+            const points = [];
+            const guidePaths = container.querySelectorAll('.guide-trace');
+            if (guidePaths.length === 0) return [];
+            
+            guidePaths.forEach(path => {
+                const totalLen = path.getTotalLength();
+                // Sample approx 1 point every 2-3 pixels along guidelines
+                const samplesCount = Math.max(30, Math.floor(totalLen / 3));
+                for (let i = 0; i <= samplesCount; i++) {
+                    const pct = i / samplesCount;
+                    const pt = path.getPointAtLength(pct * totalLen);
+                    
+                    // Maps SVG 100x120 internal viewBox directly to Canvas client space
+                    const canvasX = pt.x * (canvas.width / 100);
+                    const canvasY = pt.y * (canvas.height / 120);
+                    
+                    points.push({
+                        x: canvasX,
+                        y: canvasY,
+                        visited: false
+                    });
+                }
+            });
+            return points;
+        }
+
+        // Live calculation of coverage completeness & stay-on-line precision
+        function calculateAccuracy() {
+            let totalTargets = 0;
+            let totalVisited = 0;
+            let totalDrawn = 0;
+            let totalError = 0;
+
+            if (modalCaseMode === 'both' || modalCaseMode === 'upper') {
+                totalTargets += upperTargetPoints.length;
+                totalVisited += upperTargetPoints.filter(p => p.visited).length;
+                totalDrawn += upperDrawnPointsCount;
+                totalError += upperAccumulatedError;
+            }
+            if (modalCaseMode === 'both' || modalCaseMode === 'lower') {
+                totalTargets += lowerTargetPoints.length;
+                totalVisited += lowerTargetPoints.filter(p => p.visited).length;
+                totalDrawn += lowerDrawnPointsCount;
+                totalError += lowerAccumulatedError;
+            }
+
+            if (totalDrawn === 0 || totalTargets === 0) {
+                accuracyValue.textContent = "0%";
+                accuracyGrade.textContent = "Ready!";
+                accuracyBadge.className = "px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 bg-slate-100 text-slate-500 border border-slate-200";
+                return;
+            }
+
+            // Coverage: Percentage of guideline path successfully traced
+            const coverage = totalVisited / totalTargets; // 0.0 to 1.0
+
+            // Precision: Average distance of drawing from closest guidelines
+            const avgError = totalError / totalDrawn;
+            
+            // Map avg error distance (px) into standard score multiplier
+            const precisionScore = Math.max(0, 100 - (avgError * 2.5));
+
+            // Combined Score: 75% Coverage completeness, 25% precision tracking (encouraging and positive)
+            let finalScore = Math.round((coverage * 100) * 0.75 + precisionScore * 0.25);
+
+            // Attenuate precision score if drawn points exist but coverage is extremely low
+            if (coverage < 0.05) {
+                finalScore = Math.round(finalScore * (coverage / 0.05));
+            }
+
+            // Dynamic grading system thresholds
+            let grade = "Keep Tracing! ✍️";
+            let colorClass = "bg-slate-100 text-slate-500 border border-slate-200";
+
+            if (finalScore >= 95) {
+                grade = "Perfect! ✨";
+                colorClass = "bg-indigo-50 text-indigo-600 border border-indigo-200 shadow-sm scale-105 duration-200";
+            } else if (finalScore >= 80) {
+                grade = "Great Job! 🌟";
+                colorClass = "bg-emerald-50 text-emerald-600 border border-emerald-200";
+            } else if (finalScore >= 50) {
+                grade = "Good Progress! 👍";
+                colorClass = "bg-blue-50 text-blue-600 border border-blue-200";
+            } else {
+                grade = "Keep Practicing! ✍️";
+                colorClass = "bg-amber-50 text-amber-600 border border-amber-200";
+            }
+
+            accuracyValue.textContent = `${finalScore}%`;
+            accuracyGrade.textContent = grade;
+            accuracyBadge.className = `px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${colorClass}`;
+        }
+
+        // Draw Logic with Jitter Damping Filter (EMA smoothing)
+        function draw(e, isUpperCanvas) {
+            const canvas = isUpperCanvas ? canvasUpper : canvasLower;
+            const ctx = isUpperCanvas ? ctxUpper : ctxLower;
+            const isDrawing = isUpperCanvas ? isDrawingUpper : isDrawingLower;
+
+            if (!isDrawing) return;
+
+            // Normalize coordinate offsets based on client positioning inside overlay
+            const rect = canvas.getBoundingClientRect();
+            let rawX, rawY;
+
+            if (e.touches && e.touches.length > 0) {
+                rawX = e.touches[0].clientX - rect.left;
+                rawY = e.touches[0].clientY - rect.top;
+            } else {
+                rawX = e.clientX - rect.left;
+                rawY = e.clientY - rect.top;
+            }
+
+            // --- JITTER REDUCTION FILTER (Exponential Moving Average) ---
+            // Calculate Smoothed Point by interpolating the step change vector
+            const smoothedX = lastX + SMOOTHING_FACTOR * (rawX - lastX);
+            const smoothedY = lastY + SMOOTHING_FACTOR * (rawY - lastY);
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(smoothedX, smoothedY);
+            ctx.stroke();
+
+            // Trace evaluation
+            const targetPoints = isUpperCanvas ? upperTargetPoints : lowerTargetPoints;
+            if (targetPoints.length > 0) {
+                let minDist = Infinity;
+                let nearestPt = null;
+
+                targetPoints.forEach(pt => {
+                    const d = Math.hypot(smoothedX - pt.x, smoothedY - pt.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearestPt = pt;
+                    }
+                });
+
+                // Tolerance threshold (px)
+                const traceTolerance = 24;
+                if (minDist < traceTolerance && nearestPt) {
+                    nearestPt.visited = true;
+                }
+
+                // Clamp deviation error to 30px so sudden flips do not catastrophically ruin accuracy average
+                const cappedError = Math.min(minDist, 30);
+
+                if (isUpperCanvas) {
+                    upperDrawnPointsCount++;
+                    upperAccumulatedError += cappedError;
+                } else {
+                    lowerDrawnPointsCount++;
+                    lowerAccumulatedError += cappedError;
+                }
+
+                calculateAccuracy();
+            }
+
+            // Update last state coordinate anchors to the filtered values
+            lastX = smoothedX;
+            lastY = smoothedY;
+        }
+
+        // Set Mouse/Touch Coordinates
+        function setStartPosition(e, canvas) {
+            const rect = canvas.getBoundingClientRect();
+            if (e.touches && e.touches.length > 0) {
+                lastX = e.touches[0].clientX - rect.left;
+                lastY = e.touches[0].clientY - rect.top;
+            } else {
+                lastX = e.clientX - rect.left;
+                lastY = e.clientY - rect.top;
+            }
+        }
+
+        // Mouse listeners Upper Draw
+        canvasUpper.addEventListener('mousedown', (e) => {
+            isDrawingUpper = true;
+            setStartPosition(e, canvasUpper);
+        });
+        canvasUpper.addEventListener('mousemove', (e) => draw(e, true));
+        window.addEventListener('mouseup', () => isDrawingUpper = false);
+
+        // Touch listeners Upper Draw (Mobile support)
+        canvasUpper.addEventListener('touchstart', (e) => {
+            isDrawingUpper = true;
+            setStartPosition(e, canvasUpper);
+        });
+        canvasUpper.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            draw(e, true);
+        });
+        window.addEventListener('touchend', () => isDrawingUpper = false);
+
+        // Mouse listeners Lower Draw
+        canvasLower.addEventListener('mousedown', (e) => {
+            isDrawingLower = true;
+            setStartPosition(e, canvasLower);
+        });
+        canvasLower.addEventListener('mousemove', (e) => draw(e, false));
+        window.addEventListener('mouseup', () => isDrawingLower = false);
+
+        // Touch listeners Lower Draw (Mobile support)
+        canvasLower.addEventListener('touchstart', (e) => {
+            isDrawingLower = true;
+            setStartPosition(e, canvasLower);
+        });
+        canvasLower.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            draw(e, false);
+        });
+        window.addEventListener('touchend', () => isDrawingLower = false);
+
+        // Clear Practice Canvas Action
+        btnClearPractice.addEventListener('click', () => {
+            if (modalCaseMode === 'both' || modalCaseMode === 'upper') {
+                ctxUpper.clearRect(0, 0, canvasUpper.width, canvasUpper.height);
+                upperDrawnPointsCount = 0;
+                upperAccumulatedError = 0;
+                upperTargetPoints.forEach(p => p.visited = false);
+            }
+            if (modalCaseMode === 'both' || modalCaseMode === 'lower') {
+                ctxLower.clearRect(0, 0, canvasLower.width, canvasLower.height);
+                lowerDrawnPointsCount = 0;
+                lowerAccumulatedError = 0;
+                lowerTargetPoints.forEach(p => p.visited = false);
+            }
+            calculateAccuracy();
         });
 
         // Trigger modal update and layout configurations
@@ -773,16 +1155,56 @@
                 return upperDuration + 200 + (i * (duration + 100));
             });
 
+            // Adjust Canvas visibility based on mode & cases
+            if (modalMode === 'practice') {
+                canvasUpper.className = (modalCaseMode === 'both' || modalCaseMode === 'upper') ? "absolute inset-0 w-full h-full cursor-crosshair select-none touch-none pointer-events-auto trace-canvas" : "hidden";
+                canvasLower.className = (modalCaseMode === 'both' || modalCaseMode === 'lower') ? "absolute inset-0 w-full h-full cursor-crosshair select-none touch-none pointer-events-auto trace-canvas" : "hidden";
+            }
+
             // Draw canvases
+            const forceLightGray = (modalMode === 'practice'); // Faint grey paths used for Practice Mode trace helper
+            
             if (modalCaseMode === 'both' || modalCaseMode === 'upper') {
-                renderSVGMarkup(modalUpperCanvasContainer, uPaths, duration, modalAnimKey, null, true);
+                renderSVGMarkup(modalUpperCanvasContainer, uPaths, duration, modalAnimKey, null, true, forceLightGray);
             }
             if (modalCaseMode === 'both' || modalCaseMode === 'lower') {
-                renderSVGMarkup(modalLowerCanvasContainer, lPaths, duration, modalAnimKey, lowerDelays, true);
+                renderSVGMarkup(modalLowerCanvasContainer, lPaths, duration, modalAnimKey, lowerDelays, true, forceLightGray);
             }
+
+            // Re-align drawing overlay context coordinates and map new targets
+            requestAnimationFrame(() => {
+                if (modalMode === 'practice') {
+                    if (modalCaseMode === 'both' || modalCaseMode === 'upper') {
+                        resetPracticeCanvas(canvasUpper, ctxUpper);
+                        upperTargetPoints = sampleDOMPaths(modalUpperCanvasContainer, canvasUpper);
+                    }
+                    if (modalCaseMode === 'both' || modalCaseMode === 'lower') {
+                        resetPracticeCanvas(canvasLower, ctxLower);
+                        lowerTargetPoints = sampleDOMPaths(modalLowerCanvasContainer, canvasLower);
+                    }
+                    upperDrawnPointsCount = 0;
+                    upperAccumulatedError = 0;
+                    lowerDrawnPointsCount = 0;
+                    lowerAccumulatedError = 0;
+                    calculateAccuracy();
+                }
+            });
 
             renderCarouselTrack();
         }
+
+        // Dynamic Resize Observer specifically optimized for embedded website resizing
+        const resizeObserver = new ResizeObserver(() => {
+            if (modalMode === 'practice' && selectedLetter) {
+                renderModalView();
+            }
+        });
+        
+        // Connect resize observers on load
+        window.addEventListener('load', () => {
+            resizeObserver.observe(modalUpperCanvasContainer);
+            resizeObserver.observe(modalLowerCanvasContainer);
+        });
 
         btnPlayModal.addEventListener('click', () => {
             modalAnimKey = Date.now();
