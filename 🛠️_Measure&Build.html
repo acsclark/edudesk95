@@ -52,8 +52,8 @@
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- html2pdf for PDF Generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- docx.js for DOCX Generation -->
+    <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
     
     <style>
         /* Wood pegboard background pattern */
@@ -473,7 +473,7 @@
                         setCutParts(prev => prev.filter(i => i.id !== draggedItem.id));
                         snapped = true;
                       } else if (Math.abs(draggedItem.length - targetLength) < 0.05) { 
-                        setPlacedParts(prev => ({ ...prev, [closestTarget.id]: draggedItem }));
+                        setPlacedParts(prev => ({ ...prev, [closestTarget.id]: { ...draggedItem, w: closestTarget.w, h: closestTarget.h, rot: closestTarget.rot || 0 } }));
                         setCutParts(prev => prev.filter(i => i.id !== draggedItem.id));
                         showMessage('Perfect fit! Awesome job!');
                         triggerScreenShake(); 
@@ -1132,10 +1132,10 @@
             // Mark State
             const [drawnX, setDrawnX] = useState(100);
             const [markLine, setMarkLine] = useState([]); // Array of absolute Y-coordinates
-            const [isDrawing, setIsDrawing] = useState(false);
-            const [cursor, setCursor] = useState({ x: 0, y: 0 });
-            const [isHoveringWorkspace, setIsHoveringWorkspace] = useState(false);
+            const [pencilY, setPencilY] = useState(0);   // 0..1 animation progress
+            const [isAnimating, setIsAnimating] = useState(false);
             const [fabMessage, setFabMessage] = useState('');
+            const animFrameRef = useRef(null);
             
             // Cut State (Vertical Feed)
             const [materialY, setMaterialY] = useState(170); // Starts at bottom
@@ -1163,16 +1163,31 @@
                 return pt.matrixTransform(svg.getScreenCTM().inverse());
             };
 
-            // -- Live Pencil Pointer Move Handlers --
-            const handleWorkspacePointerMove = (e) => {
-                const pt = getWorkspacePoint(e);
-                setCursor({ x: pt.x, y: pt.y });
-                setIsHoveringWorkspace(true);
-                
-                if (isDrawing && step === 1) {
-                    setMarkLine(prev => [...prev, pt.y]);
-                }
+            // -- Auto pencil animation when entering step 1 --
+            const startPencilAnimation = (lockedX) => {
+                setDrawnX(lockedX);
+                setMarkLine([]);
+                setPencilY(0);
+                setIsAnimating(true);
+                const DURATION = 550;
+                const start = performance.now();
+                const animate = (now) => {
+                    const t = Math.min((now - start) / DURATION, 1);
+                    setPencilY(t);
+                    setMarkLine([t]);
+                    if (t < 1) {
+                        animFrameRef.current = requestAnimationFrame(animate);
+                    } else {
+                        setIsAnimating(false);
+                        setTimeout(() => setStep(2), 300);
+                    }
+                };
+                animFrameRef.current = requestAnimationFrame(animate);
             };
+
+            useEffect(() => () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); }, []);
+
+            const handleWorkspacePointerMove = (e) => {};
 
             // -- Step 0 Dragging Effect with smart magnet snapping to needed sizes --
             useEffect(() => {
@@ -1219,39 +1234,7 @@
                 };
             }, [isDraggingTape, step, scale, targetLengths, isSnapped]);
 
-            // -- Step 1 Draw Handlers --
-            const handleMarkDown = (e) => {
-                if (step !== 1) return;
-                e.preventDefault();
-                setIsDrawing(true);
-                const pt = getWorkspacePoint(e);
-                setMarkLine([pt.y]);
-                setDrawnX(pt.x - 50);
-            };
 
-            const handleMarkUp = () => {
-                if (!isDrawing || step !== 1) return;
-                setIsDrawing(false);
-                
-                if (markLine.length > 5) {
-                    const minY = Math.min(...markLine);
-                    const maxY = Math.max(...markLine);
-                    const span = maxY - minY;
-                    
-                    if (span > 35) {
-                        const diff = Math.abs(drawnX - tapeX);
-                        if (diff <= 25) {
-                            setStep(2); 
-                        } else {
-                            setMarkLine([]); 
-                            setFabMessage("Draw your mark right at the end of the tape measure!");
-                            setTimeout(() => setFabMessage(''), 4500);
-                        }
-                    } else {
-                        setMarkLine([]); 
-                    }
-                }
-            };
 
             // -- Step 2 Cut Logic (Vertical Feed) --
             const triggerCut = () => {
@@ -1376,7 +1359,7 @@
                         {step === 0 && <p className="text-xl text-yellow-400 font-bold">Step 1: Pull tape measure to the required length.</p>}
                         {step === 1 && (
                             <p className="text-xl text-amber-400 font-bold animate-pulse">
-                                {fabMessage ? fabMessage : "Step 2: Drag the pencil down to draw a clear cut line!"}
+                                Step 2: Marking the cut line...
                             </p>
                         )}
                         {step === 2 && !hasCut && <p className="text-xl text-red-500 font-bold animate-pulse">Step 3: Drag your material UP through the saw!</p>}
@@ -1393,8 +1376,7 @@
                               className="w-full h-full overflow-visible" 
                               style={{ cursor: step === 1 ? 'none' : 'default' }}
                               onPointerMove={handleWorkspacePointerMove}
-                              onPointerLeave={() => setIsHoveringWorkspace(false)}
-                              onPointerEnter={() => setIsHoveringWorkspace(true)}
+
                          >
                             <defs>
                               <pattern id="wood-texture" patternUnits="userSpaceOnUse" width="100" height="100"><rect width="100" height="100" fill="#DEB887" /><path d="M0 10 Q 25 5 50 15 T 100 10 M0 30 Q 30 35 60 25 T 100 30 M0 50 Q 20 45 50 55 T 100 50 M0 70 Q 40 75 70 65 T 100 70 M0 90 Q 25 85 50 95 T 100 90" fill="none" stroke="#CD853F" strokeWidth="1" opacity="0.5"/></pattern>
@@ -1446,10 +1428,10 @@
 
                                 <rect x="-2" y="-10" width="4" height="80" fill="#ef4444" />
                                 
-                                {(step === 1 || step === 2) && markLine.length > 0 && (
+                                {(step === 1 || step === 2) && (
                                     <line 
                                         x1={drawnX} y1={0} 
-                                        x2={drawnX} y2={Math.min(60, Math.max(0, Math.max(...markLine) - 98))} 
+                                        x2={drawnX} y2={step === 1 ? pencilY * 60 : 60} 
                                         stroke={type === 'wood' ? '#1c1917' : '#ef4444'} 
                                         strokeWidth="5" strokeLinecap="round" 
                                     />
@@ -1487,25 +1469,18 @@
                             )}
 
                             {step === 1 && (
-                                <rect 
-                                   x="0" y="0" width="100%" height="100%" 
-                                   fill="transparent"
-                                   className="cursor-none"
-                                   onPointerDown={handleMarkDown}
-                                   onPointerUp={handleMarkUp}
-                                />
-                            )}
-
-                            {step === 1 && isHoveringWorkspace && (
-                                <g transform={`translate(${cursor.x}, ${cursor.y}) rotate(-30)`} style={{ pointerEvents: 'none' }}>
-                                   <path d="M -5 -55 A 5 5 0 0 1 5 -55 Z" fill="#f472b6" />
-                                   <rect x="-5" y="-55" width="10" height="7" fill="#9ca3af" />
-                                   <line x1="-5" y1="-51" x2="5" y2="-51" stroke="#4b5563" strokeWidth="1" />
-                                   <rect x="-5" y="-48" width="10" height="38" fill="#eab308" />
-                                   <rect x="-2" y="-48" width="4" height="38" fill="#facc15" />
-                                   <polygon points="-5,-10 5,-10 0,0" fill="#ffedd5" />
-                                   <polygon points="-1.5,-3 1.5,-3 0,0" fill="#1f2937" />
-                                 </g>
+                                <g transform={`translate(${50 + drawnX}, ${98 + pencilY * 60 - 2})`} style={{ pointerEvents: 'none' }}>
+                                    {/* Animated pencil tip at the drawing point */}
+                                    <g transform="rotate(-30)" style={{ transform: 'rotate(-30deg)', transformOrigin: '0px 0px' }}>
+                                        <path d="M -5 -55 A 5 5 0 0 1 5 -55 Z" fill="#f472b6" />
+                                        <rect x="-5" y="-55" width="10" height="7" fill="#9ca3af" />
+                                        <line x1="-5" y1="-51" x2="5" y2="-51" stroke="#4b5563" strokeWidth="1" />
+                                        <rect x="-5" y="-48" width="10" height="38" fill="#eab308" />
+                                        <rect x="-2" y="-48" width="4" height="38" fill="#facc15" />
+                                        <polygon points="-5,-10 5,-10 0,0" fill="#ffedd5" />
+                                        <polygon points="-1.5,-3 1.5,-3 0,0" fill="#1f2937" />
+                                    </g>
+                                </g>
                             )}
 
                             {step === 2 && (
@@ -1532,7 +1507,7 @@
                      <div className="mt-8 flex justify-center">
                          {step === 0 && (
                              <button 
-                                onClick={() => { setDrawnX(tapeX); setStep(1); }}
+                                onClick={() => { setStep(1); startPencilAnimation(tapeX); }}
                                 className={`px-8 py-4 rounded-2xl font-black text-2xl transition-all duration-150 ${
                                     isSnapped 
                                     ? 'bg-green-500 text-white shadow-[0_8px_0_#15803d] scale-102 ring-4 ring-green-400/30' 
@@ -1599,273 +1574,324 @@
                 }
             };
 
-            const generatePDF = () => {
+            const generatePDF = async () => {
                 setIsGeneratingPDF(true);
+                try {
+                    // ---- Step 1: Draw build preview onto an off-screen canvas ----
+                    const BW = 1050, BH = 600;
+                    const PADDING = 40;
+                    const S1_H = BH - PADDING * 2;
+                    const S1_X = PADDING, S1_W = BW - PADDING * 2;
 
-                // Capture scratchpad canvas content
-                const scratchCanvas = canvasRef.current;
+                    const buildCanvas = document.createElement('canvas');
+                    buildCanvas.width = BW; buildCanvas.height = BH;
+                    const ctx = buildCanvas.getContext('2d');
 
-                // We draw the entire worksheet onto a single off-screen canvas, then download as PNG.
-                const W = 1050;   // pixel width of output image (~A4 at 125dpi)
-                const PADDING = 40;
+                    const roundRect = (x, y, w, h, r, fill, stroke, strokeW) => {
+                        ctx.beginPath();
+                        ctx.moveTo(x + r, y);
+                        ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+                        ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                        ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+                        ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+                        ctx.closePath();
+                        if (fill)   { ctx.fillStyle = fill;   ctx.fill(); }
+                        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = strokeW || 2; ctx.stroke(); }
+                    };
 
-                // ---- Build rows for the receipt ----
-                const receiptLines = itemsList.map(item =>
-                    `${item.name}  |  ${item.len}cm × $${item.rate.toFixed(2)} = $${item.cost.toFixed(2)}`
-                );
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, BW, BH);
 
-                // ---- Measure heights ----
-                // Section 1 (build preview): 220px high
-                // Section 2 (receipt): dynamic
-                // Section 3 (working / scratchpad): 220px high
-                const HEADER_H   = 80;
-                const S1_H       = 220;
-                const S2_BASE    = 180 + receiptLines.length * 26 + 40; // header + lines + total row
-                const S3_H       = 220;
-                const SECTION_GAP = 20;
-                const TOTAL_H = PADDING + HEADER_H + SECTION_GAP + S1_H + SECTION_GAP + Math.max(S2_BASE, S3_H) + PADDING + 20;
+                    // Board background + grid
+                    roundRect(S1_X, PADDING, S1_W, S1_H, 10, '#0c4a6e', '#1c1917', 3);
+                    ctx.save();
+                    ctx.beginPath(); ctx.rect(S1_X, PADDING, S1_W, S1_H); ctx.clip();
+                    ctx.strokeStyle = 'rgba(56,189,248,0.15)'; ctx.lineWidth = 1;
+                    for (let gx = S1_X; gx < S1_X + S1_W; gx += 20) { ctx.beginPath(); ctx.moveTo(gx, PADDING); ctx.lineTo(gx, PADDING + S1_H); ctx.stroke(); }
+                    for (let gy = PADDING; gy < PADDING + S1_H; gy += 20) { ctx.beginPath(); ctx.moveTo(S1_X, gy); ctx.lineTo(S1_X + S1_W, gy); ctx.stroke(); }
+                    ctx.restore();
 
-                const oc = document.createElement('canvas');
-                oc.width  = W;
-                oc.height = TOTAL_H;
-                const ctx = oc.getContext('2d');
+                // Draw placed parts onto build canvas
+                    const parts2 = Object.values(placedParts);
+                    if (parts2.length === 0) {
+                        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+                        ctx.font = '14px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('No parts placed', BW/2, BH/2);
+                    } else {
+                        const fills2   = { wood: '#d97706', chain: '#475569', pipe: '#0284c7', plastic: '#ef4444' };
+                        const strokes2 = { wood: '#92400e', chain: '#0f172a', pipe: '#1e293b', plastic: '#991b1b' };
+                        const CM_PX   = 10;
+                        const gameW = 800, gameH = 500;
+                        const sx = S1_W / gameW, sy = S1_H / gameH;
 
-                // ---- Background ----
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, W, TOTAL_H);
+                        parts2.forEach(part => {
+                            const pxW = (part.w || 10) * CM_PX;
+                            const pxH = (part.h || 2) * CM_PX;
+                            const cx  = part.cx || part.x || 400;
+                            const cy  = Math.min(part.cy || part.y || 250, 490);
+                            const drawX = S1_X + (cx - pxW/2) * sx;
+                            const drawY = PADDING + (cy - pxH/2) * sy;
+                            const drawW = Math.max(pxW * sx, 6);
+                            const drawH = Math.max(pxH * sy, 5);
+                            const rot   = (part.rot || 0) * Math.PI / 180;
+                            ctx.save();
+                            ctx.translate(drawX + drawW/2, drawY + drawH/2);
+                            ctx.rotate(rot);
+                            roundRect(-drawW/2, -drawH/2, drawW, drawH, 3,
+                                fills2[part.type] || '#d97706', strokes2[part.type] || '#92400e', 2);
+                            if (drawW > 20) {
+                                ctx.fillStyle = '#ffffff';
+                                ctx.font = 'bold 7px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.fillText(`${part.w}cm`, 0, 3);
+                            }
+                            ctx.restore();
+                        });
 
-                // ---- Helper: rounded rect ----
-                const roundRect = (x, y, w, h, r, fill, stroke, strokeW) => {
-                    ctx.beginPath();
-                    ctx.moveTo(x + r, y);
-                    ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-                    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-                    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-                    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
-                    ctx.closePath();
-                    if (fill)   { ctx.fillStyle = fill;   ctx.fill(); }
-                    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = strokeW || 2; ctx.stroke(); }
-                };
-
-                // ---- HEADER ----
-                roundRect(PADDING, PADDING, W - PADDING*2, HEADER_H - 10, 10, '#1c1917', null);
-                ctx.fillStyle = '#fbbf24';
-                ctx.font = 'bold 28px Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('🪚  WOODCRAFT WORKSHOP  —  FREE BUILD WORKSHEET', W/2, PADDING + 32);
-                ctx.fillStyle = '#a8a29e';
-                ctx.font = '14px Arial, sans-serif';
-                ctx.fillText('Rangitata, Canterbury, NZ  |  Student Worksheet', W/2, PADDING + 56);
-
-                let curY = PADDING + HEADER_H + SECTION_GAP;
-
-                // ---- SECTION LABEL HELPER ----
-                const sectionLabel = (label, accentColor, x, y, w) => {
-                    ctx.fillStyle = accentColor;
-                    ctx.fillRect(x, y, 5, 20);
-                    ctx.fillStyle = '#44403c';
-                    ctx.font = 'bold 13px Arial, sans-serif';
-                    ctx.textAlign = 'left';
-                    ctx.fillText(label.toUpperCase(), x + 12, y + 15);
-                };
-
-                // ============================================================
-                // SECTION 1 — MY BUILD (canvas snapshot of placed parts)
-                // ============================================================
-                const S1_X = PADDING;
-                const S1_W = W - PADDING*2;
-                sectionLabel('Section 1 — My Build', '#f59e0b', S1_X, curY, S1_W);
-                curY += 26;
-
-                // Board background
-                roundRect(S1_X, curY, S1_W, S1_H, 10, '#0c4a6e', '#1c1917', 3);
-
-                // Grid overlay
-                ctx.save();
-                ctx.beginPath();
-                ctx.rect(S1_X, curY, S1_W, S1_H);
-                ctx.clip();
-                ctx.strokeStyle = 'rgba(56,189,248,0.15)';
-                ctx.lineWidth = 1;
-                for (let gx = S1_X; gx < S1_X + S1_W; gx += 20) {
-                    ctx.beginPath(); ctx.moveTo(gx, curY); ctx.lineTo(gx, curY + S1_H); ctx.stroke();
-                }
-                for (let gy = curY; gy < curY + S1_H; gy += 20) {
-                    ctx.beginPath(); ctx.moveTo(S1_X, gy); ctx.lineTo(S1_X + S1_W, gy); ctx.stroke();
-                }
-                ctx.restore();
-
-                // Draw placed parts
-                const parts = Object.values(placedParts);
-                if (parts.length === 0) {
-                    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-                    ctx.font = '14px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('No parts placed', W/2, curY + S1_H/2);
-                } else {
-                    const fills   = { wood: '#d97706', chain: '#475569', pipe: '#0284c7', plastic: '#ef4444' };
-                    const strokes = { wood: '#92400e', chain: '#0f172a', pipe: '#1e293b', plastic: '#991b1b' };
-                    const CM_PX   = 10;
-                    const gameW = 800, gameH = 500;
-                    const sx = S1_W / gameW, sy = S1_H / gameH;
-
-                    parts.forEach(part => {
-                        const pxW = (part.w || 10) * CM_PX;
-                        const pxH = (part.h || 2) * CM_PX;
-                        const cx  = part.cx || part.x || 400;
-                        const cy  = Math.min(part.cy || part.y || 250, 490);
-                        const drawX = S1_X + (cx - pxW/2) * sx;
-                        const drawY = curY + (cy - pxH/2) * sy;
-                        const drawW = Math.max(pxW * sx, 6);
-                        const drawH = Math.max(pxH * sy, 5);
-                        const rot   = (part.rot || 0) * Math.PI / 180;
-
-                        ctx.save();
-                        ctx.translate(drawX + drawW/2, drawY + drawH/2);
-                        ctx.rotate(rot);
-                        roundRect(-drawW/2, -drawH/2, drawW, drawH, 3,
-                            fills[part.type] || '#d97706', strokes[part.type] || '#92400e', 2);
-                        // label
-                        if (drawW > 20) {
+                        // Legend
+                        const legendItems = [['wood','#d97706','Timber'],['pipe','#0284c7','Pipe'],['chain','#475569','Chain'],['plastic','#ef4444','Plastic']];
+                        let lx = S1_X + S1_W - 10;
+                        const ly = PADDING + S1_H - 18;
+                        legendItems.slice().reverse().forEach(([, c, l]) => {
+                            const tw = ctx.measureText(l).width + 22;
+                            lx -= tw + 6;
+                            roundRect(lx, ly - 12, tw, 18, 4, 'rgba(0,0,0,0.65)', null);
+                            ctx.fillStyle = c;
+                            ctx.fillRect(lx + 5, ly - 7, 10, 10);
                             ctx.fillStyle = '#ffffff';
-                            ctx.font = 'bold 7px Arial';
-                            ctx.textAlign = 'center';
-                            ctx.fillText(`${part.w}cm`, 0, 3);
+                            ctx.font = 'bold 9px Arial';
+                            ctx.textAlign = 'left';
+                            ctx.fillText(l, lx + 19, ly + 2);
+                        });
+                    }
+
+                    // ---- Step 2: Get build image as base64 ----
+                    const buildImgBase64 = buildCanvas.toDataURL('image/png').split(',')[1];
+                    const buildImgBytes = Uint8Array.from(atob(buildImgBase64), c => c.charCodeAt(0));
+
+                    // ---- Step 3: Get scratchpad image ----
+                    const scratchCanvas = canvasRef.current;
+                    let scratchImgBytes = null;
+                    if (scratchCanvas) {
+                        const scratchBase64 = scratchCanvas.toDataURL('image/png').split(',')[1];
+                        scratchImgBytes = Uint8Array.from(atob(scratchBase64), c => c.charCodeAt(0));
+                    }
+
+                    // ---- Step 4: Build the DOCX ----
+                    const {
+                        Document, Packer, Paragraph, TextRun, ImageRun,
+                        Table, TableRow, TableCell,
+                        AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign,
+                        PageBreak, HeadingLevel
+                    } = docx;
+
+                    // Page dimensions: A4 portrait in DXA (1440 DXA = 1 inch)
+                    // A4: 11906 w x 16838 h, margins 720 each side (~0.5in)
+                    const PAGE_W = 11906, PAGE_H = 16838;
+                    const MARGIN = 720;
+                    const CONTENT_W = PAGE_W - MARGIN * 2; // 10466 DXA
+
+                    // ImageRun transformation takes pixels (at 96dpi).
+                    // CONTENT_W in DXA: 10466. Convert: 10466/1440 inches * 96dpi = ~697px
+                    const CONTENT_W_PX = Math.round(CONTENT_W / 1440 * 96);
+                    const buildImgW = CONTENT_W_PX;
+                    const buildImgH = Math.round(CONTENT_W_PX * (BH / BW));
+
+                    // ---- Receipt table rows ----
+                    const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' };
+                    const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+                    const allThinBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+                    const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
+
+                    const cellStyle = (text, bold, align, shade) => new TableCell({
+                        borders: allThinBorders,
+                        width: { size: Math.round(CONTENT_W * 0.5), type: WidthType.DXA },
+                        shading: shade ? { fill: shade, type: ShadingType.CLEAR } : undefined,
+                        margins: { top: 60, bottom: 60, left: 100, right: 100 },
+                        children: [new Paragraph({
+                            alignment: align || AlignmentType.LEFT,
+                            children: [new TextRun({ text, bold: !!bold, font: 'Courier New', size: 18 })]
+                        })]
+                    });
+
+                    const receiptHeaderRow = new TableRow({
+                        children: [
+                            new TableCell({
+                                columnSpan: 2,
+                                borders: allThinBorders,
+                                width: { size: CONTENT_W, type: WidthType.DXA },
+                                shading: { fill: '1c1917', type: ShadingType.CLEAR },
+                                margins: { top: 80, bottom: 80, left: 120, right: 120 },
+                                children: [
+                                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'WOODCRAFT WORKSHOP', bold: true, color: 'FFFFFF', font: 'Courier New', size: 24 })] }),
+                                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Rangitata, Canterbury, NZ', color: 'AAAAAA', font: 'Courier New', size: 18 })] }),
+                                ]
+                            })
+                        ]
+                    });
+
+                    const pricingRow = new TableRow({
+                        children: [
+                            new TableCell({
+                                columnSpan: 2,
+                                borders: allThinBorders,
+                                width: { size: CONTENT_W, type: WidthType.DXA },
+                                shading: { fill: 'F5F5F0', type: ShadingType.CLEAR },
+                                margins: { top: 60, bottom: 60, left: 120, right: 120 },
+                                children: [
+                                    new Paragraph({ children: [new TextRun({ text: 'PRICING PLAN:', bold: true, font: 'Courier New', size: 18 })] }),
+                                    ...['WOOD   : $1.00 / cm', 'PIPE   : $2.00 / cm', 'CHAIN  : $1.50 / cm', 'PLASTIC: $2.50 / cm'].map(l =>
+                                        new Paragraph({ children: [new TextRun({ text: '  ' + l, font: 'Courier New', size: 18 })] })
+                                    )
+                                ]
+                            })
+                        ]
+                    });
+
+                    const itemRows = itemsList.map(item => new TableRow({
+                        children: [
+                            new TableCell({
+                                borders: allThinBorders,
+                                width: { size: Math.round(CONTENT_W * 0.5), type: WidthType.DXA },
+                                margins: { top: 60, bottom: 60, left: 100, right: 100 },
+                                children: [
+                                    new Paragraph({ children: [new TextRun({ text: item.name.toUpperCase(), bold: true, font: 'Courier New', size: 18 })] }),
+                                    new Paragraph({ children: [new TextRun({ text: item.len + 'cm', font: 'Courier New', size: 16, color: '78716c' })] }),
+                                ]
+                            }),
+                            new TableCell({
+                                borders: allThinBorders,
+                                width: { size: Math.round(CONTENT_W * 0.5), type: WidthType.DXA },
+                                margins: { top: 60, bottom: 60, left: 100, right: 100 },
+                                children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `${item.len} x $${item.rate.toFixed(2)} = $${item.cost.toFixed(2)}`, bold: true, font: 'Courier New', size: 18 })] })]
+                            }),
+                        ]
+                    }));
+
+                    const totalRow = new TableRow({
+                        children: [
+                            new TableCell({
+                                borders: { top: { style: BorderStyle.DOUBLE, size: 4, color: '000000' }, bottom: thinBorder, left: thinBorder, right: thinBorder },
+                                width: { size: Math.round(CONTENT_W * 0.5), type: WidthType.DXA },
+                                margins: { top: 80, bottom: 80, left: 120, right: 120 },
+                                children: [new Paragraph({ children: [new TextRun({ text: 'TOTAL DUE:', bold: true, font: 'Courier New', size: 22 })] })]
+                            }),
+                            new TableCell({
+                                borders: { top: { style: BorderStyle.DOUBLE, size: 4, color: '000000' }, bottom: thinBorder, left: thinBorder, right: thinBorder },
+                                width: { size: Math.round(CONTENT_W * 0.5), type: WidthType.DXA },
+                                margins: { top: 80, bottom: 80, left: 120, right: 120 },
+                                children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: '$___________', bold: true, font: 'Courier New', size: 22 })] })]
+                            })
+                        ]
+                    });
+
+                    const receiptTable = new Table({
+                        width: { size: CONTENT_W, type: WidthType.DXA },
+                        columnWidths: [Math.round(CONTENT_W * 0.5), Math.round(CONTENT_W * 0.5)],
+                        rows: [receiptHeaderRow, pricingRow, ...itemRows, totalRow]
+                    });
+
+                    // ---- Working space: scratchpad image or lined area ----
+                    const workingChildren = [
+                        new Paragraph({ children: [new TextRun({ text: 'Section 3 — My Working', bold: true, size: 22, color: '1a6332' })] }),
+                        new Paragraph({ children: [new TextRun({ text: 'Add up all the costs from the receipt. Show your working below!', size: 18, color: '78716c', italics: true })] }),
+                        new Paragraph({ children: [] }),
+                    ];
+
+                    if (scratchImgBytes) {
+                        // Show scratchpad drawing - scale to content width in pixels
+                        const scratchW = CONTENT_W_PX;
+                        const scratchH = Math.round(CONTENT_W_PX * (scratchCanvas.height / scratchCanvas.width));
+                        workingChildren.push(new Paragraph({
+                            children: [new ImageRun({ data: scratchImgBytes, transformation: { width: scratchW, height: scratchH }, type: 'png' })]
+                        }));
+                    } else {
+                        // Empty lined area using blank paragraphs
+                        for (let li = 0; li < 14; li++) {
+                            workingChildren.push(new Paragraph({
+                                border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'BBBBBB', space: 1 } },
+                                children: [new TextRun({ text: ' ', size: 28 })]
+                            }));
                         }
-                        ctx.restore();
+                    }
+
+                    workingChildren.push(new Paragraph({ children: [] }));
+                    workingChildren.push(new Paragraph({
+                        border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 1 } },
+                        children: [new TextRun({ text: 'MY TOTAL ANSWER:  $', bold: true, size: 22 })]
+                    }));
+
+                    // ---- Build the document ----
+                    const pageProps = {
+                        size: { width: PAGE_W, height: PAGE_H },
+                        margin: { top: MARGIN, right: MARGIN, bottom: MARGIN, left: MARGIN }
+                    };
+
+                    const doc = new Document({
+                        sections: [
+                            // Page 1: Build image
+                            {
+                                properties: { page: pageProps },
+                                children: [
+                                    new Paragraph({
+                                        alignment: AlignmentType.CENTER,
+                                        children: [new TextRun({ text: 'WOODCRAFT WORKSHOP — FREE BUILD WORKSHEET', bold: true, size: 32, font: 'Arial' })]
+                                    }),
+                                    new Paragraph({
+                                        alignment: AlignmentType.CENTER,
+                                        children: [new TextRun({ text: 'Rangitata, Canterbury, NZ  |  Student Worksheet', size: 18, color: '78716c', font: 'Arial' })]
+                                    }),
+                                    new Paragraph({ children: [] }),
+                                    new Paragraph({
+                                        children: [new TextRun({ text: 'Section 1 — My Build', bold: true, size: 22, color: 'b45309', font: 'Arial' })]
+                                    }),
+                                    new Paragraph({ children: [] }),
+                                    new Paragraph({
+                                        alignment: AlignmentType.CENTER,
+                                        children: [new ImageRun({
+                                            data: buildImgBytes,
+                                            transformation: {
+                                                width: buildImgW,
+                                                height: buildImgH
+                                            },
+                                            type: 'png'
+                                        })]
+                                    }),
+                                    new Paragraph({
+                                        children: [new TextRun({ text: 'Name: ________________________________     Date: _______________', size: 20, font: 'Arial' })]
+                                    }),
+                                ]
+                            },
+                            // Page 2: Receipt + Working space
+                            {
+                                properties: { page: pageProps },
+                                children: [
+                                    new Paragraph({
+                                        children: [new TextRun({ text: 'Section 2 — Material Receipt', bold: true, size: 22, color: 'b45309', font: 'Arial' })]
+                                    }),
+                                    new Paragraph({ children: [] }),
+                                    receiptTable,
+                                    new Paragraph({ children: [] }),
+                                    new Paragraph({ children: [] }),
+                                    ...workingChildren
+                                ]
+                            }
+                        ]
                     });
 
-                    // Legend
-                    const legendItems = [['wood','#d97706','Timber'],['pipe','#0284c7','Pipe'],['chain','#475569','Chain'],['plastic','#ef4444','Plastic']];
-                    let lx = S1_X + S1_W - 10;
-                    const ly = curY + S1_H - 18;
-                    legendItems.slice().reverse().forEach(([, c, l]) => {
-                        const tw = ctx.measureText(l).width + 22;
-                        lx -= tw + 6;
-                        ctx.fillStyle = 'rgba(0,0,0,0.65)';
-                        roundRect(lx, ly - 12, tw, 18, 4, 'rgba(0,0,0,0.65)', null);
-                        ctx.fillStyle = c;
-                        ctx.fillRect(lx + 5, ly - 7, 10, 10);
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 9px Arial';
-                        ctx.textAlign = 'left';
-                        ctx.fillText(l, lx + 19, ly + 2);
-                    });
+                    // ---- Step 5: Download ----
+                    const buffer = await Packer.toBlob(doc);
+                    const url = URL.createObjectURL(buffer);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'Woodcraft_Worksheet.docx';
+                    link.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 5000);
+                } catch (err) {
+                    console.error('DOCX generation error:', err);
+                    alert('Sorry, could not generate worksheet: ' + err.message);
                 }
-
-                curY += S1_H + SECTION_GAP;
-
-                // ============================================================
-                // SECTIONS 2 & 3 SIDE BY SIDE
-                // ============================================================
-                const S23_Y  = curY;
-                const S2_W   = 320;
-                const S3_X   = PADDING + S2_W + 18;
-                const S3_W   = S1_W - S2_W - 18;
-                const S23_H  = Math.max(S2_BASE, S3_H);
-
-                // ---- SECTION 2: RECEIPT ----
-                sectionLabel('Section 2 — Material Receipt', '#f59e0b', PADDING, S23_Y, S2_W);
-                const r2Y = S23_Y + 26;
-                roundRect(PADDING, r2Y, S2_W, S23_H - 26, 10, '#fafaf9', '#1c1917', 3);
-
-                ctx.fillStyle = '#1c1917';
-                ctx.font = 'bold 13px "Courier New", monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText('WOODCRAFT WORKSHOP', PADDING + S2_W/2, r2Y + 22);
-                ctx.font = '11px "Courier New", monospace';
-                ctx.fillStyle = '#78716c';
-                ctx.fillText('Rangitata, Canterbury, NZ', PADDING + S2_W/2, r2Y + 38);
-
-                // Dashed separator
-                ctx.setLineDash([4, 4]);
-                ctx.strokeStyle = '#a8a29e'; ctx.lineWidth = 1;
-                ctx.beginPath(); ctx.moveTo(PADDING + 10, r2Y + 48); ctx.lineTo(PADDING + S2_W - 10, r2Y + 48); ctx.stroke();
-                ctx.setLineDash([]);
-
-                // Pricing plan
-                ctx.fillStyle = '#1c1917'; ctx.font = 'bold 10px "Courier New", monospace'; ctx.textAlign = 'left';
-                const planLines = ['PRICING PLAN:', '  WOOD   : $1.00 / cm', '  PIPE   : $2.00 / cm', '  CHAIN  : $1.50 / cm', '  PLASTIC: $2.50 / cm'];
-                let ry = r2Y + 62;
-                planLines.forEach(line => { ctx.fillText(line, PADDING + 12, ry); ry += 14; });
-                ctx.setLineDash([4,4]); ctx.strokeStyle = '#a8a29e';
-                ctx.beginPath(); ctx.moveTo(PADDING + 10, ry + 2); ctx.lineTo(PADDING + S2_W - 10, ry + 2); ctx.stroke();
-                ctx.setLineDash([]);
-                ry += 14;
-
-                // Line items
-                itemsList.forEach(item => {
-                    ctx.fillStyle = '#1c1917'; ctx.font = 'bold 10px "Courier New", monospace'; ctx.textAlign = 'left';
-                    ctx.fillText(item.name.toUpperCase(), PADDING + 12, ry);
-                    ctx.fillStyle = '#78716c'; ctx.font = '9px "Courier New", monospace';
-                    ctx.fillText(`${item.len}cm`, PADDING + 12, ry + 12);
-                    ctx.fillStyle = '#1c1917'; ctx.font = 'bold 11px "Courier New", monospace'; ctx.textAlign = 'right';
-                    ctx.fillText(`${item.len} × $${item.rate.toFixed(2)} = $${item.cost.toFixed(2)}`, PADDING + S2_W - 12, ry + 12);
-                    // light separator
-                    ctx.strokeStyle = '#e7e5e4'; ctx.lineWidth = 1;
-                    ctx.beginPath(); ctx.moveTo(PADDING + 10, ry + 18); ctx.lineTo(PADDING + S2_W - 10, ry + 18); ctx.stroke();
-                    ry += 26;
-                });
-
-                // Total row (blank for student to fill in)
-                ctx.strokeStyle = '#1c1917'; ctx.lineWidth = 2.5;
-                ctx.beginPath(); ctx.moveTo(PADDING + 10, ry); ctx.lineTo(PADDING + S2_W - 10, ry); ctx.stroke();
-                ry += 10;
-                ctx.fillStyle = '#1c1917'; ctx.font = 'bold 13px "Courier New", monospace'; ctx.textAlign = 'left';
-                ctx.fillText('TOTAL DUE:', PADDING + 12, ry + 12);
-                // Blank answer line
-                ctx.strokeStyle = '#1c1917'; ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.moveTo(PADDING + S2_W - 90, ry + 14); ctx.lineTo(PADDING + S2_W - 12, ry + 14); ctx.stroke();
-
-                // ---- SECTION 3: MY WORKING ----
-                sectionLabel('Section 3 — My Working', '#22c55e', S3_X, S23_Y, S3_W);
-                const r3Y = S23_Y + 26;
-                roundRect(S3_X, r3Y, S3_W, S23_H - 26, 10, '#fafef7', '#1c1917', 3);
-
-                ctx.fillStyle = '#78716c'; ctx.font = '11px Arial'; ctx.textAlign = 'left';
-                ctx.fillText('Add up all the costs from the receipt. Show your working below!', S3_X + 12, r3Y + 20);
-
-                // Lined writing area
-                const lineAreaY = r3Y + 30;
-                const lineAreaH = S23_H - 26 - 60;
-                ctx.save();
-                ctx.beginPath(); ctx.rect(S3_X + 8, lineAreaY, S3_W - 16, lineAreaH); ctx.clip();
-
-                // Grid background
-                ctx.fillStyle = '#f0fdf4'; ctx.fillRect(S3_X + 8, lineAreaY, S3_W - 16, lineAreaH);
-                ctx.strokeStyle = 'rgba(187,247,208,0.8)'; ctx.lineWidth = 1;
-                for (let ly2 = lineAreaY + 24; ly2 < lineAreaY + lineAreaH; ly2 += 24) {
-                    ctx.beginPath(); ctx.moveTo(S3_X + 8, ly2); ctx.lineTo(S3_X + S3_W - 8, ly2); ctx.stroke();
-                }
-
-                // If scratchpad has drawing, paste it
-                if (scratchCanvas) {
-                    ctx.globalAlpha = 0.9;
-                    ctx.drawImage(scratchCanvas, S3_X + 8, lineAreaY, S3_W - 16, lineAreaH);
-                    ctx.globalAlpha = 1.0;
-                } else {
-                    ctx.fillStyle = 'rgba(180,180,180,0.4)'; ctx.font = 'italic 13px "Architects Daughter", cursive, Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('✏️  Scribble your working here!', S3_X + S3_W/2, lineAreaY + lineAreaH/2);
-                }
-                ctx.restore();
-
-                // "My Total Answer" line
-                const ansY = r3Y + S23_H - 26 - 25;
-                ctx.strokeStyle = '#1c1917'; ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.moveTo(S3_X + 8, ansY); ctx.lineTo(S3_X + S3_W - 8, ansY); ctx.stroke();
-                ctx.fillStyle = '#1c1917'; ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
-                ctx.fillText('MY TOTAL ANSWER: $', S3_X + 12, ansY + 18);
-                ctx.strokeStyle = '#1c1917'; ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.moveTo(S3_X + 175, ansY + 20); ctx.lineTo(S3_X + S3_W - 12, ansY + 20); ctx.stroke();
-
-                // ============================================================
-                // Download as PNG
-                // ============================================================
-                const link = document.createElement('a');
-                link.download = 'Woodcraft_Worksheet.png';
-                link.href = oc.toDataURL('image/png');
-                link.click();
                 setIsGeneratingPDF(false);
             };
 
