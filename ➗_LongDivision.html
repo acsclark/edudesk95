@@ -239,7 +239,7 @@
             color: var(--accent-success);
             outline: none;
             display: none;
-            padding: 0; /* Clear padding to maximize typing space */
+            padding: 0;
         }
 
         .carried-input {
@@ -543,6 +543,9 @@
 
             buildVisualChartContainers();
             updateCountingUI();
+            
+            // NEW FIX: Wipe the canvas and draw the new fresh equation immediately!
+            drawCanvas(); 
         }
 
         function generateBookworkProblemsList(digits, allowRemainder) {
