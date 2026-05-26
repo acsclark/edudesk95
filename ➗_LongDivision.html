@@ -15,6 +15,7 @@
             --accent-primary: #4cc9f0; 
             --accent-secondary: #f72585; 
             --accent-success: #4ade80; 
+            --accent-leap: #00ff66;
             --text-color: #e2e8f0;
         }
 
@@ -55,8 +56,8 @@
             border-radius: 4px;
             box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.4);
             width: 100%;
-            max-width: 980px;
-            height: 90vh; 
+            max-width: 1100px;
+            height: 92vh; 
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -85,7 +86,6 @@
             font-size: 1.2rem;
         }
 
-        /* CRITICAL FIX: Universal removal of Chrome/Safari/Firefox number input arrows */
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -174,33 +174,33 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
+            gap: 15px;
+            margin-bottom: 10px;
         }
 
         .equation-preview {
-            font-size: 2.2rem;
+            font-size: 2.8rem;
             color: var(--accent-primary);
             background-color: #000;
-            padding: 8px 16px;
-            border: 2px solid var(--accent-secondary);
+            padding: 10px 20px;
+            border: 3px solid var(--accent-secondary);
             white-space: nowrap;
         }
 
         .scanning-equation {
-            font-size: 1.8rem;
+            font-size: 2.2rem;
             color: var(--accent-secondary);
             text-transform: uppercase;
             text-align: right;
             flex: 1;
-            height: 28px;
+            height: 34px;
         }
 
         .instruction-box {
             background-color: #0f3460;
             border-left: 6px solid var(--accent-secondary);
             padding: 10px;
-            font-size: 1.4rem;
+            font-size: 1.6rem;
             min-height: 64px;
             display: flex;
             flex-direction: column;
@@ -208,31 +208,32 @@
             justify-content: center;
             line-height: 1.2;
             text-align: center;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
 
         .canvas-container {
             position: relative;
             background: #000;
             border: 3px solid #333;
-            width: 100%;
-            height: 200px;
-            margin-bottom: 8px;
+            width: 760px; /* Locked down to 760px to anchor pixel mapping perfectly */
+            height: 340px; 
+            margin-bottom: 10px;
+            margin-right: auto;
         }
 
         canvas {
             display: block;
-            width: 100%;
-            height: 100%;
+            width: 760px;
+            height: 340px;
         }
 
         #inline-input {
             position: absolute;
             z-index: 10;
-            font-size: 38px;
+            font-size: 42px;
             font-family: 'VT323', monospace;
-            width: 44px;
-            height: 44px;
+            width: 52px;
+            height: 52px;
             text-align: center;
             border: 3px solid var(--accent-success);
             background-color: #000;
@@ -244,7 +245,7 @@
 
         .carried-input {
             position: absolute;
-            width: 24px;
+            width: 24px; 
             height: 24px;
             font-size: 20px;
             font-family: 'VT323', monospace;
@@ -253,37 +254,26 @@
             background-color: #1a1a2e;
             text-align: center;
             outline: none;
+            padding: 0;
+            z-index: 15;
         }
 
         #interactive-remainder-zone {
             position: absolute;
             z-index: 20;
             background-color: var(--panel-color);
-            border: 3px solid var(--accent-secondary);
+            border: 3px solid var(--accent-leap);
             padding: 8px;
-            width: 220px;
+            width: 180px;
             display: none;
             flex-direction: column;
             align-items: center;
-            box-shadow: 0 0 15px var(--accent-secondary);
-        }
-
-        .star-container {
-            display: flex;
-            justify-content: center;
-            gap: 4px;
-            margin: 5px 0;
-            flex-wrap: wrap;
-        }
-
-        .interactive-star {
-            font-size: 22px;
-            cursor: pointer;
+            box-shadow: 0 0 15px var(--accent-leap);
         }
 
         #setup-input-area {
             background: rgba(0, 0, 0, 0.4);
-            padding: 10px;
+            padding: 12px;
             border-radius: 4px;
             text-align: center;
             margin-bottom: 5px;
@@ -297,7 +287,7 @@
         }
 
         .feedback {
-            font-size: 1.6rem;
+            font-size: 1.8rem;
             color: var(--accent-primary);
             text-transform: uppercase;
             flex: 1;
@@ -306,8 +296,8 @@
 
         button {
             font-family: 'VT323', monospace;
-            font-size: 1.6rem;
-            padding: 8px 22px;
+            font-size: 1.8rem;
+            padding: 8px 26px;
             cursor: pointer;
             border: none;
             color: white;
@@ -322,6 +312,8 @@
         }
 
         button.btn-check { background-color: var(--accent-success); box-shadow: 0 4px 0px #166534; }
+        button.btn-leap-action { background-color: var(--accent-leap); color: #000; box-shadow: 0 4px 0px #00993d; font-weight: bold; }
+        button.btn-leap-action:active { box-shadow: 0 2px 0px #00993d; }
 
         #bookwork-zone {
             background-color: #000;
@@ -397,13 +389,12 @@
 
                 <div class="canvas-container" id="canvas-workspace">
                     <div id="interactive-remainder-zone">
-                        <div style="font-size: 1.1rem; color: var(--accent-secondary);">ENERGY LEAK!</div>
-                        <div id="rem-num-track" style="font-size: 1.8rem;">0</div>
-                        <div class="star-container" id="rem-star-box"></div>
-                        <button id="rem-clicker-btn" onclick="handleRemCountUpClick()" style="font-size: 1.1rem; padding: 4px 8px;">COUNT +1</button>
+                        <div style="font-size: 1.1rem; color: #fff; font-weight: bold; text-transform: uppercase;">Energy Leak</div>
+                        <div id="rem-num-track" style="font-size: 1.8rem; margin: 4px 0; color: var(--accent-leap); font-weight: bold;">NUM: 0</div>
+                        <button class="btn-leap-action" id="rem-clicker-btn" onclick="handleRemCountUpClick()" style="font-size: 1.1rem; padding: 6px 10px;">BRIDGE GAP +1</button>
                     </div>
                     <div id="remainder-inputs-overlay"></div>
-                    <canvas id="mathCanvas" width="720" height="200"></canvas>
+                    <canvas id="mathCanvas" width="760" height="340"></canvas>
                     <input type="number" id="inline-input" placeholder="?">
                 </div>
 
@@ -413,8 +404,8 @@
                 </div>
 
                 <div id="setup-input-area" class="setup-input-zone">
-                    <span id="setup-prompt" style="font-size: 1.6rem;">COUNT: </span>
-                    <input type="number" id="setup-input" style="width: 100px; font-size: 1.6rem;">
+                    <span id="setup-prompt" style="font-size: 1.8rem;">COUNT: </span>
+                    <input type="number" id="setup-input" style="width: 120px; font-size: 1.8rem;">
                 </div>
             </div>
         </div>
@@ -440,11 +431,15 @@
         let targetR = 0;
         let divisionPhase = "input";       
         let isAnimating = false;
-        let remCurrentVal = 0;
-        let remStarsBuilt = 0;
-        let remStarsCounted = 0;
-        let bookworkProblemsArray = [];
-        let showingBookworkAnswers = false;
+        
+        let remBaseMultipleVal = 0;
+        let remLeapsRendered = 0;
+
+        let smoothViewCenterVal = 0;
+        let scaleTargetVal = 0;
+        let scaleConstantSpeed = 0; 
+        let scanState = "idle";     
+        let lastTimestamp = 0;
 
         const canvas = document.getElementById('mathCanvas');
         const ctx = canvas.getContext('2d');
@@ -456,13 +451,12 @@
         const scanningEq = document.getElementById('scanning-equation');
         const remZone = document.getElementById('interactive-remainder-zone');
         const remNumTrack = document.getElementById('rem-num-track');
-        const remStarBox = document.getElementById('rem-star-box');
 
-        const startX = 120; 
-        const digitSpacing = 65;
-        const quotientY = 55;   
-        const lineY = 85;       
-        const dividendY = 140;  
+        const startX = 140; 
+        const digitSpacing = 75;
+        const quotientY = 65;   
+        const lineY = 100;       
+        const dividendY = 160;  
 
         function buildVisualChartContainers() {
             const strip = document.getElementById('multiples-strip');
@@ -514,6 +508,8 @@
             document.getElementById('bookwork-zone').style.display = "none";
 
             divisor = Math.floor(Math.random() * 8) + 2; 
+            scaleConstantSpeed = divisor / 1000; 
+
             let minRange = Math.pow(10, selectedDigits - 1);
             let maxRange = Math.pow(10, selectedDigits) - 1;
             let randomDividend = Math.floor(Math.random() * (maxRange - minRange + 1)) + minRange;
@@ -532,6 +528,10 @@
             currentStep = 0;
             divisionPhase = "input";
             isAnimating = false;
+            smoothViewCenterVal = 0;
+            scaleTargetVal = 0;
+            scanState = "idle";
+            remLeapsRendered = 0;
 
             document.getElementById('feedback').innerText = '';
             setupInputArea.style.display = "block";
@@ -543,9 +543,6 @@
 
             buildVisualChartContainers();
             updateCountingUI();
-            
-            // NEW FIX: Wipe the canvas and draw the new fresh equation immediately!
-            drawCanvas(); 
         }
 
         function generateBookworkProblemsList(digits, allowRemainder) {
@@ -599,7 +596,9 @@
             carriedOverlay.innerHTML = '';
             if (document.getElementById('level-select').value === "gotit") {
                 for(let i = 1; i < dividendDigits.length; i++) {
-                    carriedOverlay.innerHTML += `<input type="text" maxlength="1" class="carried-input" style="left:${(startX + i * digitSpacing) - 22}px; top:${dividendY - 40}px;" id="carry-box-${i}">`;
+                    // Position adjusted to -18px left of target digit to hug the upper-left shoulder 
+                    // exactly where the blue indicator boxes were drawn.
+                    carriedOverlay.innerHTML += `<input type="text" maxlength="1" class="carried-input" style="left:${(startX + i * digitSpacing) - 18}px; top:${dividendY - 42}px;" id="carry-box-${i}">`;
                 }
             }
             divisionPhase = "input";
@@ -617,7 +616,6 @@
                 calculateCurrentTarget();
             }
             
-            drawCanvas();
             const instr = document.getElementById('instruction');
             const btn = document.getElementById('action-btn');
             const mode = document.getElementById('level-select').value;
@@ -655,47 +653,58 @@
 
         function runComparisonAnimation() {
             isAnimating = true;
-            document.getElementById('instruction').innerHTML = `<div>SCANNING MATRIX ${currentStep + 1}...</div><div>CHECKING VALUE: <span style="color:var(--accent-secondary)">${currentFocusValue}</span>...</div>`;
+            document.getElementById('instruction').innerHTML = `<div>SCANNING MATRIX ${currentStep + 1}...</div><div>TRACKING VALUE: <span style="color:var(--accent-secondary)">${currentFocusValue}</span>...</div>`;
             scanningEq.style.opacity = "1";
-            for (let i = 1; i <= 9; i++) document.getElementById(`m${i}`).className = "multiple-box filled";
+            scanningEq.style.color = "var(--accent-secondary)";
             
+            for (let i = 1; i <= 9; i++) document.getElementById(`m${i}`).className = "multiple-box";
+
             if (currentFocusValue === 0) {
                 scanningEq.innerHTML = `0 x ${divisor} = 0`;
+                scanningEq.style.color = "var(--accent-success)";
+                smoothViewCenterVal = 0;
+                scaleTargetVal = 0;
+                scanState = "idle";
                 finishAnimation(0);
                 return;
             }
 
-            let stepIndex = 1;
-            function scanNextBox() {
-                if (stepIndex > 9) { finishAnimation(9); return; }
-                let currentBox = document.getElementById(`m${stepIndex}`);
-                let chartValue = divisor * stepIndex;
-                currentBox.className = "multiple-box active";
-                scanningEq.innerHTML = `${stepIndex} x ${divisor} = ${chartValue}`;
-
-                if (currentFocusValue < chartValue) {
-                    currentBox.style.borderColor = "var(--accent-secondary)";
-                    scanningEq.style.color = "var(--accent-secondary)";
-                    setTimeout(() => finishAnimation(stepIndex - 1), 600);
-                } else {
-                    setTimeout(() => {
-                        currentBox.className = "multiple-box filled";
-                        stepIndex++; scanNextBox();
-                    }, 400);
-                }
+            targetQ = Math.floor(currentFocusValue / divisor);
+            let perfectMatch = (currentFocusValue % divisor === 0);
+            
+            if (perfectMatch) {
+                scaleTargetVal = targetQ * divisor;
+            } else {
+                scaleTargetVal = (targetQ + 1) * divisor;
             }
-            scanNextBox();
+            
+            smoothViewCenterVal = 0;
+            scanState = "scanning_up";
         }
 
         function finishAnimation(bestFitIndex) {
             isAnimating = false;
-            for (let i = 1; i <= 9; i++) document.getElementById(`m${i}`).className = "multiple-box filled";
-            if (bestFitIndex > 0) document.getElementById(`m${bestFitIndex}`).className = "multiple-box active";
+            scanState = "idle";
+            smoothViewCenterVal = bestFitIndex * divisor; 
+            
+            for (let i = 1; i <= 9; i++) {
+                let box = document.getElementById(`m${i}`);
+                if (box) {
+                    box.className = (i <= bestFitIndex) ? "multiple-box filled" : "multiple-box";
+                    box.style.borderColor = "";
+                }
+            }
+            if (bestFitIndex > 0) {
+                let activeBox = document.getElementById(`m${bestFitIndex}`);
+                if (activeBox) activeBox.className = "multiple-box active";
+            }
             
             scanningEq.innerHTML = `${bestFitIndex} x ${divisor} = ${divisor * bestFitIndex}`;
             scanningEq.style.color = "var(--accent-success)";
             document.getElementById('instruction').innerHTML = `<div>TARGET CAPTURED: FITS <span style="color:var(--accent-success)">${bestFitIndex}</span> TIMES!</div><div>TAP ROOF ENTRY BOX!</div>`;
+            
             manageInlineInput(true);
+            
             const btn = document.getElementById('action-btn');
             if (btn) { btn.innerText = "SUBMIT"; btn.style.display = "inline-block"; }
         }
@@ -710,41 +719,34 @@
                 }
                 return;
             }
+            
             remZone.style.display = "flex";
-            remZone.style.left = (startX + currentStep * digitSpacing - 60) + "px";
-            remZone.style.top = (quotientY + 20) + "px";
-            remCurrentVal = divisor * targetQ;
-            remStarsBuilt = 0; remStarsCounted = 0;
-            remNumTrack.innerText = remCurrentVal;
-            remStarBox.innerHTML = '';
-            document.getElementById('instruction').innerHTML = `<div>ENERGY ESCAPE! COUNT UP FROM ${remCurrentVal} TO ${currentFocusValue}!</div>`;
+            remZone.style.left = (startX + currentStep * digitSpacing - 40) + "px";
+            remZone.style.top = (quotientY + 25) + "px";
+            
+            remBaseMultipleVal = divisor * targetQ;
+            remLeapsRendered = 0;
+            remNumTrack.innerText = `NUM: ${remBaseMultipleVal}`;
+            
+            document.getElementById('instruction').innerHTML = `<div>ENERGY LEAK! LEAP FROM ${remBaseMultipleVal} UNTIL YOU REACH THE TARGET ${currentFocusValue}!</div>`;
         }
 
         function handleRemCountUpClick() {
-            if (remCurrentVal >= currentFocusValue) return;
-            remCurrentVal++; remStarsBuilt++;
-            remNumTrack.innerText = remCurrentVal;
-            remStarBox.innerHTML += `<span class="interactive-star" id="star-${remStarsBuilt}" onclick="handleStarClick(${remStarsBuilt})">⭐</span>`;
-            if (remCurrentVal === currentFocusValue) {
-                document.getElementById('instruction').innerHTML = `<div>COLLECT THE REMAINDER PARTICLES!</div>`;
-            }
-        }
-
-        function handleStarClick(idx) {
-            let s = document.getElementById(`star-${idx}`);
-            if (s.innerText === "🌟") return;
-            remStarsCounted++;
-            s.innerText = "🌟";
-            if (remStarsCounted === targetR) {
+            if (remLeapsRendered >= targetR) return;
+            
+            remLeapsRendered++;
+            remNumTrack.innerText = `NUM: ${remBaseMultipleVal + remLeapsRendered}`;
+            
+            if (remLeapsRendered === targetR) {
+                document.getElementById('instruction').innerHTML = `<div>GAP BRIDGED SUCCESSFULLY! REMAINDER IS ${targetR}</div>`;
                 setTimeout(() => {
                     remZone.style.display = "none";
-                    document.getElementById('instruction').innerHTML = `<div>CORE STABILIZED! +${targetR} DRIFTED NEXT DOOR.</div>`;
                     const btn = document.getElementById('action-btn');
                     if (btn) {
                         btn.style.display = "inline-block";
                         btn.innerText = "CONTINUE";
                     }
-                }, 500);
+                }, 1000);
             }
         }
 
@@ -759,29 +761,30 @@
 
         function drawCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.font = '48px "VT323"'; 
+            ctx.font = '54px "VT323"'; 
             
             ctx.strokeStyle = 'var(--accent-primary)';
             ctx.lineWidth = 5;
             ctx.beginPath();
-            ctx.moveTo(startX - 20, lineY);
-            ctx.lineTo(startX + dividendDigits.length * digitSpacing + 10, lineY); 
-            ctx.moveTo(startX - 18, lineY);
-            ctx.quadraticCurveTo(startX - 35, lineY + 20, startX - 25, lineY + 55);                     
+            ctx.moveTo(startX - 25, lineY);
+            ctx.lineTo(startX + dividendDigits.length * digitSpacing + 15, lineY); 
+            ctx.moveTo(startX - 23, lineY);
+            ctx.quadraticCurveTo(startX - 40, lineY + 25, startX - 30, lineY + 65);                     
             ctx.stroke();
 
             ctx.fillStyle = 'var(--accent-primary)';
-            ctx.fillText(divisor, startX - 60, lineY + 42);
+            ctx.fillText(divisor, startX - 70, lineY + 48);
 
             for (let i = 0; i < dividendDigits.length; i++) {
                 let posX = startX + i * digitSpacing;
                 if (document.getElementById('level-select').value === "scaffold" && i > 0 && remainders[i] > 0) {
                     ctx.fillStyle = 'var(--accent-secondary)';
                     ctx.font = '28px "VT323"';
-                    ctx.fillText(remainders[i], posX - 22, dividendY - 22);
+                    // Synchronized the help layout reference coordinates with the new entry box anchors
+                    ctx.fillText(remainders[i], posX - 14, dividendY - 28); 
                 }
                 ctx.fillStyle = '#fff';
-                ctx.font = '48px "VT323"';
+                ctx.font = '54px "VT323"';
                 ctx.fillText(dividendDigits[i], posX, dividendY);
             }
 
@@ -794,15 +797,166 @@
 
             if (currentStep === dividendDigits.length && remainders[dividendDigits.length] > 0) {
                 ctx.fillStyle = 'var(--accent-secondary)';
-                ctx.font = '32px "VT323"';
+                ctx.font = '36px "VT323"';
                 ctx.fillText(`R ${remainders[dividendDigits.length]}`, startX + dividendDigits.length * digitSpacing, quotientY);
             }
 
             if (currentStep < dividendDigits.length) {
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
                 ctx.setLineDash([4, 4]);
-                ctx.strokeRect(startX + currentStep * digitSpacing - 15, quotientY - 35, 50, 120);
+                ctx.strokeRect(startX + currentStep * digitSpacing - 15, quotientY - 40, 55, 135);
                 ctx.setLineDash([]);
+            }
+
+            if (appMode === "division" && currentStep < dividendDigits.length) {
+                const viewX = 40;     
+                const viewY = 220;    
+                const viewW = 680;    
+                const viewH = 100;    
+                const centerX = viewX + (viewW / 2); 
+                const lineBaseY = viewY + 45;
+                
+                const multipleSpacingPx = 185; 
+
+                function calculatePlotX(val) {
+                    return centerX + ((val - smoothViewCenterVal) / divisor) * multipleSpacingPx;
+                }
+
+                ctx.save();
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 3;
+                ctx.fillStyle = '#090d16';
+                ctx.fillRect(viewX, viewY, viewW, viewH);
+                ctx.strokeRect(viewX, viewY, viewW, viewH);
+
+                ctx.beginPath();
+                ctx.rect(viewX + 2, viewY + 2, viewW - 4, viewH - 4);
+                ctx.clip();
+
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(viewX, lineBaseY);
+                ctx.lineTo(viewX + viewW, lineBaseY);
+                ctx.stroke();
+
+                ctx.textAlign = 'center';
+
+                let minValToDraw = Math.max(0, Math.floor(smoothViewCenterVal - (5 * divisor)));
+                let maxValToDraw = Math.floor(smoothViewCenterVal + (5 * divisor));
+
+                for (let val = minValToDraw; val <= maxValToDraw; val++) {
+                    let plotX = calculatePlotX(val);
+
+                    if (plotX >= viewX - 30 && plotX <= viewX + viewW + 30) {
+                        if (val % divisor === 0) {
+                            ctx.strokeStyle = '#ff4757'; 
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            ctx.moveTo(plotX, lineBaseY - 12);
+                            ctx.lineTo(plotX, lineBaseY + 12);
+                            ctx.stroke();
+                            
+                            ctx.fillStyle = '#ff4757'; 
+                            ctx.font = '22px "VT323"'; 
+                            ctx.fillText(val, plotX, lineBaseY + 28);
+                        } else {
+                            ctx.strokeStyle = '#4a5568'; 
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(plotX, lineBaseY - 6);
+                            ctx.lineTo(plotX, lineBaseY + 6);
+                            ctx.stroke();
+                        }
+                    }
+                }
+
+                let focusPlotX = calculatePlotX(currentFocusValue);
+                if (focusPlotX >= viewX && focusPlotX <= viewX + viewW) {
+                    ctx.fillStyle = 'var(--accent-secondary)';
+                    ctx.font = '18px "VT323"';
+                    ctx.fillText(`🎯 ${currentFocusValue}`, focusPlotX, lineBaseY - 26);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(focusPlotX, lineBaseY - 20);
+                    ctx.lineTo(focusPlotX - 6, lineBaseY - 11);
+                    ctx.lineTo(focusPlotX + 6, lineBaseY - 11);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                let maxCompletedMultiples = Math.floor(smoothViewCenterVal / divisor);
+                if (maxCompletedMultiples > 0) {
+                    ctx.save();
+                    ctx.strokeStyle = 'var(--accent-leap)'; 
+                    ctx.shadowBlur = 5;
+                    ctx.shadowColor = 'var(--accent-leap)';
+                    ctx.lineWidth = 4; 
+                    ctx.setLineDash([4, 4]);
+
+                    for (let m = 0; m < maxCompletedMultiples; m++) {
+                        let p1 = calculatePlotX(m * divisor);
+                        let p2 = calculatePlotX((m + 1) * divisor);
+                        let hopMidX = (p1 + p2) / 2;
+                        let hopHeight = Math.abs(p2 - p1) * 0.45; 
+
+                        ctx.beginPath();
+                        ctx.moveTo(p1, lineBaseY - 5);
+                        ctx.quadraticCurveTo(hopMidX, lineBaseY - 5 - hopHeight, p2, lineBaseY - 5);
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                }
+
+                if (divisionPhase === "reveal" && remLeapsRendered > 0) {
+                    ctx.save();
+                    ctx.strokeStyle = 'var(--accent-leap)';
+                    ctx.shadowBlur = 5;
+                    ctx.shadowColor = 'var(--accent-leap)';
+                    ctx.lineWidth = 4;
+                    ctx.setLineDash([4, 4]);
+
+                    let singleStepPxWidth = multipleSpacingPx / divisor;
+
+                    for (let step = 0; step < remLeapsRendered; step++) {
+                        let currentSubVal = remBaseMultipleVal + step;
+                        let nextSubVal = currentSubVal + 1;
+
+                        let p1 = calculatePlotX(currentSubVal);
+                        let p2 = calculatePlotX(nextSubVal);
+                        let midX = (p1 + p2) / 2;
+                        let jumpHeight = singleStepPxWidth * 0.75; 
+
+                        ctx.beginPath();
+                        ctx.moveTo(p1, lineBaseY - 5);
+                        ctx.quadraticCurveTo(midX, lineBaseY - 5 - jumpHeight, p2, lineBaseY - 5);
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                }
+
+                ctx.restore(); 
+
+                ctx.fillStyle = 'var(--accent-success)';
+                ctx.beginPath();
+                ctx.moveTo(centerX, viewY + viewH - 15);
+                ctx.lineTo(centerX - 8, viewY + viewH - 4);
+                ctx.lineTo(centerX + 8, viewY + viewH - 4);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.font = '18px "VT323"';
+                ctx.fillStyle = 'var(--accent-success)';
+                ctx.textAlign = 'center';
+                
+                if (divisionPhase === "reveal") {
+                    let liveValue = remBaseMultipleVal + remLeapsRendered;
+                    ctx.fillText(`NUMBER LINE FOCUS: ${liveValue}`, centerX, viewY + viewH + 14);
+                } else {
+                    let dynamicFitDisplayVal = Math.floor(smoothViewCenterVal / divisor) * divisor;
+                    ctx.fillText(`FIT FOCUS: ${dynamicFitDisplayVal}`, centerX, viewY + viewH + 14);
+                }
+                ctx.textAlign = 'left'; 
             }
         }
 
@@ -843,8 +997,88 @@
             }
         }
 
+        function activeRenderLoop(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            let dt = timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+            
+            if (dt > 100) dt = 16; 
+
+            if (appMode === "division" && currentStep < dividendDigits.length) {
+                
+                if (scanState === "scanning_up") {
+                    smoothViewCenterVal += scaleConstantSpeed * dt;
+                    if (smoothViewCenterVal >= scaleTargetVal) {
+                        smoothViewCenterVal = scaleTargetVal;
+                        
+                        let perfectMatch = (currentFocusValue % divisor === 0);
+                        if (perfectMatch) {
+                            scanState = "idle";
+                            finishAnimation(targetQ);
+                        } else {
+                            scanState = "paused_at_overshoot";
+                            setTimeout(() => {
+                                scaleTargetVal = targetQ * divisor;
+                                scanState = "moving_back";
+                            }, 800); 
+                        }
+                    }
+                } 
+                else if (scanState === "moving_back") {
+                    smoothViewCenterVal -= scaleConstantSpeed * dt;
+                    if (smoothViewCenterVal <= scaleTargetVal) {
+                        smoothViewCenterVal = scaleTargetVal;
+                        scanState = "idle";
+                        finishAnimation(targetQ);
+                    }
+                }
+
+                if (scanState === "scanning_up" || scanState === "moving_back" || scanState === "paused_at_overshoot") {
+                    let currentCrossedMultiple = Math.floor(smoothViewCenterVal / divisor);
+                    let displayStep = currentCrossedMultiple + 1;
+                    if (displayStep > 9) displayStep = 9;
+
+                    for (let i = 1; i <= 9; i++) {
+                        let box = document.getElementById(`m${i}`);
+                        if (box) {
+                            if (i <= currentCrossedMultiple) {
+                                box.className = "multiple-box filled";
+                                box.style.borderColor = "";
+                            } else if (i === displayStep) {
+                                box.className = "multiple-box active";
+                                if (scanState === "paused_at_overshoot" && i === (targetQ + 1)) {
+                                    box.style.borderColor = "var(--accent-secondary)";
+                                }
+                            } else {
+                                box.className = "multiple-box";
+                                box.style.borderColor = "";
+                            }
+                        }
+                    }
+
+                    if (scanState === "scanning_up") {
+                        scanningEq.innerHTML = `${displayStep} x ${divisor} = ${displayStep * divisor}`;
+                        scanningEq.style.color = "var(--accent-secondary)";
+                    } else if (scanState === "paused_at_overshoot") {
+                        let overshootStep = targetQ + 1;
+                        scanningEq.innerHTML = `${overshootStep} x ${divisor} = ${overshootStep * divisor} > ${currentFocusValue}!`;
+                        scanningEq.style.color = "var(--accent-secondary)";
+                    } else if (scanState === "moving_back") {
+                        scanningEq.innerHTML = `RETURNING TO: ${targetQ} x ${divisor} = ${targetQ * divisor}`;
+                        scanningEq.style.color = "var(--accent-primary)";
+                    }
+                }
+            }
+
+            drawCanvas();
+            requestAnimationFrame(activeRenderLoop);
+        }
+
         window.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSubmit(); });
-        window.onload = () => { setTimeout(initGame, 100); };
+        window.onload = () => { 
+            initGame(); 
+            requestAnimationFrame(activeRenderLoop); 
+        };
     </script>
 </body>
 </html>
