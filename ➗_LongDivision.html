@@ -89,10 +89,12 @@
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button {
             -webkit-appearance: none;
+            appearance: none;
             margin: 0;
         }
         input[type="number"] {
             -moz-appearance: textfield;
+            appearance: textfield;
         }
 
         .main-gameplay-layout {
@@ -215,7 +217,7 @@
             position: relative;
             background: #000;
             border: 3px solid #333;
-            width: 760px; /* Locked down to 760px to anchor pixel mapping perfectly */
+            width: 760px; 
             height: 340px; 
             margin-bottom: 10px;
             margin-right: auto;
@@ -238,6 +240,22 @@
             border: 3px solid var(--accent-success);
             background-color: #000;
             color: var(--accent-success);
+            outline: none;
+            display: none;
+            padding: 0;
+        }
+
+        #subtract-input {
+            position: absolute;
+            z-index: 10;
+            font-size: 42px;
+            font-family: 'VT323', monospace;
+            width: 52px;
+            height: 52px;
+            text-align: center;
+            border: 3px solid var(--accent-secondary);
+            background-color: #000;
+            color: var(--accent-secondary);
             outline: none;
             display: none;
             padding: 0;
@@ -352,6 +370,7 @@
                 LVL: 
                 <select id="level-select" onchange="initGame()">
                     <option value="scaffold" selected>HELP MODE</option>
+                    <option value="subtract">SUBTRACTION MODE</option>
                     <option value="gotit">INDEPENDENT</option>
                     <option value="bookwork">10-QUEST BOOK</option>
                 </select>
@@ -396,6 +415,7 @@
                     <div id="remainder-inputs-overlay"></div>
                     <canvas id="mathCanvas" width="760" height="340"></canvas>
                     <input type="number" id="inline-input" placeholder="?">
+                    <input type="number" id="subtract-input" placeholder="?">
                 </div>
 
                 <div id="bookwork-zone" style="display: none;">
@@ -424,6 +444,7 @@
         let dividendDigits = [];
         let quotientDigits = [];
         let remainders = []; 
+        let revealedRemainders = []; // Visual tracking array to prevent premature carried numbers
         let currentMultipleStep = 1; 
         let currentStep = 0;          
         let currentFocusValue = 0;
@@ -444,6 +465,7 @@
         const canvas = document.getElementById('mathCanvas');
         const ctx = canvas.getContext('2d');
         const inlineInput = document.getElementById('inline-input');
+        const subtractInput = document.getElementById('subtract-input');
         const carriedOverlay = document.getElementById('remainder-inputs-overlay');
         const setupInputArea = document.getElementById('setup-input-area');
         const setupInputField = document.getElementById('setup-input');
@@ -473,6 +495,21 @@
 
         function handleChartBoxClick(index) {
             if (isAnimating) return;
+            const mode = document.getElementById('level-select').value;
+            
+            if (mode === "subtract" && divisionPhase === "drop_multiple") {
+                if (index === targetQ) {
+                    divisionPhase = "subtract";
+                    document.getElementById('feedback').innerText = "MULTIPLE POSITIONED!";
+                    document.getElementById('feedback').style.color = "var(--accent-success)";
+                    updateDivisionUI();
+                } else {
+                    document.getElementById('feedback').innerText = "CHOOSE THE MATCHING INVENTORY CARD!";
+                    document.getElementById('feedback').style.color = "var(--accent-secondary)";
+                }
+                return;
+            }
+
             let targetBoxVal = document.getElementById(`mv${index}`);
             if (targetBoxVal && targetBoxVal.innerText !== "?") {
                 let computedValue = divisor * index;
@@ -522,6 +559,7 @@
             dividendDigits = randomDividend.toString().split('').map(Number);
             quotientDigits = new Array(dividendDigits.length).fill(null);
             remainders = new Array(dividendDigits.length + 1).fill(0);
+            revealedRemainders = new Array(dividendDigits.length + 1).fill(0);
 
             appMode = "counting";
             currentMultipleStep = 1;
@@ -538,6 +576,7 @@
             remZone.style.display = "none";
             scanningEq.style.opacity = "0"; 
             carriedOverlay.innerHTML = ''; 
+            manageSubtractInput(false);
             
             document.getElementById('equation-display').innerHTML = `${dividendDigits.join('')} &divide; ${divisor}`;
 
@@ -596,8 +635,6 @@
             carriedOverlay.innerHTML = '';
             if (document.getElementById('level-select').value === "gotit") {
                 for(let i = 1; i < dividendDigits.length; i++) {
-                    // Position adjusted to -18px left of target digit to hug the upper-left shoulder 
-                    // exactly where the blue indicator boxes were drawn.
                     carriedOverlay.innerHTML += `<input type="text" maxlength="1" class="carried-input" style="left:${(startX + i * digitSpacing) - 18}px; top:${dividendY - 42}px;" id="carry-box-${i}">`;
                 }
             }
@@ -624,15 +661,27 @@
                 if (divisionPhase === "input") {
                     if (btn) { btn.innerText = "SUBMIT"; btn.style.display = "none"; }
                     manageInlineInput(false); 
-                    if (mode === "gotit") {
+                    manageSubtractInput(false);
+                    if (mode === "gotit" || mode === "subtract") {
                         instr.innerHTML = `<div>SOLVE ZONE ${currentStep + 1}</div><div>HOW MANY TIMES DOES ${divisor} FIT IN?</div>`;
                         manageInlineInput(true);
                         if (btn) btn.style.display = "inline-block";
                     } else {
                         runComparisonAnimation();
                     }
+                } else if (divisionPhase === "drop_multiple") {
+                    manageInlineInput(false);
+                    manageSubtractInput(false);
+                    if (btn) btn.style.display = "none";
+                    instr.innerHTML = `<div>QUOTIENT RECORDED!</div><div>TAP THE MATCHING CARD (<span style="color:var(--accent-primary)">x${targetQ}</span>) TO DROP MULTIPLE BELOW!</div>`;
+                } else if (divisionPhase === "subtract") {
+                    manageInlineInput(false);
+                    if (btn) { btn.innerText = "SUBMIT"; btn.style.display = "inline-block"; }
+                    instr.innerHTML = `<div>SUBTRACTION WORKSHOP</div><div>SUBTRACT TO FIND THE REMAINDER TO CARRY!</div>`;
+                    manageSubtractInput(true);
                 } else if (divisionPhase === "reveal") {
                     manageInlineInput(false);
+                    manageSubtractInput(false);
                     if (btn) btn.style.display = "none"; 
                     if (mode === "gotit") {
                         currentStep++; divisionPhase = "input";
@@ -646,6 +695,7 @@
                 let finalR = dividendDigits.join('') % divisor;
                 document.getElementById('equation-display').innerHTML = `${dividendDigits.join('')} &divide; ${divisor} = ${finalWholeQ}${finalR > 0 ? " R"+finalR : ""}`;
                 remZone.style.display = "none"; scanningEq.style.opacity = "0"; carriedOverlay.innerHTML = ''; 
+                manageSubtractInput(false);
                 instr.innerHTML = `<div style="color:var(--accent-success)">LEVEL COMPLETE! DIVISION MASTER!</div>`;
                 document.getElementById('control-pane').innerHTML = `<button class="btn-check" style="background-color:var(--accent-primary); box-shadow:0 4px 0 #0f3460" onclick="initGame()">RESET</button>`;
             }
@@ -739,6 +789,10 @@
             
             if (remLeapsRendered === targetR) {
                 document.getElementById('instruction').innerHTML = `<div>GAP BRIDGED SUCCESSFULLY! REMAINDER IS ${targetR}</div>`;
+                
+                // Show the carried number now that the gap bridging simulation is fully complete
+                revealedRemainders[currentStep + 1] = targetR;
+
                 setTimeout(() => {
                     remZone.style.display = "none";
                     const btn = document.getElementById('action-btn');
@@ -759,6 +813,15 @@
             } else { inlineInput.style.display = "none"; }
         }
 
+        function manageSubtractInput(show) {
+            if (show && currentStep < dividendDigits.length && divisionPhase === "subtract") {
+                subtractInput.style.left = (startX + currentStep * digitSpacing - 12) + "px";
+                subtractInput.style.top = "232px";
+                subtractInput.style.display = "block";
+                subtractInput.value = ""; subtractInput.focus();
+            } else { subtractInput.style.display = "none"; }
+        }
+
         function drawCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.font = '54px "VT323"'; 
@@ -775,13 +838,16 @@
             ctx.fillStyle = 'var(--accent-primary)';
             ctx.fillText(divisor, startX - 70, lineY + 48);
 
+            const mode = document.getElementById('level-select').value;
+
             for (let i = 0; i < dividendDigits.length; i++) {
                 let posX = startX + i * digitSpacing;
-                if (document.getElementById('level-select').value === "scaffold" && i > 0 && remainders[i] > 0) {
+                
+                // Changed condition to check visual track array rather than underlying math state
+                if ((mode === "scaffold" || mode === "subtract") && i > 0 && revealedRemainders[i] > 0) {
                     ctx.fillStyle = 'var(--accent-secondary)';
                     ctx.font = '28px "VT323"';
-                    // Synchronized the help layout reference coordinates with the new entry box anchors
-                    ctx.fillText(remainders[i], posX - 14, dividendY - 28); 
+                    ctx.fillText(revealedRemainders[i], posX - 14, dividendY - 28); 
                 }
                 ctx.fillStyle = '#fff';
                 ctx.font = '54px "VT323"';
@@ -808,7 +874,29 @@
                 ctx.setLineDash([]);
             }
 
-            if (appMode === "division" && currentStep < dividendDigits.length) {
+            if (mode === "subtract" && currentStep < dividendDigits.length) {
+                if (divisionPhase === "subtract" || divisionPhase === "drop_multiple") {
+                    ctx.save();
+                    ctx.fillStyle = 'var(--accent-primary)';
+                    ctx.font = '54px "VT323"';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(targetQ * divisor, startX + currentStep * digitSpacing + 30, 210);
+                    
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(startX + currentStep * digitSpacing - 30, 222);
+                    ctx.lineTo(startX + currentStep * digitSpacing + 40, 222);
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = 'var(--accent-secondary)';
+                    ctx.textAlign = 'center';
+                    ctx.fillText("-", startX + currentStep * digitSpacing - 45, 210);
+                    ctx.restore();
+                }
+            }
+
+            if (appMode === "division" && currentStep < dividendDigits.length && mode !== "subtract") {
                 const viewX = 40;     
                 const viewY = 220;    
                 const viewW = 680;    
@@ -963,6 +1051,7 @@
         function handleSubmit() {
             if (isAnimating) return; 
             const feedback = document.getElementById('feedback');
+            const mode = document.getElementById('level-select').value;
             feedback.style.color = "var(--accent-secondary)";
 
             if (appMode === "counting") {
@@ -984,10 +1073,36 @@
                 if (divisionPhase === "input") {
                     if (parseInt(inlineInput.value) === targetQ) {
                         quotientDigits[currentStep] = targetQ; remainders[currentStep + 1] = targetR;
-                        scanningEq.style.opacity = "0"; divisionPhase = "reveal"; updateDivisionUI();
+                        scanningEq.style.opacity = "0"; 
+                        
+                        if (mode === "subtract") {
+                            divisionPhase = (targetQ === 0) ? "subtract" : "drop_multiple";
+                        } else {
+                            divisionPhase = "reveal";
+                        }
+                        
+                        updateDivisionUI();
                         feedback.innerText = "";
                     } else { 
-                        feedback.innerText = "CALCULATION ERROR!"; 
+                        feedback.innerText = "QUOTIENT ERROR!"; 
+                    }
+                } else if (divisionPhase === "subtract") {
+                    if (parseInt(subtractInput.value) === targetR) {
+                        feedback.innerText = "REMAINDER CAPTURED!";
+                        feedback.style.color = "var(--accent-success)";
+                        manageSubtractInput(false);
+                        
+                        // Show the carried remainder upon completing subtraction mode check
+                        revealedRemainders[currentStep + 1] = targetR;
+
+                        setTimeout(() => {
+                            currentStep++;
+                            divisionPhase = "input";
+                            updateDivisionUI();
+                            feedback.innerText = "";
+                        }, 800);
+                    } else {
+                        feedback.innerText = "SUBTRACTION ERROR!";
                     }
                 } else { 
                     currentStep++; 
@@ -1004,8 +1119,9 @@
             
             if (dt > 100) dt = 16; 
 
-            if (appMode === "division" && currentStep < dividendDigits.length) {
-                
+            const mode = document.getElementById('level-select').value;
+
+            if (appMode === "division" && currentStep < dividendDigits.length && mode !== "subtract") {
                 if (scanState === "scanning_up") {
                     smoothViewCenterVal += scaleConstantSpeed * dt;
                     if (smoothViewCenterVal >= scaleTargetVal) {
