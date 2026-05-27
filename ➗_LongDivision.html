@@ -364,14 +364,14 @@
 
     <h1>MATH QUEST 🎯</h1>
     
-    <div class="app-container">
+    <div class="app-container" id="master-container">
         <div class="settings-panel">
             <div>
                 LVL: 
                 <select id="level-select" onchange="initGame()">
-                    <option value="scaffold" selected>HELP MODE</option>
+                    <option value="scaffold">HELP MODE</option>
                     <option value="subtract">SUBTRACTION MODE</option>
-                    <option value="gotit">INDEPENDENT</option>
+                    <option value="gotit" selected>INDEPENDENT</option>
                     <option value="bookwork">10-QUEST BOOK</option>
                 </select>
             </div>
@@ -439,12 +439,19 @@
     </div>
 
     <script>
+        const THEME = {
+            primary: '#4cc9f0',
+            secondary: '#f72585',
+            success: '#4ade80',
+            leap: '#00ff66'
+        };
+
         let appMode = "counting"; 
         let divisor = 0;
         let dividendDigits = [];
         let quotientDigits = [];
         let remainders = []; 
-        let revealedRemainders = []; // Visual tracking array to prevent premature carried numbers
+        let revealedRemainders = []; 
         let currentMultipleStep = 1; 
         let currentStep = 0;          
         let currentFocusValue = 0;
@@ -452,6 +459,7 @@
         let targetR = 0;
         let divisionPhase = "input";       
         let isAnimating = false;
+        let dropMultipleVisible = false; 
         
         let remBaseMultipleVal = 0;
         let remLeapsRendered = 0;
@@ -461,6 +469,10 @@
         let scaleConstantSpeed = 0; 
         let scanState = "idle";     
         let lastTimestamp = 0;
+
+        // Custom Mouse Drag Variables for Independent Mode map scrubbing
+        let isDragging = false;
+        let lastMouseX = 0;
 
         const canvas = document.getElementById('mathCanvas');
         const ctx = canvas.getContext('2d');
@@ -566,10 +578,13 @@
             currentStep = 0;
             divisionPhase = "input";
             isAnimating = false;
+            dropMultipleVisible = false;
             smoothViewCenterVal = 0;
             scaleTargetVal = 0;
             scanState = "idle";
             remLeapsRendered = 0;
+            isDragging = false;
+            canvas.style.cursor = "default";
 
             document.getElementById('feedback').innerText = '';
             setupInputArea.style.display = "block";
@@ -633,6 +648,8 @@
             appMode = "division";
             setupInputArea.style.display = "none";
             carriedOverlay.innerHTML = '';
+            
+            // We preserve carry boxes for gotit mode visually, though logic doesn't require filling them
             if (document.getElementById('level-select').value === "gotit") {
                 for(let i = 1; i < dividendDigits.length; i++) {
                     carriedOverlay.innerHTML += `<input type="text" maxlength="1" class="carried-input" style="left:${(startX + i * digitSpacing) - 18}px; top:${dividendY - 42}px;" id="carry-box-${i}">`;
@@ -651,6 +668,7 @@
         function updateDivisionUI() {
             if (currentStep < dividendDigits.length && divisionPhase === "input") {
                 calculateCurrentTarget();
+                smoothViewCenterVal = 0; // Reset map view for the new digit analysis
             }
             
             const instr = document.getElementById('instruction');
@@ -662,26 +680,41 @@
                     if (btn) { btn.innerText = "SUBMIT"; btn.style.display = "none"; }
                     manageInlineInput(false); 
                     manageSubtractInput(false);
-                    if (mode === "gotit" || mode === "subtract") {
+                    
+                    if (mode === "gotit") {
+                        instr.innerHTML = `<div>SOLVE ZONE ${currentStep + 1}</div><div>HOW MANY TIMES DOES ${divisor} FIT IN? <br><span style="color:var(--accent-primary); font-size:1.2rem;">(DRAG NUMBER LINE MAP BELOW TO EXPLORE!)</span></div>`;
+                        scanningEq.innerHTML = `&lt;- DRAG THE MAP -&gt;`;
+                        scanningEq.style.color = "var(--accent-primary)";
+                        scanningEq.style.opacity = "1";
+                        canvas.style.cursor = "grab";
+                        manageInlineInput(true);
+                        if (btn) btn.style.display = "inline-block";
+                    } 
+                    else if (mode === "subtract") {
                         instr.innerHTML = `<div>SOLVE ZONE ${currentStep + 1}</div><div>HOW MANY TIMES DOES ${divisor} FIT IN?</div>`;
+                        canvas.style.cursor = "default";
                         manageInlineInput(true);
                         if (btn) btn.style.display = "inline-block";
                     } else {
+                        canvas.style.cursor = "default";
                         runComparisonAnimation();
                     }
                 } else if (divisionPhase === "drop_multiple") {
                     manageInlineInput(false);
                     manageSubtractInput(false);
                     if (btn) btn.style.display = "none";
+                    canvas.style.cursor = "default";
                     instr.innerHTML = `<div>QUOTIENT RECORDED!</div><div>TAP THE MATCHING CARD (<span style="color:var(--accent-primary)">x${targetQ}</span>) TO DROP MULTIPLE BELOW!</div>`;
                 } else if (divisionPhase === "subtract") {
                     manageInlineInput(false);
+                    canvas.style.cursor = "default";
                     if (btn) { btn.innerText = "SUBMIT"; btn.style.display = "inline-block"; }
                     instr.innerHTML = `<div>SUBTRACTION WORKSHOP</div><div>SUBTRACT TO FIND THE REMAINDER TO CARRY!</div>`;
                     manageSubtractInput(true);
                 } else if (divisionPhase === "reveal") {
                     manageInlineInput(false);
                     manageSubtractInput(false);
+                    canvas.style.cursor = "default";
                     if (btn) btn.style.display = "none"; 
                     if (mode === "gotit") {
                         currentStep++; divisionPhase = "input";
@@ -696,10 +729,115 @@
                 document.getElementById('equation-display').innerHTML = `${dividendDigits.join('')} &divide; ${divisor} = ${finalWholeQ}${finalR > 0 ? " R"+finalR : ""}`;
                 remZone.style.display = "none"; scanningEq.style.opacity = "0"; carriedOverlay.innerHTML = ''; 
                 manageSubtractInput(false);
+                canvas.style.cursor = "default";
                 instr.innerHTML = `<div style="color:var(--accent-success)">LEVEL COMPLETE! DIVISION MASTER!</div>`;
                 document.getElementById('control-pane').innerHTML = `<button class="btn-check" style="background-color:var(--accent-primary); box-shadow:0 4px 0 #0f3460" onclick="initGame()">RESET</button>`;
             }
         }
+
+        // ==============================================
+        // DRAGGABLE NUMBER LINE LOGIC (Independent Mode)
+        // ==============================================
+        function getCanvasMouseX(e) {
+            const rect = canvas.getBoundingClientRect();
+            if (e.touches && e.touches.length > 0) {
+                return (e.touches[0].clientX - rect.left) * (canvas.width / rect.width);
+            }
+            return (e.clientX - rect.left) * (canvas.width / rect.width);
+        }
+
+        function getCanvasMouseY(e) {
+            const rect = canvas.getBoundingClientRect();
+            if (e.touches && e.touches.length > 0) {
+                return (e.touches[0].clientY - rect.top) * (canvas.height / rect.height);
+            }
+            return (e.clientY - rect.top) * (canvas.height / rect.height);
+        }
+
+        function onDragStart(e) {
+            const mode = document.getElementById('level-select').value;
+            if (mode !== "gotit" || appMode !== "division" || currentStep >= dividendDigits.length || divisionPhase !== "input") return;
+            
+            const mx = getCanvasMouseX(e);
+            const my = getCanvasMouseY(e);
+            
+            const viewX = 40, viewY = 220, viewW = 680, viewH = 100;
+            if (mx >= viewX && mx <= viewX + viewW && my >= viewY && my <= viewY + viewH) {
+                isDragging = true;
+                lastMouseX = mx;
+                canvas.style.cursor = "grabbing";
+                if(e.cancelable) e.preventDefault(); 
+            }
+        }
+
+        function onDragMove(e) {
+            if (!isDragging) return;
+            const mx = getCanvasMouseX(e);
+            const deltaX = mx - lastMouseX;
+            lastMouseX = mx;
+            
+            const multipleSpacingPx = 185;
+            let valChange = -deltaX * (divisor / multipleSpacingPx);
+            smoothViewCenterVal += valChange;
+            
+            if (smoothViewCenterVal < 0) smoothViewCenterVal = 0;
+            if (smoothViewCenterVal > currentFocusValue) smoothViewCenterVal = currentFocusValue;
+            
+            updateInventoryFromDrag();
+            if(e.cancelable) e.preventDefault();
+        }
+
+        function onDragEnd(e) {
+            if (isDragging) {
+                isDragging = false;
+                const mode = document.getElementById('level-select').value;
+                if (mode === "gotit" && divisionPhase === "input") {
+                    canvas.style.cursor = "grab";
+                } else {
+                    canvas.style.cursor = "default";
+                }
+            }
+        }
+
+        function updateInventoryFromDrag() {
+            let currentCrossedMultiple = Math.min(targetQ, Math.floor(smoothViewCenterVal / divisor));
+            let displayStep = currentCrossedMultiple + 1;
+            
+            for (let i = 1; i <= 9; i++) {
+                let box = document.getElementById(`m${i}`);
+                if (box) {
+                    if (i <= currentCrossedMultiple) {
+                        box.className = "multiple-box filled";
+                        box.style.borderColor = "";
+                    } else if (i === displayStep && smoothViewCenterVal <= targetQ * divisor) {
+                        box.className = "multiple-box active";
+                    } else {
+                        box.className = "multiple-box";
+                        box.style.borderColor = "";
+                    }
+                }
+            }
+            
+            if (smoothViewCenterVal > targetQ * divisor) {
+                let gap = (smoothViewCenterVal - targetQ * divisor).toFixed(1);
+                scanningEq.innerHTML = `GAP BRIDGING: +${gap}`;
+                scanningEq.style.color = "var(--accent-leap)";
+            } else {
+                let disp = currentCrossedMultiple;
+                if (disp === 0) disp = 1;
+                scanningEq.innerHTML = `${disp} x ${divisor} = ${disp * divisor}`;
+                scanningEq.style.color = "var(--accent-secondary)";
+            }
+            scanningEq.style.opacity = "1";
+        }
+
+        canvas.addEventListener('mousedown', onDragStart);
+        canvas.addEventListener('mousemove', onDragMove);
+        window.addEventListener('mouseup', onDragEnd);
+        canvas.addEventListener('touchstart', onDragStart, {passive: false});
+        canvas.addEventListener('touchmove', onDragMove, {passive: false});
+        window.addEventListener('touchend', onDragEnd);
+        // ==============================================
 
         function runComparisonAnimation() {
             isAnimating = true;
@@ -790,7 +928,6 @@
             if (remLeapsRendered === targetR) {
                 document.getElementById('instruction').innerHTML = `<div>GAP BRIDGED SUCCESSFULLY! REMAINDER IS ${targetR}</div>`;
                 
-                // Show the carried number now that the gap bridging simulation is fully complete
                 revealedRemainders[currentStep + 1] = targetR;
 
                 setTimeout(() => {
@@ -843,7 +980,6 @@
             for (let i = 0; i < dividendDigits.length; i++) {
                 let posX = startX + i * digitSpacing;
                 
-                // Changed condition to check visual track array rather than underlying math state
                 if ((mode === "scaffold" || mode === "subtract") && i > 0 && revealedRemainders[i] > 0) {
                     ctx.fillStyle = 'var(--accent-secondary)';
                     ctx.font = '28px "VT323"';
@@ -903,7 +1039,6 @@
                 const viewH = 100;    
                 const centerX = viewX + (viewW / 2); 
                 const lineBaseY = viewY + 45;
-                
                 const multipleSpacingPx = 185; 
 
                 function calculatePlotX(val) {
@@ -973,30 +1108,58 @@
                     ctx.fill();
                 }
 
-                let maxCompletedMultiples = Math.floor(smoothViewCenterVal / divisor);
-                if (maxCompletedMultiples > 0) {
-                    ctx.save();
-                    ctx.strokeStyle = 'var(--accent-leap)'; 
-                    ctx.shadowBlur = 5;
-                    ctx.shadowColor = 'var(--accent-leap)';
-                    ctx.lineWidth = 4; 
-                    ctx.setLineDash([4, 4]);
+                // UNIFIED DRAWING FOR DYNAMIC LEAPS (Automated / Manual Drag)
+                let currentContinuousMultiple = smoothViewCenterVal / divisor;
+                let drawLimit = mode === "gotit" ? targetQ : Math.floor(currentContinuousMultiple) + 1;
+                
+                ctx.save();
+                ctx.strokeStyle = 'var(--accent-leap)'; 
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = 'var(--accent-leap)';
+                ctx.lineWidth = 4; 
+                ctx.setLineDash([4, 4]);
 
-                    for (let m = 0; m < maxCompletedMultiples; m++) {
-                        let p1 = calculatePlotX(m * divisor);
-                        let p2 = calculatePlotX((m + 1) * divisor);
-                        let hopMidX = (p1 + p2) / 2;
-                        let hopHeight = Math.abs(p2 - p1) * 0.45; 
-
-                        ctx.beginPath();
-                        ctx.moveTo(p1, lineBaseY - 5);
-                        ctx.quadraticCurveTo(hopMidX, lineBaseY - 5 - hopHeight, p2, lineBaseY - 5);
-                        ctx.stroke();
+                for (let m = 0; m < drawLimit; m++) {
+                    if (m * divisor >= smoothViewCenterVal) break;
+                    
+                    let p1 = calculatePlotX(m * divisor);
+                    let progress = Math.min(1, currentContinuousMultiple - m);
+                    if (progress <= 0) break;
+                    
+                    let targetP2 = calculatePlotX((m + 1) * divisor);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(p1, lineBaseY - 5);
+                    
+                    let steps = 20;
+                    let drawnSteps = Math.ceil(progress * steps);
+                    let hopHeight = Math.abs(targetP2 - p1) * 0.45;
+                    
+                    for(let s = 1; s <= drawnSteps; s++) {
+                        let t = s / steps;
+                        if (t > progress) t = progress; 
+                        
+                        let curveX = p1 + t * (targetP2 - p1);
+                        let curveY = (lineBaseY - 5) - (4 * hopHeight * t * (1 - t));
+                        ctx.lineTo(curveX, curveY);
                     }
-                    ctx.restore();
+                    ctx.stroke();
+                }
+                ctx.restore();
+
+                // Small Remaining Leaps trigger conditions
+                let drawSmallLeaps = false;
+                let remValAmount = 0;
+                
+                if (mode === "gotit" && smoothViewCenterVal > targetQ * divisor) {
+                    drawSmallLeaps = true;
+                    remValAmount = smoothViewCenterVal - targetQ * divisor;
+                } else if (divisionPhase === "reveal" && remLeapsRendered > 0) {
+                    drawSmallLeaps = true;
+                    remValAmount = remLeapsRendered;
                 }
 
-                if (divisionPhase === "reveal" && remLeapsRendered > 0) {
+                if (drawSmallLeaps) {
                     ctx.save();
                     ctx.strokeStyle = 'var(--accent-leap)';
                     ctx.shadowBlur = 5;
@@ -1005,24 +1168,33 @@
                     ctx.setLineDash([4, 4]);
 
                     let singleStepPxWidth = multipleSpacingPx / divisor;
+                    let baseVal = targetQ * divisor;
 
-                    for (let step = 0; step < remLeapsRendered; step++) {
-                        let currentSubVal = remBaseMultipleVal + step;
-                        let nextSubVal = currentSubVal + 1;
-
-                        let p1 = calculatePlotX(currentSubVal);
-                        let p2 = calculatePlotX(nextSubVal);
-                        let midX = (p1 + p2) / 2;
-                        let jumpHeight = singleStepPxWidth * 0.75; 
-
+                    for (let step = 0; step < targetR; step++) {
+                        if (step >= remValAmount) break;
+                        
+                        let progress = Math.min(1, remValAmount - step);
+                        let p1 = calculatePlotX(baseVal + step);
+                        let targetP2 = calculatePlotX(baseVal + step + 1);
+                        
                         ctx.beginPath();
                         ctx.moveTo(p1, lineBaseY - 5);
-                        ctx.quadraticCurveTo(midX, lineBaseY - 5 - jumpHeight, p2, lineBaseY - 5);
+                        
+                        let steps = 10;
+                        let drawnSteps = Math.ceil(progress * steps);
+                        let hopHeight = singleStepPxWidth * 0.75;
+                        
+                        for(let s = 1; s <= drawnSteps; s++) {
+                            let t = s / steps;
+                            if (t > progress) t = progress;
+                            let curveX = p1 + t * (targetP2 - p1);
+                            let curveY = (lineBaseY - 5) - (4 * hopHeight * t * (1 - t));
+                            ctx.lineTo(curveX, curveY);
+                        }
                         ctx.stroke();
                     }
                     ctx.restore();
                 }
-
                 ctx.restore(); 
 
                 ctx.fillStyle = 'var(--accent-success)';
@@ -1037,7 +1209,9 @@
                 ctx.fillStyle = 'var(--accent-success)';
                 ctx.textAlign = 'center';
                 
-                if (divisionPhase === "reveal") {
+                if (mode === "gotit") {
+                    ctx.fillText(`NUMBER LINE FOCUS: ${Math.floor(smoothViewCenterVal)}`, centerX, viewY + viewH + 14);
+                } else if (divisionPhase === "reveal") {
                     let liveValue = remBaseMultipleVal + remLeapsRendered;
                     ctx.fillText(`NUMBER LINE FOCUS: ${liveValue}`, centerX, viewY + viewH + 14);
                 } else {
@@ -1092,7 +1266,6 @@
                         feedback.style.color = "var(--accent-success)";
                         manageSubtractInput(false);
                         
-                        // Show the carried remainder upon completing subtraction mode check
                         revealedRemainders[currentStep + 1] = targetR;
 
                         setTimeout(() => {
@@ -1121,7 +1294,7 @@
 
             const mode = document.getElementById('level-select').value;
 
-            if (appMode === "division" && currentStep < dividendDigits.length && mode !== "subtract") {
+            if (appMode === "division" && currentStep < dividendDigits.length && mode !== "subtract" && mode !== "gotit") {
                 if (scanState === "scanning_up") {
                     smoothViewCenterVal += scaleConstantSpeed * dt;
                     if (smoothViewCenterVal >= scaleTargetVal) {
