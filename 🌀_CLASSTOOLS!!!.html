@@ -400,6 +400,15 @@
         .emoji-btn { background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.4); border-radius: 8px; font-size: 1.4rem; cursor: pointer; padding: 4px 8px; transition: all 0.2s; box-shadow: none; }
         .emoji-btn:hover { background: rgba(255, 255, 255, 0.4); transform: scale(1.15); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
+        /* Mindmap mode toggle buttons */
+        .mm-mode-btn {
+            padding: 6px 12px; border-radius: 8px; border: 2px solid #E5E7EB;
+            background: white; color: #374151; font-weight: 700; font-size: 0.85rem;
+            cursor: pointer; transition: all 0.15s; white-space: nowrap;
+        }
+        .mm-mode-btn:hover { border-color: #6366F1; color: #6366F1; }
+        .mm-mode-btn.mm-mode-active { background: #6366F1; color: white; border-color: #6366F1; }
+
         /* Mindmap edit toolbar buttons */
         .mm-fmt-btn {
             background: transparent; border: 1px solid #4B5563; color: #F3F4F6;
@@ -541,24 +550,43 @@
     <div id="mindmap-overlay" class="overlay fullscreen-overlay hidden" style="flex-direction: column;">
         <button class="close-fullscreen" onclick="closeMindmap()" style="z-index: 10001; background: rgba(0,0,0,0.5);">×</button>
 
-        <div class="mindmap-toolbar">
-            <button class="btn-primary" onclick="addRootNode()">➕ Add Free Node</button>
-            <div style="width: 2px; height: 30px; background: #E5E7EB;"></div>
-            
-            <label style="display: flex; align-items: center; gap: 5px; font-weight: bold; cursor: pointer; color: #1F2937;">
-                <input type="checkbox" id="mindmap-paint-mode"> 🎨 Paint Tool
-            </label>
-            <input type="color" id="mindmap-paint-color" value="#EC4899" style="width: 40px; padding: 0; border-radius: 4px; cursor: pointer;">
-            
-            <div style="width: 2px; height: 30px; background: #E5E7EB;"></div>
-            <button class="btn-secondary" onclick="downloadMindmap()">⬇️ Export Image</button>
-            
-            <div style="margin-left: auto; font-size: 0.85rem; color: #6B7280; text-align: right; line-height: 1.6;">
-                <b>Drag circle</b> → branch &nbsp;|&nbsp; <b>Shift+drag</b> → move &nbsp;|&nbsp; <b>E+click</b> → edit text &nbsp;|&nbsp; <b>+/−</b> → zoom
+        <div class="mindmap-toolbar" style="flex-wrap: wrap; gap: 10px;">
+            <button class="btn-primary" onclick="addRootNode()" style="white-space:nowrap;">➕ Add Node</button>
+
+            <div style="width: 2px; height: 30px; background: #E5E7EB; flex-shrink:0;"></div>
+
+            <!-- Mode toggles -->
+            <div style="display:flex; gap:6px; align-items:center;">
+                <button id="mm-mode-draw" class="mm-mode-btn mm-mode-active" onclick="setMmMode('draw')" title="Drag a circle to draw a branch">✏️ Draw</button>
+                <button id="mm-mode-edit" class="mm-mode-btn" onclick="setMmMode('edit')" title="Click a circle to edit its text">📝 Edit</button>
+                <button id="mm-mode-move" class="mm-mode-btn" onclick="setMmMode('move')" title="Drag a circle to move it">✋ Move</button>
             </div>
+
+            <div style="width: 2px; height: 30px; background: #E5E7EB; flex-shrink:0;"></div>
+
+            <!-- Paint tool -->
+            <label style="display:flex; align-items:center; gap:5px; font-weight:bold; cursor:pointer; color:#1F2937; white-space:nowrap;">
+                <input type="checkbox" id="mindmap-paint-mode"> 🎨 Paint
+            </label>
+            <input type="color" id="mindmap-paint-color" value="#EC4899" style="width:36px; height:32px; padding:0; border-radius:4px; cursor:pointer; border:none;">
+
+            <div style="width: 2px; height: 30px; background: #E5E7EB; flex-shrink:0;"></div>
+
+            <!-- Zoom slider -->
+            <div style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
+                <span style="font-size:0.8rem; color:#6B7280; font-weight:600;">🔍</span>
+                <input type="range" id="mm-zoom-slider" min="20" max="300" value="100"
+                    style="width:90px; cursor:pointer; accent-color:#6366F1;"
+                    oninput="mmSetZoomFromSlider(this.value)">
+                <span id="mm-zoom-label" style="font-size:0.8rem; color:#6B7280; font-weight:700; min-width:36px;">100%</span>
+            </div>
+
+            <div style="width: 2px; height: 30px; background: #E5E7EB; flex-shrink:0;"></div>
+
+            <button class="btn-secondary" onclick="downloadMindmap()" style="white-space:nowrap;">⬇️ Export</button>
         </div>
 
-        <div id="mindmap-viewport" onmousedown="mmWorkspaceMouseDown(event)" ondblclick="mmWorkspaceDblClick(event)">
+        <div id="mindmap-viewport" onmousedown="mmWorkspaceMouseDown(event)" ontouchstart="mmWorkspaceMouseDown(event)" ondblclick="mmWorkspaceDblClick(event)">
             <div id="mindmap-workspace-inner">
                 <svg id="mindmap-lines" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; pointer-events: none;"></svg>
                 <div id="mindmap-nodes" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;"></div>
@@ -1198,6 +1226,29 @@
         let mmMoveStartX = 0, mmMoveStartY = 0;
         let mmMoveNodeStartX = 0, mmMoveNodeStartY = 0;
         let mmIsShiftDown = false;
+        let mmMode = 'draw'; // 'draw' | 'edit' | 'move'
+
+        function setMmMode(mode) {
+            mmMode = mode;
+            if (mode !== 'edit' && mmEditingId !== null) mmExitEditMode();
+            ['draw','edit','move'].forEach(m => {
+                const btn = document.getElementById(`mm-mode-${m}`);
+                if (btn) btn.classList.toggle('mm-mode-active', m === mode);
+            });
+        }
+
+        function mmSetZoomFromSlider(val) {
+            const vp = document.getElementById('mindmap-viewport');
+            const cx = vp.clientWidth / 2;
+            const cy = vp.clientHeight / 2;
+            const oldZoom = mmZoom;
+            mmZoom = parseInt(val) / 100;
+            mmCurrentPanX = cx - (cx - mmCurrentPanX) * (mmZoom / oldZoom);
+            mmCurrentPanY = cy - (cy - mmCurrentPanY) * (mmZoom / oldZoom);
+            applyMmTransform();
+            const label = document.getElementById('mm-zoom-label');
+            if (label) label.textContent = val + '%';
+        }
 
         function getContrastColor(hex) {
             if (hex.indexOf('#') === 0) hex = hex.slice(1);
@@ -1360,30 +1411,33 @@
         function mmNodeMouseDown(e, id) {
             if (e.type.includes('mouse') && e.button !== 0) return;
 
-            // In edit mode on THIS node — let browser handle selection, do nothing
+            // Already editing this node — let browser handle selection
             if (mmEditingId === id) return;
 
-            // E key held = enter edit mode on this node
-            if (mmIsEditKey) {
-                e.stopPropagation();
-                editNode(id);
-                return;
-            }
-
-            // Clicking a different node while editing: exit first
-            if (mmEditingId !== null) mmExitEditMode();
-
+            // Paint mode takes priority
             if (document.getElementById('mindmap-paint-mode').checked) {
-                let color = document.getElementById('mindmap-paint-color').value;
+                e.stopPropagation();
+                const color = document.getElementById('mindmap-paint-color').value;
                 mmNodes[id].bg = color;
                 mmNodes[id].color = getContrastColor(color);
                 renderMindmap();
                 return;
             }
+
             e.stopPropagation();
 
-            // Shift + drag = MOVE node
-            if (mmIsShiftDown) {
+            // Edit mode (button or E key)
+            if (mmMode === 'edit' || mmIsEditKey) {
+                if (mmEditingId !== null && mmEditingId !== id) mmExitEditMode();
+                editNode(id);
+                return;
+            }
+
+            // Exit any open edit before doing anything else
+            if (mmEditingId !== null) mmExitEditMode();
+
+            // Move mode (button or Shift key)
+            if (mmMode === 'move' || mmIsShiftDown) {
                 mmMovingNode = id;
                 const coords = getMmCoords(e);
                 mmMoveStartX = coords.x;
@@ -1393,7 +1447,7 @@
                 return;
             }
 
-            // Normal drag from node = draw a branch line
+            // Draw mode — drag to create a branch line
             mmCreatingFrom = id;
             const coords = getMmCoords(e);
             const canvasStart = screenToCanvas(coords.x, coords.y);
@@ -1518,10 +1572,15 @@
             const cy = vp.clientHeight / 2;
             const oldZoom = mmZoom;
             mmZoom = Math.max(0.2, Math.min(3, mmZoom + delta));
-            // Zoom toward centre of viewport
             mmCurrentPanX = cx - (cx - mmCurrentPanX) * (mmZoom / oldZoom);
             mmCurrentPanY = cy - (cy - mmCurrentPanY) * (mmZoom / oldZoom);
             applyMmTransform();
+            // Sync slider
+            const pct = Math.round(mmZoom * 100);
+            const slider = document.getElementById('mm-zoom-slider');
+            const label  = document.getElementById('mm-zoom-label');
+            if (slider) slider.value = pct;
+            if (label)  label.textContent = pct + '%';
         }
 
         window.addEventListener('mouseup', mmMouseUp);
@@ -1622,12 +1681,29 @@
             updateMmFmtButtons();
         }
 
+        function mmReequalize(nodeEl) {
+            if (!nodeEl) return;
+            nodeEl.style.width = '';
+            nodeEl.style.height = '';
+            requestAnimationFrame(() => {
+                const s = Math.max(nodeEl.offsetWidth, nodeEl.offsetHeight);
+                nodeEl.style.width  = s + 'px';
+                nodeEl.style.height = s + 'px';
+                // Reposition the floating toolbar since node may have grown/shrunk
+                if (mmEditingId !== null) positionMmToolbar(nodeEl);
+                updateMmLines();
+            });
+        }
+
         function mmApplySize() {
             if (mmEditingId === null) return;
             const size = parseInt(document.getElementById('mm-edit-size').value) || 16;
             mmNodes[mmEditingId].fontSize = size;
             const nodeEl = document.getElementById(`mm-node-${mmEditingId}`);
-            if (nodeEl) nodeEl.style.fontSize = size + 'px';
+            if (nodeEl) {
+                nodeEl.style.fontSize = size + 'px';
+                mmReequalize(nodeEl);
+            }
         }
 
         function mmApplyFont() {
@@ -1635,7 +1711,10 @@
             const font = document.getElementById('mm-edit-font').value;
             mmNodes[mmEditingId].font = font;
             const nodeEl = document.getElementById(`mm-node-${mmEditingId}`);
-            if (nodeEl) nodeEl.style.fontFamily = font;
+            if (nodeEl) {
+                nodeEl.style.fontFamily = font;
+                mmReequalize(nodeEl);
+            }
         }
 
         function mmApplyNodeColor() {
