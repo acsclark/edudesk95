@@ -575,10 +575,9 @@
             <!-- Zoom slider -->
             <div style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
                 <span style="font-size:0.8rem; color:#6B7280; font-weight:600;">🔍</span>
-                <input type="range" id="mm-zoom-slider" min="20" max="300" value="100"
-                    style="width:90px; cursor:pointer; accent-color:#6366F1;"
-                    oninput="mmSetZoomFromSlider(this.value)">
-                <span id="mm-zoom-label" style="font-size:0.8rem; color:#6B7280; font-weight:700; min-width:36px;">100%</span>
+                <button class="mm-mode-btn" onclick="mmZoomBy(-0.15)" style="padding:4px 10px; font-size:1rem;">−</button>
+                <span id="mm-zoom-label" style="font-size:0.8rem; color:#6B7280; font-weight:700; min-width:38px; text-align:center;">100%</span>
+                <button class="mm-mode-btn" onclick="mmZoomBy(0.15)" style="padding:4px 10px; font-size:1rem;">+</button>
             </div>
 
             <div style="width: 2px; height: 30px; background: #E5E7EB; flex-shrink:0;"></div>
