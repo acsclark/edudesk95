@@ -1964,10 +1964,25 @@
                 ctx.restore(); // remove clip
             });
 
-            const link = document.createElement('a');
-            link.download = 'mindmap.png';
-            link.href = cvs.toDataURL('image/png');
-            link.click();
+            const dataUrl = cvs.toDataURL('image/png');
+            // On iOS/iPad Safari, <a download> is ignored — open in new tab so user can long-press to save
+            const isSafariMobile = /iP(ad|hone|od)/i.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            if (isSafariMobile) {
+                const win = window.open();
+                win.document.write(`<html><head><title>Mindmap</title></head><body style="margin:0;background:#111;">
+                    <p style="color:white;font-family:sans-serif;padding:10px;margin:0;">
+                        📥 Long-press the image below and choose <b>Save to Photos</b> or <b>Save Image</b>.
+                    </p>
+                    <img src="${dataUrl}" style="max-width:100%;display:block;">
+                    </body></html>`);
+                win.document.close();
+            } else {
+                const link = document.createElement('a');
+                link.download = 'mindmap.png';
+                link.href = dataUrl;
+                link.click();
+            }
         }
 
         // --- WORD OF THE DAY (WOTD) REDESIGNED LOGIC ---
