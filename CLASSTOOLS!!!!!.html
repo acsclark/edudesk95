@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom Seating Planner</title>
+    <style>
+        :root {
+            --primary: #3B82F6; /* Vibrant Blue */
+            --bg: #F3F4F6;
+            --panel-bg: #FFFFFF;
+            --border: #E5E7EB;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: var(--bg);
+            color: #1F2937;
+            overflow: hidden;
+        }
+
+        /* Top Bar Controls */
+        #topbar {
+            display: flex;
+            align-items: center;
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            gap: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            z-index: 101;
+            overflow-x: auto;
+            flex-shrink: 0;
+        }
+
+        .topbar-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-right: 20px;
+            border-right: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        .topbar-section:last-child { border-right: none; }
+
+        .topbar-label { font-weight: 800; font-size: 0.9rem; color: #4B5563; text-transform: uppercase; letter-spacing: 0.5px;}
+
+        /* Main App Area */
+        #main-area {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        /* Bottom Teacher Tools Bar */
+        #bottom-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--panel-bg);
+            border-top: 1px solid var(--border);
+            padding: 12px 20px;
+            gap: 15px;
+            box-shadow: 0 -2px 15px rgba(0,0,0,0.05);
+            z-index: 101;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+
+        /* Sidebar Controls */
+        #sidebar {
+            width: 320px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border);
+            padding: 25px 20px;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.03);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        h2 { margin-top: 0; margin-bottom: 5px; font-size: 1.15rem; color: #111827; font-weight: 800; }
+        
+        .input-row { display: flex; gap: 10px; align-items: center; }
+        
+        input[type="text"], input[type="number"], input[type="range"], textarea, select {
+            padding: 10px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+            font-weight: 600;
+        }
+        input:focus, textarea:focus { outline: none; border-color: var(--primary); }
+
+        .topbar-section input[type="number"] { width: 65px; }
+        .topbar-section input[type="range"] { width: 100px; cursor: pointer; }
+
+        textarea { resize: vertical; min-height: 120px; flex-shrink: 0; width: 100%; }
+
+        button {
+            background-color: var(--primary); color: white; border: none;
+            padding: 10px 15px; border-radius: 6px; cursor: pointer;
+            font-weight: 800; transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.15); }
+        button:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        
+        #sidebar button { width: 100%; }
+        #sidebar .input-row button { width: auto; }
+        #bottom-bar button { font-size: 1rem; }
+
+        .btn-secondary { background-color: #10B981; }
+        .btn-danger { background-color: #EF4444; }
+        .btn-outline { background-color: transparent; border: 2px solid #9CA3AF; color: #4B5563; box-shadow: none; }
+        .btn-outline:hover { background-color: #F3F4F6; filter: none; }
+        .btn-lock { background-color: #F59E0B; }
+        .btn-purple { background-color: #8B5CF6; }
+
+        .btn-large { font-size: 1.5rem; padding: 15px 40px; border-radius: 8px; }
+
+        hr { border: 0; border-top: 2px solid var(--border); width: 100%; margin: 15px 0; }
+
+        /* Group Colors UI */
+        .color-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        
+        .color-swatch {
+            width: 36px; height: 36px; border-radius: 8px; border: 3px solid transparent;
+            cursor: pointer; flex-shrink: 0; transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .color-swatch.active { border-color: #111827; transform: scale(1.15); box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        .color-swatch:hover { opacity: 0.9; }
+
+        #no-brush { width: 100%; background-color: #E5E7EB; color: #374151; margin-bottom: 10px; box-shadow: none; }
+        #no-brush.active { border: 2px solid #111827; font-weight: 900; }
+
+        /* Saved Items UI */
+        .saved-items-container {
+            display: flex; flex-direction: column; gap: 8px;
+            max-height: 250px; overflow-y: auto; margin-top: 5px;
+            flex-shrink: 0; padding-right: 5px;
+        }
+        
+        .saved-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #F9FAFB; border: 2px solid var(--border);
+            border-radius: 6px; padding: 10px 12px; cursor: pointer;
+            transition: background 0.1s, border-color 0.1s; font-size: 0.95rem; font-weight: 700;
+        }
+        .saved-item:hover { background: #F3F4F6; border-color: #9CA3AF; }
+
+        .btn-delete-item {
+            background: transparent; color: #EF4444; width: auto !important;
+            padding: 4px 8px !important; font-size: 1.4rem; line-height: 1; box-shadow: none;
+        }
+        .btn-delete-item:hover { background: #FEE2E2; color: #DC2626; transform: none; box-shadow: none; }
+
+        /* Main Workspace */
+        #workspace {
+            flex-grow: 1; overflow: hidden; position: relative;
+            cursor: grab; background-color: #E5E7EB;
+            background-image: radial-gradient(#9CA3AF 2px, transparent 2px);
+            background-size: 30px 30px;
+        }
+        #workspace:active { cursor: grabbing; }
+
+        #room-container { position: absolute; left: 50%; top: 50%; }
+
+        #room {
+            background-color: #FAFAFA; border: 6px solid #374151; position: absolute; border-radius: 12px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform-origin: center center; background-size: 10px 10px;
+            background-image: linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+                              linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+        }
+
+        .desk {
+            background-color: #F59E0B; border: 3px solid #D97706; border-radius: 8px;
+            position: absolute; cursor: grab; display: flex; justify-content: center;
+            align-items: center; text-align: center;
+            user-select: none; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            padding: 4px; box-sizing: border-box; transition: box-shadow 0.1s, filter 0.1s;
+        }
+        .desk:active { filter: brightness(0.9); box-shadow: 0 2px 3px rgba(0,0,0,0.2); }
+        .desk.selected { box-shadow: 0 0 0 5px #111827; z-index: 10; }
+
+        .student-name { 
+            pointer-events: none; white-space: nowrap; transform-origin: center; 
+            color: #FFFFFF; font-weight: 800; letter-spacing: 0.5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5); /* High contrast to white */
+        }
+        
+        .lock-icon {
+            position: absolute; top: -10px; right: -10px; font-size: 14px;
+            background: #111827; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+            pointer-events: none; z-index: 2; border: 2px solid white;
+        }
+        
+        .small-text { font-size: 0.8rem; color: #6B7280; margin-top: -5px; font-weight: 600; }
+
+        /* --- Overlays & Modals --- */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(17, 24, 39, 0.85); z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(8px);
+        }
+        .overlay.hidden { display: none !important; }
+        
+        .modal {
+            background: white; padding: 50px 70px; border-radius: 20px;
+            text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            border: 6px solid var(--primary);
+        }
+        .huge-name { font-size: 6rem; font-weight: 900; color: #111827; margin: 20px 0; text-transform: uppercase; letter-spacing: -1px; }
+
+        .fullscreen-overlay { background: #111827; backdrop-filter: none; flex-direction: column; }
+        .close-fullscreen {
+            position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.2);
+            color: white; border: none; font-size: 2.5rem; border-radius: 50%;
+            width: 60px; height: 60px; cursor: pointer; z-index: 10000;
+            display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: none;
+        }
+        .close-fullscreen:hover { background: rgba(255,255,255,0.4); transform: none; box-shadow: none; }
+
+        /* ZAP GAME OVERLAY */
+        #zap-overlay { transition: background-color 0.1s; }
+        .zap-grid {
+            display: grid;
+            grid-template-columns: 50px repeat(6, 1fr);
+            grid-template-rows: 50px repeat(3, 1fr);
+            gap: 15px; width: 90vw; max-width: 1200px; height: 65vh; margin: 0 auto;
+        }
+        .grid-label {
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 2.5rem; font-weight: 900; text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .zap-card-container { width: 100%; height: 100%; perspective: 1000px; cursor: pointer; }
+        .zap-card-inner {
+            position: relative; width: 100%; height: 100%; text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d;
+        }
+        .zap-card-container.flipped .zap-card-inner { transform: rotateY(180deg); }
+        .zap-card-front, .zap-card-back {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            display: flex; align-items: center; justify-content: center; border-radius: 16px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+        .zap-card-front {
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6); border: 6px solid #FFFFFF;
+            font-size: clamp(2rem, 5vw, 5rem); color: rgba(255,255,255,0.9); font-weight: 900;
+        }
+        .zap-card-front:hover { filter: brightness(1.1); transform: scale(1.02); transition: all 0.2s; }
+        .zap-card-back {
+            background: white; border: 6px solid #111827; transform: rotateY(180deg);
+            font-size: clamp(2rem, 4.5vw, 4.5rem); font-weight: 900; color: #111827;
+        }
+        .zap-card-container.is-zap .zap-card-back { color: #EF4444; font-size: clamp(1.5rem, 3.5vw, 3.5rem); }
+
+        .violent-shake { animation: shakeHard 0.5s cubic-bezier(.36,.07,.19,.97) both; background-color: #991b1b !important; }
+        @keyframes shakeHard {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); background-color: #111827; }
+            10%, 50%, 90% { transform: translate(-30px, 20px) rotate(-3deg); background-color: #EF4444; }
+            30%, 70% { transform: translate(30px, -20px) rotate(3deg); background-color: #DC2626; }
+            20%, 60% { transform: translate(-20px, -30px) rotate(2deg); background-color: #EF4444; }
+            40%, 80% { transform: translate(20px, 30px) rotate(-2deg); background-color: #B91C1C; }
+        }
+
+        /* Full Screen Scoreboard */
+        #scoreboard-container { display: flex; flex-direction: row; width: 100%; height: 100%; }
+        .score-col {
+            flex: 1; display: flex; flex-direction: column; justify-content: space-between;
+            align-items: center; padding: 60px 10px; box-sizing: border-box; border-right: 2px solid rgba(0,0,0,0.1);
+        }
+        .score-col:last-child { border-right: none; }
+        .score-btn {
+            background: transparent; border: none; color: rgba(255,255,255,0.4);
+            font-size: 7rem; cursor: pointer; user-select: none; font-weight: 300;
+            transition: transform 0.1s, color 0.2s; line-height: 1; padding: 20px; box-shadow: none;
+        }
+        .score-btn:hover { color: rgba(255,255,255,0.9); transform: none; box-shadow: none; }
+        .score-btn:active { transform: scale(1.2); color: white; box-shadow: none; }
+        .score-number {
+            font-size: 11vw; font-weight: 900; color: white; line-height: 1; margin: 0;
+            text-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            font-family: 'Arial Rounded MT Bold', 'Helvetica Rounded', Arial, sans-serif; letter-spacing: -2px;
+        }
+        .team-name { color: white; font-size: 2.5rem; font-weight: 800; text-shadow: 0 4px 8px rgba(0,0,0,0.3); margin-top: -30px; letter-spacing: 1px; }
+
+        /* Full Screen Dice Roller */
+        .dice-controls {
+            background: rgba(255,255,255,0.1); padding: 25px 40px; border-radius: 16px;
+            display: flex; gap: 30px; align-items: center; color: white;
+            margin-bottom: 50px; flex-wrap: wrap; justify-content: center; backdrop-filter: blur(10px);
+        }
+        .dice-controls label { display: flex; flex-direction: column; font-size: 1rem; gap: 5px; color: #F3F4F6; font-weight: 700;}
+        .dice-controls input, .dice-controls select { padding: 10px; border-radius: 6px; border: none; width: 90px; font-weight: 800; color: #111827; }
+        .dice-controls .control-group { display: flex; gap: 15px; align-items: center; border-left: 2px solid rgba(255,255,255,0.2); padding-left: 30px;}
+        .dice-controls .control-group:first-child { border-left: none; padding-left: 0; }
+        
+        .dice-container { display: flex; gap: 80px; margin-bottom: 50px; flex-wrap: wrap; justify-content: center; }
+        
+        .die {
+            width: 400px; height: 400px; background: white; border-radius: 50px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16rem; font-weight: 900; box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+            border: 10px solid #111827; color: #111827; user-select: none;
+        }
+        
+        .die.rolling { animation: shake 0.3s infinite; }
+        @keyframes shake {
+            0% { transform: translate(4px, 4px) rotate(0deg); }
+            10% { transform: translate(-4px, -8px) rotate(-2deg); }
+            20% { transform: translate(-12px, 0px) rotate(2deg); }
+            30% { transform: translate(12px, 8px) rotate(0deg); }
+            40% { transform: translate(4px, -4px) rotate(2deg); }
+            50% { transform: translate(-4px, 8px) rotate(-2deg); }
+            60% { transform: translate(-12px, 4px) rotate(0deg); }
+            70% { transform: translate(12px, 4px) rotate(-2deg); }
+            80% { transform: translate(-4px, -4px) rotate(2deg); }
+            90% { transform: translate(4px, 8px) rotate(0deg); }
+            100% { transform: translate(4px, -8px) rotate(-2deg); }
+        }
+
+        /* Timer & Stopwatch */
+        .timer-header { position: absolute; top: 40px; display: flex; gap: 20px; align-items: center; }
+        .timer-display { 
+            font-size: 28vw; font-weight: 900; color: white; line-height: 1; 
+            font-variant-numeric: tabular-nums; font-family: monospace; 
+            text-shadow: 0 15px 40px rgba(0,0,0,0.6); margin: 40px 0;
+        }
+        .timer-buttons { display: flex; gap: 25px; margin-bottom: 20px; }
+
+        /* Ticker (Scrolling Pixel Message) */
+        .ticker-wrap { width: 100%; height: 100%; display: flex; align-items: center; white-space: nowrap; overflow: hidden; position: relative; }
+        .ticker-content {
+            position: absolute; left: 0; bottom: 35%; line-height: 1; 
+            font-family: 'Courier New', Courier, monospace; font-weight: 900; text-transform: uppercase;
+            text-shadow: 6px 6px 0px rgba(0,0,0,0.5); will-change: transform; animation: tickerScroll linear infinite;
+        }
+        @keyframes tickerScroll { 0% { transform: translateX(100vw); } 100% { transform: translateX(-100%); } }
+        
+        /* UPDATED COMPACT BOTTOM CONTROLS PANEL */
+        .bottom-controls-panel {
+            position: absolute; bottom: 20px; background: rgba(255,255,255,0.15); 
+            padding: 12px 25px; border-radius: 12px; display: flex; gap: 20px; 
+            align-items: center; backdrop-filter: blur(15px); color: white; flex-wrap: wrap; justify-content: center; max-width: 900px;
+        }
+        .bottom-controls-panel input[type="text"] { width: 280px; font-size: 1rem; padding: 6px 10px; margin-left: 5px; border-radius: 6px; border: none;}
+        .bottom-controls-panel input[type="color"] { width: 35px; height: 30px; cursor: pointer; padding: 0; border: none; border-radius: 6px; margin-left: 5px; }
+        .bottom-controls-panel input[type="range"] { width: 90px; margin-left: 5px;}
+        .bottom-controls-panel label { display: flex; flex-direction: row; align-items: center; font-size: 0.9rem; font-weight: 800; margin: 0; gap: 5px;}
+        
+        .emoji-bar {
+            display: flex; gap: 8px; align-items: center; justify-content: center; width: 100%; margin-top: 5px;
+            background: rgba(0,0,0,0.25); padding: 8px 15px; border-radius: 8px;
+        }
+        .emoji-btn {
+            background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 8px; font-size: 1.4rem; cursor: pointer; padding: 4px 8px; transition: all 0.2s; box-shadow: none;
+        }
+        .emoji-btn:hover { background: rgba(255, 255, 255, 0.4); transform: scale(1.15); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+
+        /* Presentation Mode Settings */
+        body.presenting #topbar, body.presenting #bottom-bar, body.presenting #sidebar { display: none !important; }
+        body.presenting #workspace { background-color: #111827; background-image: radial-gradient(#374151 2px, transparent 2px); }
+        #exit-present-btn {
+            display: none; position: fixed; top: 20px; right: 20px; z-index: 10000;
+            background: rgba(0,0,0,0.6); color: white; padding: 15px 30px; border-radius: 10px;
+            font-size: 1.3rem; cursor: pointer; border: 2px solid rgba(255,255,255,0.3); backdrop-filter: blur(8px); font-weight: 800; box-shadow: none;
+        }
+        #exit-present-btn:hover { background: rgba(0,0,0,0.9); border-color: white; transform: none; box-shadow: none;}
+        body.presenting #exit-present-btn { display: block; }
+
+    </style>
+</head>
+<body>
+
+    <div id="topbar">
+        <div class="topbar-section">
+            <span class="topbar-label">View:</span>
+            <input type="range" id="zoomSlider" min="0.4" max="3" step="0.1" value="1.2" oninput="updateZoom()" title="Zoom">
+            <button class="btn-outline" onclick="resetView()">⌂ Reset</button>
+        </div>
+        
+        <div class="topbar-section">
+            <span class="topbar-label">Room (m):</span>
+            W: <input type="number" id="roomW" value="8" step="0.5" min="2" onchange="updateRoomSize()">
+            L: <input type="number" id="roomL" value="8" step="0.5" min="2" onchange="updateRoomSize()">
+        </div>
+
+        <div class="topbar-section">
+            <span class="topbar-label">Desk (m):</span>
+            W: <input type="number" id="deskW" value="1" step="0.1" min="0.5">
+            D: <input type="number" id="deskL" value="0.6" step="0.1" min="0.3">
+            <button onclick="addSingleDesk()">+ Add 1 Desk</button>
+        </div>
+
+        <div class="topbar-section">
+            <span class="topbar-label">Auto-Fill:</span>
+            <input type="number" id="deskCount" value="20" min="1" title="Number of Desks">
+            <button class="btn-danger" onclick="clearAndGenerateDesks()">Clear & Fill</button>
+        </div>
+
+        <div class="topbar-section">
+            <span class="topbar-label">Tools:</span>
+            <button class="btn-secondary" onclick="rotateSelectedDesks()" title="Rotate Selected 90°">Rotate (R)</button>
+            <button class="btn-lock" onclick="toggleLockSelected()" title="Lock a student to this desk so they aren't randomized">🔒 Lock/Unlock (L)</button>
+        </div>
+    </div>
+
+    <div id="main-area">
+        <div id="sidebar">
+            <h2>Groups & Colors</h2>
+            <div class="small-text">Select a brush below, then click desks to paint them.</div>
+            <button id="no-brush" class="active" onclick="setBrush(null)">🖱️ Default Cursor (No Paint)</button>
+            <div id="color-palette"></div>
+            <hr>
+
+            <h2>Students & Rosters</h2>
+            <div class="small-text">Dbl-click any desk to manually type a name.</div>
+            <textarea id="classList" placeholder="Paste your student names here...&#10;Alice&#10;Bob&#10;Charlie"></textarea>
+            <button onclick="assignSeats()">Randomize Seating</button>
+
+            <div class="input-row" style="margin-top: 10px;">
+                <input type="text" id="listName" placeholder="Name this roster..." style="flex-grow:1;">
+                <button class="btn-secondary" onclick="saveClassList()">Save</button>
+            </div>
+            <div id="savedClassLists" class="saved-items-container"></div>
+            <hr>
+
+            <h2>Saved Seating Plans</h2>
+            <div class="small-text">Saves entire arrangement (room, desks, names, locks, and teams).</div>
+            <div class="input-row" style="margin-top: 5px;">
+                <input type="text" id="planName" placeholder="e.g., Period 1 Seating..." style="flex-grow:1;">
+                <button class="btn-secondary" onclick="saveSeatingPlan()">Save</button>
+            </div>
+            <div id="planList" class="saved-items-container"></div>
+            <hr>
+
+            <h2>Saved Layouts (Blank)</h2>
+            <div class="small-text">Saves just the physical room setup and desks.</div>
+            <div class="input-row" style="margin-top: 5px;">
+                <input type="text" id="layoutName" placeholder="Name this room layout..." style="flex-grow:1;">
+                <button class="btn-secondary" onclick="saveLayout()">Save</button>
+            </div>
+            <div id="layoutList" class="saved-items-container"></div>
+        </div>
+
+        <div id="workspace">
+            <div id="room-container">
+                <div id="room"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="bottom-bar">
+        <span class="topbar-label">Teacher Tools:</span>
+        <button class="btn-purple" onclick="pickRandomStudent()">🎲 Student</button>
+        <button class="btn-purple" onclick="openTeamSelector()">🎲 Team</button>
+        <button class="btn-secondary" onclick="openScoreboard()">🏆 Scoreboard</button>
+        <button style="background-color: #EC4899;" onclick="openDiceRoller()">🎲 Dice</button>
+        <button style="background-color: #14B8A6;" onclick="openTimer()">⏱️ Timer</button>
+        <button style="background-color: #F97316;" onclick="openTicker()">💬 Ticker</button>
+        <button style="background-color: #EF4444;" onclick="openZapGame()">⚡ ZAP!</button>
+        <button style="background-color: #0284C7;" onclick="togglePresentationMode()">📺 Present Room</button>
+    </div>
+
+    <button id="exit-present-btn" onclick="exitPresentationMode()">Exit Presentation</button>
+
+    <div id="random-student-overlay" class="overlay hidden">
+        <div class="modal">
+            <h2 id="random-student-title" style="margin-top:0; color: #6B7280; font-weight: 800;">Selected Student:</h2>
+            <div id="random-student-name" class="huge-name">?</div>
+            <button onclick="closeRandomStudent()" style="font-size: 1.2rem; padding: 12px 35px;">Great!</button>
+        </div>
+    </div>
+    
+    <div id="team-selector-overlay" class="overlay hidden">
+        <div class="modal">
+            <h2 style="margin-top:0; color: #6B7280; font-weight: 800;">Pick Random Student From:</h2>
+            <div id="team-buttons-container" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin: 25px 0; max-width: 450px;"></div>
+            <button class="btn-outline" onclick="closeTeamSelector()" style="margin-top: 10px; padding: 10px 25px; font-weight: 800;">Cancel</button>
+        </div>
+    </div>
+
+    <div id="zap-overlay" class="overlay fullscreen-overlay hidden">
+        <button class="close-fullscreen" onclick="closeZapGame()">×</button>
+        <h1 style="color:white; font-size: 5rem; margin-top: 15px; margin-bottom: 25px; font-weight: 900; text-shadow: 0 6px 15px rgba(0,0,0,0.6); letter-spacing: 2px;">⚡ ZAP! ⚡</h1>
+        
+        <div class="dice-controls" style="margin-bottom: 40px; padding: 15px 30px;">
+            <button class="btn-secondary btn-large" onclick="initZapGame()" style="padding: 12px 45px; font-size: 1.3rem;">🔄 SHUFFLE & RESET</button>
+        </div>
+
+        <div id="zap-grid" class="zap-grid">
+            </div>
+    </div>
+
+    <div id="scoreboard-overlay" class="overlay fullscreen-overlay hidden">
+        <button class="close-fullscreen" onclick="closeScoreboard()">×</button>
+        <div id="scoreboard-container"></div>
+    </div>
+
+    <div id="dice-overlay" class="overlay fullscreen-overlay hidden">
+        <button class="close-fullscreen" onclick="closeDiceRoller()">×</button>
+        
+        <div class="dice-controls">
+            <div class="control-group">
+                <label>Number of Dice:
+                    <select id="dice-count" onchange="updateDiceView()">
+                        <option value="1">1 Die</option>
+                        <option value="2">2 Dice</option>
+                    </select>
+                </label>
+                <label>Roll Time:
+                    <select id="dice-duration">
+                        <option value="1">1 Sec</option>
+                        <option value="2">2 Sec</option>
+                        <option value="3">3 Sec</option>
+                    </select>
+                </label>
+            </div>
+            <div class="control-group">
+                <span style="font-weight:bold; color:white; font-size: 1.2rem;">Die 1:</span>
+                <label>Min <input type="number" id="die1-min" value="1"></label>
+                <label>Max <input type="number" id="die1-max" value="6"></label>
+            </div>
+            <div class="control-group" id="die2-controls" style="display:none;">
+                <span style="font-weight:bold; color:white; font-size: 1.2rem;">Die 2:</span>
+                <label>Min <input type="number" id="die2-min" value="1"></label>
+                <label>Max <input type="number" id="die2-max" value="6"></label>
+            </div>
+        </div>
+
+        <div class="dice-container">
+            <div id="die1" class="die">?</div>
+            <div id="die2" class="die" style="display:none;">?</div>
+        </div>
+
+        <button class="btn-purple btn-large" id="roll-button" onclick="rollDice()" style="font-size: 2rem; padding: 20px 60px;">ROLL DICE</button>
+    </div>
+
+    <div id="timer-overlay" class="overlay fullscreen-overlay hidden">
+        <button class="close-fullscreen" onclick="closeTimer()">×</button>
+        
+        <div class="timer-header">
+            <button class="btn-outline" id="timer-mode-btn" onclick="toggleTimerMode()" style="color:white; border-color:white; font-size:1.4rem; padding: 12px 25px; font-weight: 800;">Mode: Countdown</button>
+            <div id="timer-inputs" style="display: flex; gap: 15px; align-items: center; color: white; font-weight: 900; font-size:1.4rem; background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 12px;">
+                Set Time: 
+                <input type="number" id="timer-input-m" value="5" min="0" onchange="resetTimer()" style="width: 80px; font-size:1.4rem;"> m
+                <input type="number" id="timer-input-s" value="0" min="0" max="59" onchange="resetTimer()" style="width: 80px; font-size:1.4rem;"> s
+            </div>
+        </div>
+
+        <div id="timer-display-val" class="timer-display">05:00</div>
+        
+        <div class="timer-buttons">
+            <button class="btn-secondary btn-large" onclick="startTimer()" style="font-size: 1.8rem; padding: 20px 50px;">START</button>
+            <button class="btn-lock btn-large" onclick="pauseTimer()" style="font-size: 1.8rem; padding: 20px 50px;">PAUSE</button>
+            <button class="btn-danger btn-large" onclick="resetTimer()" style="font-size: 1.8rem; padding: 20px 50px;">RESET</button>
+        </div>
+    </div>
+
+    <div id="ticker-overlay" class="overlay fullscreen-overlay hidden" style="overflow:hidden;">
+        <button class="close-fullscreen" onclick="closeTicker()">×</button>
+        
+        <div class="ticker-wrap">
+            <div id="ticker-text" class="ticker-content">PLEASE TAKE YOUR SEATS!</div>
+        </div>
+        
+        <div class="bottom-controls-panel">
+            <label>Message:
+                <input type="text" id="ticker-input" value="PLEASE TAKE YOUR SEATS!" oninput="updateTicker()" placeholder="Type message...">
+            </label>
+            <label>Color:
+                <input type="color" id="ticker-color" value="#FFFFFF" oninput="updateTicker()">
+            </label>
+            <label>Size:
+                <input type="range" id="ticker-size" min="10" max="40" value="20" step="1" oninput="updateTicker()">
+            </label>
+            <label>Speed:
+                <input type="range" id="ticker-speed" min="5" max="30" value="20" step="1" oninput="updateTicker()">
+            </label>
+
+            <div class="emoji-bar">
+                <span style="font-size: 0.9rem; font-weight: 800; margin-right: 5px; color: #FFFFFF;">Classroom Emojis:</span>
+                <button class="emoji-btn" onclick="insertEmoji('🤫')" title="Quiet / Shh">🤫</button>
+                <button class="emoji-btn" onclick="insertEmoji('👀')" title="Eyes Up Here">👀</button>
+                <button class="emoji-btn" onclick="insertEmoji('🛑')" title="Stop / Wait">🛑</button>
+                <button class="emoji-btn" onclick="insertEmoji('⏰')" title="Watch the Clock / Time's Up">⏰</button>
+                <button class="emoji-btn" onclick="insertEmoji('📖')" title="Reading Time">📖</button>
+                <button class="emoji-btn" onclick="insertEmoji('📝')" title="Writing / Independent Work">📝</button>
+                <button class="emoji-btn" onclick="insertEmoji('🙋')" title="Raise Hand to Speak">🙋</button>
+                <button class="emoji-btn" onclick="insertEmoji('🧹')" title="Clean Up Time">🧹</button>
+                <button class="emoji-btn" onclick="insertEmoji('🥪')" title="Lunch / Snack Break">🥪</button>
+                <button class="emoji-btn" onclick="insertEmoji('💯')" title="Great Job / Goal Met">💯</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SCALE = 50; 
+        const GRID_SIZE = 10; 
+        let desks = [];
+        
+        let selectedDesks = new Set();
+        let singleSelectedDesk = null;
+        let isShiftDown = false;
+
+        let currentZoom = 1.2; 
+        let panX = 0; let panY = 0;
+
+        // Save Data variables
+        let savedLayouts = [];
+        let savedClassLists = [];
+        let savedSeatingPlans = [];
+
+        // Scoreboard Memory
+        let teamScores = {};
+
+        // Vibrant High-Contrast Colors Matching the Request
+        const COLORS = {
+            blue:   { bg: '#3B82F6', border: '#2563EB' },
+            orange: { bg: '#F97316', border: '#EA580C' },
+            green:  { bg: '#22C55E', border: '#16A34A' },
+            yellow: { bg: '#F59E0B', border: '#D97706' },
+            pink:   { bg: '#EC4899', border: '#DB2777' },
+            purple: { bg: '#8B5CF6', border: '#7C3AED' },
+            red:    { bg: '#EF4444', border: '#DC2626' },
+            teal:   { bg: '#14B8A6', border: '#0D9488' } // 8th Color Added
+        };
+        let activeBrush = null;
+
+        function initColors() {
+            const palette = document.getElementById('color-palette');
+            for (const [key, val] of Object.entries(COLORS)) {
+                const row = document.createElement('div');
+                row.className = 'color-row';
+                
+                const swatch = document.createElement('div');
+                swatch.className = 'color-swatch';
+                swatch.style.backgroundColor = val.bg;
+                swatch.style.borderColor = val.border;
+                swatch.id = `swatch-${key}`;
+                swatch.onclick = () => setBrush(key);
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = `group-name-${key}`; 
+                input.placeholder = `${key.charAt(0).toUpperCase() + key.slice(1)} Group Name...`;
+                input.style.width = '100%';
+                
+                row.appendChild(swatch);
+                row.appendChild(input);
+                palette.appendChild(row);
+            }
+        }
+
+        function setBrush(colorKey) {
+            activeBrush = colorKey;
+            document.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('active'));
+            document.getElementById('no-brush').classList.remove('active');
+            
+            if (colorKey) {
+                document.getElementById(`swatch-${colorKey}`).classList.add('active');
+                workspace.style.cursor = 'crosshair'; 
+            } else {
+                document.getElementById('no-brush').classList.add('active');
+                workspace.style.cursor = 'grab';
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.body.classList.contains('presenting')) {
+                exitPresentationMode();
+            }
+            if (e.key === 'Shift') isShiftDown = true;
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+            
+            if (e.key === 'r' || e.key === 'R') rotateSelectedDesks();
+            if (e.key === 'l' || e.key === 'L') toggleLockSelected();
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'Shift') {
+                isShiftDown = false;
+                selectedDesks.forEach(d => d.classList.remove('selected'));
+                selectedDesks.clear();
+            }
+        });
+
+        function updateZoom() { currentZoom = parseFloat(document.getElementById('zoomSlider').value); applyTransform(); }
+        function resetView() { panX = 0; panY = 0; document.getElementById('zoomSlider').value = 1.2; currentZoom = 1.2; applyTransform(); }
+
+        function applyTransform() {
+            const container = document.getElementById('room-container');
+            const room = document.getElementById('room');
+            container.style.transform = `translate(${panX}px, ${panY}px)`;
+            room.style.transform = `translate(-50%, -50%) scale(${currentZoom})`;
+        }
+
+        function updateRoomSize() {
+            const roomW = parseFloat(document.getElementById('roomW').value);
+            const roomL = parseFloat(document.getElementById('roomL').value);
+            const room = document.getElementById('room');
+            
+            room.style.width = (roomW * SCALE) + 'px';
+            room.style.height = (roomL * SCALE) + 'px';
+
+            desks.forEach(desk => {
+                let currentTop = parseInt(desk.style.top);
+                let currentLeft = parseInt(desk.style.left);
+                let changed = false;
+
+                if (currentTop + desk.offsetHeight > room.offsetHeight) { currentTop = Math.max(0, room.offsetHeight - desk.offsetHeight); changed = true; }
+                if (currentLeft + desk.offsetWidth > room.offsetWidth) { currentLeft = Math.max(0, room.offsetWidth - desk.offsetWidth); changed = true; }
+
+                if (changed) {
+                    let snapTop = Math.floor(currentTop / GRID_SIZE) * GRID_SIZE;
+                    let snapLeft = Math.floor(currentLeft / GRID_SIZE) * GRID_SIZE;
+                    desk.style.top = snapTop + "px"; desk.style.left = snapLeft + "px";
+                    desk.dataset.trueTop = snapTop; desk.dataset.trueLeft = snapLeft;
+                }
+            });
+            applyTransform();
+        }
+
+        function setDeskName(desk, name) {
+            const span = desk.querySelector('.student-name');
+            span.innerText = name;
+            const w = desk.offsetWidth; const h = desk.offsetHeight;
+            const isVertical = h > w; const maxLength = isVertical ? h : w; const thickness = isVertical ? w : h;
+            
+            span.style.transform = isVertical ? 'rotate(-90deg)' : 'none';
+            
+            if (name.length > 0) {
+                let availableLength = maxLength - 10; 
+                let calculatedSize = availableLength / (name.length * 0.62);
+                let maxByHeight = thickness - 8; 
+                let finalSize = Math.max(8, Math.min(18, calculatedSize, maxByHeight));
+                span.style.fontSize = finalSize + 'px';
+            }
+        }
+
+        function createDeskElement(x, y, w, l, locked = false, initialName = '', colorKey = 'blue') {
+            const room = document.getElementById('room');
+            const pxDeskW = w * SCALE; const pxDeskL = l * SCALE;
+
+            const desk = document.createElement('div');
+            desk.className = 'desk';
+            desk.style.width = pxDeskW + 'px'; desk.style.height = pxDeskL + 'px';
+            desk.style.left = x + 'px'; desk.style.top = y + 'px';
+            
+            // Set initial color based on default or passed parameter
+            let safeColorKey = COLORS[colorKey] ? colorKey : 'blue';
+            desk.style.backgroundColor = COLORS[safeColorKey].bg;
+            desk.style.borderColor = COLORS[safeColorKey].border;
+            desk.dataset.colorKey = safeColorKey;
+
+            desk.dataset.trueTop = y; desk.dataset.trueLeft = x; desk.dataset.locked = locked ? 'true' : 'false';
+
+            const nameSpan = document.createElement('span'); nameSpan.className = 'student-name';
+            const lockIcon = document.createElement('span'); lockIcon.className = 'lock-icon'; lockIcon.innerHTML = '🔒';
+            lockIcon.style.display = locked ? 'flex' : 'none';
+
+            desk.appendChild(nameSpan); desk.appendChild(lockIcon); room.appendChild(desk); desks.push(desk);
+
+            makeDraggableDesk(desk); setDeskName(desk, initialName);
+        }
+
+        function addSingleDesk() {
+            const deskW = parseFloat(document.getElementById('deskW').value);
+            const deskL = parseFloat(document.getElementById('deskL').value);
+            createDeskElement(GRID_SIZE, GRID_SIZE, deskW, deskL);
+        }
+
+        function clearAndGenerateDesks() {
+            const deskW = parseFloat(document.getElementById('deskW').value);
+            const deskL = parseFloat(document.getElementById('deskL').value);
+            const deskCount = parseInt(document.getElementById('deskCount').value);
+            const roomW = parseFloat(document.getElementById('roomW').value);
+            const room = document.getElementById('room');
+            
+            room.innerHTML = ''; desks = []; selectedDesks.clear(); singleSelectedDesk = null;
+
+            let currentX = GRID_SIZE; let currentY = GRID_SIZE;
+            const pxDeskW = deskW * SCALE; const pxDeskL = deskL * SCALE;
+
+            for (let i = 0; i < deskCount; i++) {
+                if (currentX + pxDeskW > roomW * SCALE) { currentX = GRID_SIZE; currentY += pxDeskL + GRID_SIZE; }
+                createDeskElement(currentX, currentY, deskW, deskL, false, '', 'blue'); // Default to vibrant blue
+                currentX += pxDeskW + GRID_SIZE;
+            }
+        }
+
+        function rotateSelectedDesks() {
+            let targets = [];
+            if (isShiftDown && selectedDesks.size > 0) targets = Array.from(selectedDesks);
+            else if (singleSelectedDesk) targets = [singleSelectedDesk];
+            else return;
+
+            const room = document.getElementById('room');
+            targets.forEach(desk => {
+                const currentW = desk.style.width; const currentH = desk.style.height;
+                desk.style.width = currentH; desk.style.height = currentW;
+
+                let currentTop = parseInt(desk.style.top); let currentLeft = parseInt(desk.style.left);
+
+                if (currentTop + desk.offsetHeight > room.offsetHeight) {
+                    let newTop = Math.floor((room.offsetHeight - desk.offsetHeight) / GRID_SIZE) * GRID_SIZE;
+                    desk.style.top = newTop + "px"; desk.dataset.trueTop = newTop;
+                }
+                if (currentLeft + desk.offsetWidth > room.offsetWidth) {
+                    let newLeft = Math.floor((room.offsetWidth - desk.offsetWidth) / GRID_SIZE) * GRID_SIZE;
+                    desk.style.left = newLeft + "px"; desk.dataset.trueLeft = newLeft;
+                }
+                setDeskName(desk, desk.querySelector('.student-name').innerText);
+            });
+        }
+
+        function toggleLockSelected() {
+            let targets = [];
+            if (isShiftDown && selectedDesks.size > 0) targets = Array.from(selectedDesks);
+            else if (singleSelectedDesk) targets = [singleSelectedDesk];
+            else return;
+
+            targets.forEach(desk => {
+                const isLocked = desk.dataset.locked === 'true';
+                desk.dataset.locked = isLocked ? 'false' : 'true';
+                desk.querySelector('.lock-icon').style.display = isLocked ? 'none' : 'flex';
+            });
+        }
+
+        function assignSeats() {
+            const textArea = document.getElementById('classList').value;
+            let allStudents = textArea.split('\n').map(s => s.trim()).filter(s => s !== '');
+            if (allStudents.length === 0) { alert("Please add some names to the class list first."); return; }
+
+            const lockedDesks = desks.filter(d => d.dataset.locked === 'true');
+            const unlockedDesks = desks.filter(d => d.dataset.locked !== 'true');
+            const lockedNames = lockedDesks.map(d => d.querySelector('.student-name').innerText).filter(n => n !== '');
+            let availableStudents = allStudents.filter(s => !lockedNames.includes(s));
+
+            for (let i = availableStudents.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [availableStudents[i], availableStudents[j]] = [availableStudents[j], availableStudents[i]];
+            }
+
+            unlockedDesks.forEach((desk, index) => setDeskName(desk, (index < availableStudents.length) ? availableStudents[index] : ''));
+            lockedDesks.forEach(desk => setDeskName(desk, desk.querySelector('.student-name').innerText));
+
+            if (availableStudents.length > unlockedDesks.length) {
+                alert(`Note: You have ${availableStudents.length} unlocked students in your list but only ${unlockedDesks.length} available desks.`);
+            }
+        }
+
+        // --- TEACHER TOOLS ---
+
+        function pickRandomStudent() {
+            const names = desks.map(d => d.querySelector('.student-name').innerText).filter(n => n.trim() !== '');
+            if (names.length === 0) { alert("There are no students sitting at desks right now!"); return; }
+            const randomName = names[Math.floor(Math.random() * names.length)];
+            
+            document.getElementById('random-student-title').innerText = "Selected Student:";
+            document.getElementById('random-student-name').innerText = randomName;
+            document.getElementById('random-student-overlay').classList.remove('hidden');
+        }
+
+        function closeRandomStudent() { 
+            document.getElementById('random-student-overlay').classList.add('hidden'); 
+        }
+
+        function openTeamSelector() {
+            const activeTeams = new Set();
+            desks.forEach(d => {
+                const name = d.querySelector('.student-name').innerText.trim();
+                if (d.dataset.colorKey && name !== '') activeTeams.add(d.dataset.colorKey);
+            });
+
+            if (activeTeams.size === 0) { alert("There are no teams with students assigned to them right now!"); return; }
+
+            const container = document.getElementById('team-buttons-container');
+            container.innerHTML = '';
+            
+            activeTeams.forEach(key => {
+                const teamName = document.getElementById(`group-name-${key}`).value.trim() || (key.charAt(0).toUpperCase() + key.slice(1));
+                const btn = document.createElement('button');
+                btn.innerText = teamName;
+                btn.style.backgroundColor = COLORS[key].bg; btn.style.color = '#fff';
+                btn.style.border = `3px solid ${COLORS[key].border}`; btn.style.padding = '12px 25px';
+                btn.style.fontSize = '1.2rem'; btn.style.borderRadius = '10px'; btn.style.textShadow = '0 2px 4px rgba(0,0,0,0.4)';
+                btn.style.fontWeight = '800';
+                btn.onclick = () => pickRandomStudentFromTeam(key);
+                container.appendChild(btn);
+            });
+            document.getElementById('team-selector-overlay').classList.remove('hidden');
+        }
+
+        function closeTeamSelector() { document.getElementById('team-selector-overlay').classList.add('hidden'); }
+
+        function pickRandomStudentFromTeam(colorKey) {
+            const teamDesks = desks.filter(d => d.dataset.colorKey === colorKey && d.querySelector('.student-name').innerText.trim() !== '');
+            if (teamDesks.length === 0) return; 
+            const randomDesk = teamDesks[Math.floor(Math.random() * teamDesks.length)];
+            const randomName = randomDesk.querySelector('.student-name').innerText;
+            closeTeamSelector();
+            const teamName = document.getElementById(`group-name-${colorKey}`).value.trim() || (colorKey.charAt(0).toUpperCase() + colorKey.slice(1));
+            document.getElementById('random-student-title').innerText = `Selected Student (${teamName}):`;
+            document.getElementById('random-student-name').innerText = randomName;
+            document.getElementById('random-student-overlay').classList.remove('hidden');
+        }
+
+        // --- FULL SCREEN PRESENTATION ---
+        function togglePresentationMode() {
+            document.body.classList.add('presenting');
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch((err) => console.log(err));
+            }
+            setTimeout(() => {
+                const workspace = document.getElementById('workspace');
+                const room = document.getElementById('room');
+                const padding = 80; 
+                const scaleX = (workspace.clientWidth - padding) / room.offsetWidth;
+                const scaleY = (workspace.clientHeight - padding) / room.offsetHeight;
+                currentZoom = Math.min(scaleX, scaleY);
+                document.getElementById('zoomSlider').value = currentZoom;
+                panX = 0; panY = 0;
+                applyTransform();
+            }, 100);
+        }
+
+        function exitPresentationMode() {
+            document.body.classList.remove('presenting');
+            if (document.fullscreenElement) document.exitFullscreen().catch((err) => console.log(err));
+            setTimeout(() => { resetView(); }, 100);
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && document.body.classList.contains('presenting')) {
+                document.body.classList.remove('presenting'); setTimeout(() => resetView(), 100);
+            }
+        });
+        
+        // --- ZAP! GAME ---
+        function openZapGame() {
+            document.getElementById('zap-overlay').classList.remove('hidden');
+            initZapGame();
+        }
+
+        function closeZapGame() {
+            document.getElementById('zap-overlay').classList.add('hidden');
+            document.getElementById('zap-overlay').classList.remove('violent-shake');
+        }
+
+        function initZapGame() {
+            const grid = document.getElementById('zap-grid');
+            grid.innerHTML = '';
+            document.getElementById('zap-overlay').classList.remove('violent-shake');
+            
+            // 3 rows x 6 columns = 18 cards total (1-14 + 4 ZAPs)
+            let cards = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 'ZAP!', 'ZAP!', 'ZAP!', 'ZAP!'];
+            
+            // Fisher-Yates shuffle
+            for (let i = cards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cards[i], cards[j]] = [cards[j], cards[i]];
+            }
+            
+            // Generate Top Header Row for Columns
+            grid.appendChild(createGridLabel('')); // Top-left empty corner
+            for (let c = 1; c <= 6; c++) {
+                grid.appendChild(createGridLabel(c)); // Column numbers 1-6
+            }
+
+            // Generate Grid Content Row by Row
+            let cardIndex = 0;
+            const rowLetters = ['A', 'B', 'C']; // Rows are letters!
+
+            for (let r = 1; r <= 3; r++) {
+                // Add the Row Letter Label on the left edge
+                grid.appendChild(createGridLabel(rowLetters[r - 1])); 
+                
+                // Add the 6 cards for this row
+                for (let c = 1; c <= 6; c++) {
+                    const val = cards[cardIndex++];
+                    
+                    const container = document.createElement('div');
+                    container.className = 'zap-card-container';
+                    
+                    const inner = document.createElement('div');
+                    inner.className = 'zap-card-inner';
+                    
+                    const front = document.createElement('div');
+                    front.className = 'zap-card-front';
+                    front.innerText = '?';
+                    
+                    const back = document.createElement('div');
+                    back.className = 'zap-card-back';
+                    back.innerText = val;
+                    
+                    if (val === 'ZAP!') container.classList.add('is-zap');
+                    
+                    inner.appendChild(front); inner.appendChild(back); container.appendChild(inner);
+                    
+                    container.onclick = () => {
+                        if (container.classList.contains('flipped')) return;
+                        container.classList.add('flipped');
+                        if (val === 'ZAP!') triggerZapEffect();
+                    };
+                    
+                    grid.appendChild(container);
+                }
+            }
+        }
+
+        function createGridLabel(text) {
+            const label = document.createElement('div');
+            label.className = 'grid-label';
+            label.innerText = text;
+            return label;
+        }
+
+        let zapTimeout; // Keeps track of the timer so rapid clicks don't glitch
+
+        function triggerZapEffect() {
+            const overlay = document.getElementById('zap-overlay');
+            
+            // Clear any existing reset timer if multiple ZAPs are hit quickly
+            clearTimeout(zapTimeout);
+
+            // Remove the class and force a reflow so we can re-trigger it
+            overlay.classList.remove('violent-shake');
+            void overlay.offsetWidth; 
+            overlay.classList.add('violent-shake');
+
+            // Remove the class after 2 seconds to return the background to normal
+            zapTimeout = setTimeout(() => {
+                overlay.classList.remove('violent-shake');
+            }, 2000);
+        }
+
+        // --- SCOREBOARD ---
+        function openScoreboard() {
+            const activeKeys = new Set();
+            desks.forEach(d => { if (d.dataset.colorKey) activeKeys.add(d.dataset.colorKey); });
+            if (activeKeys.size === 0) { alert("Paint some desks first using the Groups & Colors tool to create teams!"); return; }
+            const container = document.getElementById('scoreboard-container'); container.innerHTML = '';
+            activeKeys.forEach(key => {
+                if (teamScores[key] === undefined) teamScores[key] = 0;
+                const teamName = document.getElementById(`group-name-${key}`).value.trim() || (key.charAt(0).toUpperCase() + key.slice(1));
+                const col = document.createElement('div'); col.className = 'score-col'; col.style.backgroundColor = COLORS[key].bg;
+                
+                const plusBtn = document.createElement('button'); plusBtn.className = 'score-btn'; plusBtn.innerHTML = '+';
+                plusBtn.onclick = () => { teamScores[key]++; updateScore(key); };
+
+                const numDisplay = document.createElement('div'); numDisplay.className = 'score-number';
+                numDisplay.id = `score-val-${key}`; numDisplay.innerText = teamScores[key];
+
+                const labelDisplay = document.createElement('div'); labelDisplay.className = 'team-name'; labelDisplay.innerText = teamName;
+
+                const minusBtn = document.createElement('button'); minusBtn.className = 'score-btn'; minusBtn.innerHTML = '−'; 
+                minusBtn.onclick = () => { teamScores[key]--; updateScore(key); };
+
+                col.appendChild(plusBtn); col.appendChild(numDisplay); col.appendChild(labelDisplay); col.appendChild(minusBtn); container.appendChild(col);
+            });
+            document.getElementById('scoreboard-overlay').classList.remove('hidden');
+        }
+
+        function updateScore(key) { document.getElementById(`score-val-${key}`).innerText = teamScores[key]; }
+        function closeScoreboard() { document.getElementById('scoreboard-overlay').classList.add('hidden'); }
+
+        // --- FULL SCREEN DICE ROLLER ---
+        let isRolling = false;
+        function openDiceRoller() { document.getElementById('dice-overlay').classList.remove('hidden'); updateDiceView(); }
+        function closeDiceRoller() { document.getElementById('dice-overlay').classList.add('hidden'); }
+        function updateDiceView() {
+            const numDice = parseInt(document.getElementById('dice-count').value);
+            const die2El = document.getElementById('die2');
+            const die2Controls = document.getElementById('die2-controls');
+            if (numDice === 1) { die2El.style.display = 'none'; die2Controls.style.display = 'none'; } 
+            else { die2El.style.display = 'flex'; die2Controls.style.display = 'flex'; }
+        }
+
+        function rollDice() {
+            if (isRolling) return; isRolling = true;
+            const die1Min = parseInt(document.getElementById('die1-min').value) || 1;
+            const die1Max = parseInt(document.getElementById('die1-max').value) || 6;
+            const die2Min = parseInt(document.getElementById('die2-min').value) || 1;
+            const die2Max = parseInt(document.getElementById('die2-max').value) || 6;
+            const durationSecs = parseInt(document.getElementById('dice-duration').value) || 1;
+            const numDice = parseInt(document.getElementById('dice-count').value) || 1;
+            const die1El = document.getElementById('die1'); const die2El = document.getElementById('die2');
+            const rollBtn = document.getElementById('roll-button');
+            rollBtn.innerText = "ROLLING..."; rollBtn.style.opacity = "0.7";
+            die1El.classList.add('rolling'); if (numDice === 2) die2El.classList.add('rolling');
+            
+            const rollInterval = setInterval(() => {
+                die1El.innerText = Math.floor(Math.random() * (die1Max - die1Min + 1)) + die1Min;
+                if (numDice === 2) die2El.innerText = Math.floor(Math.random() * (die2Max - die2Min + 1)) + die2Min;
+            }, 50);
+
+            setTimeout(() => {
+                clearInterval(rollInterval);
+                die1El.classList.remove('rolling'); if (numDice === 2) die2El.classList.remove('rolling');
+                die1El.innerText = Math.floor(Math.random() * (die1Max - die1Min + 1)) + die1Min;
+                if (numDice === 2) die2El.innerText = Math.floor(Math.random() * (die2Max - die2Min + 1)) + die2Min;
+                rollBtn.innerText = "ROLL DICE"; rollBtn.style.opacity = "1"; isRolling = false;
+            }, durationSecs * 1000);
+        }
+
+        // --- TIMER / STOPWATCH ---
+        let timerInterval;
+        let timeRemaining = 300; 
+        let isCountdown = true;
+        let isTimerRunning = false;
+
+        function openTimer() { document.getElementById('timer-overlay').classList.remove('hidden'); resetTimer(); }
+        function closeTimer() { document.getElementById('timer-overlay').classList.add('hidden'); pauseTimer(); }
+
+        function toggleTimerMode() {
+            isCountdown = !isCountdown;
+            document.getElementById('timer-mode-btn').innerText = isCountdown ? "Mode: Countdown" : "Mode: Stopwatch";
+            document.getElementById('timer-inputs').style.display = isCountdown ? "flex" : "none";
+            resetTimer();
+        }
+
+        function startTimer() {
+            if (isTimerRunning) return;
+            isTimerRunning = true;
+            timerInterval = setInterval(() => {
+                if (isCountdown) {
+                    if (timeRemaining > 0) timeRemaining--;
+                    else pauseTimer(); // Hit zero
+                } else {
+                    timeRemaining++;
+                }
+                updateTimerUI();
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            if (isCountdown) {
+                let m = parseInt(document.getElementById('timer-input-m').value) || 0;
+                let s = parseInt(document.getElementById('timer-input-s').value) || 0;
+                timeRemaining = (m * 60) + s;
+            } else {
+                timeRemaining = 0;
+            }
+            updateTimerUI();
+        }
+
+        function updateTimerUI() {
+            let m = Math.floor(timeRemaining / 60);
+            let s = timeRemaining % 60;
+            document.getElementById('timer-display-val').innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        // --- TICKER / SCROLLING TEXT ---
+        function openTicker() { document.getElementById('ticker-overlay').classList.remove('hidden'); updateTicker(); }
+        function closeTicker() { document.getElementById('ticker-overlay').classList.add('hidden'); }
+
+        function updateTicker() {
+            const textEl = document.getElementById('ticker-text');
+            const message = document.getElementById('ticker-input').value || " ";
+            const color = document.getElementById('ticker-color').value;
+            const size = document.getElementById('ticker-size').value; // In VW units
+            const speedSlider = parseInt(document.getElementById('ticker-speed').value); 
+
+            textEl.innerText = message;
+            textEl.style.color = color;
+            textEl.style.fontSize = size + 'vw';
+
+            let duration = 35 - speedSlider; 
+            textEl.style.animationDuration = duration + 's';
+        }
+
+        function insertEmoji(emoji) {
+            const input = document.getElementById('ticker-input');
+            input.value += emoji + " "; 
+            updateTicker();
+            input.focus();
+        }
+
+        // --- CORE DATA SAVING & LOADING ---
+
+        function loadClassListsFromStorage() {
+            const stored = localStorage.getItem('classroomLists');
+            if (stored) { savedClassLists = JSON.parse(stored); renderClassLists(); }
+        }
+
+        function saveClassList() {
+            const nameInput = document.getElementById('listName'); const textArea = document.getElementById('classList');
+            let name = nameInput.value.trim(); let students = textArea.value.trim();
+            if (!students) { alert("Please type some names in the text box before saving."); return; }
+            if (!name) name = `Class ${savedClassLists.length + 1}`;
+            savedClassLists.push({ name, students }); localStorage.setItem('classroomLists', JSON.stringify(savedClassLists));
+            nameInput.value = ''; renderClassLists();
+        }
+
+        function renderClassLists() {
+            const container = document.getElementById('savedClassLists'); container.innerHTML = '';
+            if (savedClassLists.length === 0) return;
+            savedClassLists.forEach((list, index) => {
+                const div = document.createElement('div'); div.className = 'saved-item';
+                div.onclick = () => { document.getElementById('classList').value = list.students; };
+                const span = document.createElement('span'); span.innerText = list.name; span.style.flexGrow = 1; span.style.overflow = 'hidden'; span.style.textOverflow = 'ellipsis'; span.style.whiteSpace = 'nowrap';
+                const delBtn = document.createElement('button'); delBtn.className = 'btn-delete-item'; delBtn.innerHTML = '×';
+                delBtn.onclick = (e) => { e.stopPropagation(); if(confirm("Delete this saved class list?")) { savedClassLists.splice(index, 1); localStorage.setItem('classroomLists', JSON.stringify(savedClassLists)); renderClassLists(); } };
+                div.appendChild(span); div.appendChild(delBtn); container.appendChild(div);
+            });
+        }
+
+        function loadSeatingPlansFromStorage() {
+            const stored = localStorage.getItem('classroomSeatingPlans');
+            if (stored) { savedSeatingPlans = JSON.parse(stored); renderSeatingPlanList(); }
+        }
+
+        function saveSeatingPlan() {
+            const nameInput = document.getElementById('planName');
+            let name = nameInput.value.trim();
+            if (!name) name = `Seating Plan ${savedSeatingPlans.length + 1}`;
+            const roomData = { w: document.getElementById('roomW').value, l: document.getElementById('roomL').value };
+            let teamNames = {};
+            for (const key of Object.keys(COLORS)) { teamNames[key] = document.getElementById(`group-name-${key}`).value; }
+            const desksData = desks.map(desk => {
+                return {
+                    w: desk.style.width, h: desk.style.height, top: desk.style.top, left: desk.style.left,
+                    student: desk.querySelector('.student-name').innerText,
+                    locked: desk.dataset.locked === 'true', colorKey: desk.dataset.colorKey || 'blue'
+                };
+            });
+            savedSeatingPlans.push({ name, room: roomData, desks: desksData, teamNames: teamNames });
+            localStorage.setItem('classroomSeatingPlans', JSON.stringify(savedSeatingPlans));
+            nameInput.value = ''; renderSeatingPlanList();
+        }
+
+        function renderSeatingPlanList() {
+            const list = document.getElementById('planList'); list.innerHTML = '';
+            if (savedSeatingPlans.length === 0) return;
+            savedSeatingPlans.forEach((plan, index) => {
+                const div = document.createElement('div'); div.className = 'saved-item';
+                div.onclick = () => loadConfiguration(savedSeatingPlans[index]);
+                const span = document.createElement('span'); span.innerText = plan.name; span.style.flexGrow = 1; span.style.overflow = 'hidden'; span.style.textOverflow = 'ellipsis'; span.style.whiteSpace = 'nowrap';
+                const delBtn = document.createElement('button'); delBtn.className = 'btn-delete-item'; delBtn.innerHTML = '×';
+                delBtn.onclick = (e) => { e.stopPropagation(); if(confirm("Delete this saved seating plan?")) { savedSeatingPlans.splice(index, 1); localStorage.setItem('classroomSeatingPlans', JSON.stringify(savedSeatingPlans)); renderSeatingPlanList(); } };
+                div.appendChild(span); div.appendChild(delBtn); list.appendChild(div);
+            });
+        }
+
+        function loadLayoutsFromStorage() {
+            const stored = localStorage.getItem('classroomLayouts');
+            if (stored) { savedLayouts = JSON.parse(stored); renderLayoutList(); }
+        }
+
+        function saveLayout() {
+            const nameInput = document.getElementById('layoutName');
+            let name = nameInput.value.trim();
+            if (!name) name = `Layout ${savedLayouts.length + 1}`;
+            const roomData = { w: document.getElementById('roomW').value, l: document.getElementById('roomL').value };
+            const desksData = desks.map(desk => {
+                return {
+                    w: desk.style.width, h: desk.style.height, top: desk.style.top, left: desk.style.left,
+                    student: '', locked: false, colorKey: desk.dataset.colorKey || 'blue'
+                };
+            });
+            savedLayouts.push({ name, room: roomData, desks: desksData });
+            localStorage.setItem('classroomLayouts', JSON.stringify(savedLayouts));
+            nameInput.value = ''; renderLayoutList();
+        }
+
+        function renderLayoutList() {
+            const list = document.getElementById('layoutList'); list.innerHTML = '';
+            if (savedLayouts.length === 0) return;
+            savedLayouts.forEach((layout, index) => {
+                const div = document.createElement('div'); div.className = 'saved-item';
+                div.onclick = () => loadConfiguration(savedLayouts[index]);
+                const span = document.createElement('span'); span.innerText = layout.name; span.style.flexGrow = 1; span.style.overflow = 'hidden'; span.style.textOverflow = 'ellipsis'; span.style.whiteSpace = 'nowrap';
+                const delBtn = document.createElement('button'); delBtn.className = 'btn-delete-item'; delBtn.innerHTML = '×';
+                delBtn.onclick = (e) => { e.stopPropagation(); if(confirm("Delete this saved layout?")) { savedLayouts.splice(index, 1); localStorage.setItem('classroomLayouts', JSON.stringify(savedLayouts)); renderLayoutList(); } };
+                div.appendChild(span); div.appendChild(delBtn); list.appendChild(div);
+            });
+        }
+
+        function loadConfiguration(data) {
+            if (!data) return;
+            document.getElementById('roomW').value = data.room.w;
+            document.getElementById('roomL').value = data.room.l;
+            
+            const room = document.getElementById('room');
+            room.style.width = (data.room.w * SCALE) + 'px';
+            room.style.height = (data.room.l * SCALE) + 'px';
+
+            room.innerHTML = ''; desks = []; selectedDesks.clear(); singleSelectedDesk = null;
+
+            if (data.teamNames) {
+                for (const [key, value] of Object.entries(data.teamNames)) {
+                    const input = document.getElementById(`group-name-${key}`); if (input) input.value = value;
+                }
+            } else {
+                for (const key of Object.keys(COLORS)) {
+                    const input = document.getElementById(`group-name-${key}`); if (input) input.value = "";
+                }
+            }
+
+            data.desks.forEach(d => {
+                const color = d.colorKey || 'blue';
+                const desk = document.createElement('div');
+                desk.className = 'desk'; desk.style.width = d.w; desk.style.height = d.h;
+                desk.style.top = d.top; desk.style.left = d.left;
+                
+                desk.style.backgroundColor = COLORS[color].bg; desk.style.borderColor = COLORS[color].border;
+                desk.dataset.colorKey = color;
+
+                desk.dataset.trueTop = parseFloat(d.top); desk.dataset.trueLeft = parseFloat(d.left);
+                desk.dataset.locked = d.locked ? 'true' : 'false';
+
+                const nameSpan = document.createElement('span'); nameSpan.className = 'student-name';
+                const lockIcon = document.createElement('span'); lockIcon.className = 'lock-icon'; lockIcon.innerHTML = '🔒';
+                lockIcon.style.display = d.locked ? 'flex' : 'none';
+
+                desk.appendChild(nameSpan); desk.appendChild(lockIcon); room.appendChild(desk); desks.push(desk);
+                makeDraggableDesk(desk); setDeskName(desk, d.student || '');
+            });
+            resetView();
+        }
+
+        // --- DRAG & INTERACTIONS ---
+        function makeDraggableDesk(element) {
+            let startX = 0, startY = 0;
+            element.onmousedown = dragMouseDown; element.ontouchstart = dragMouseDown;
+            
+            element.ondblclick = function(e) {
+                e.stopPropagation();
+                const newName = prompt("Manually enter a student name for this desk:", element.querySelector('.student-name').innerText);
+                if (newName !== null) setDeskName(element, newName.trim());
+            };
+
+            function dragMouseDown(e) {
+                e.preventDefault(); e.stopPropagation(); 
+                if (activeBrush) {
+                    element.style.backgroundColor = COLORS[activeBrush].bg; element.style.borderColor = COLORS[activeBrush].border;
+                    element.dataset.colorKey = activeBrush; 
+                }
+
+                if (isShiftDown) {
+                    selectedDesks.add(element); element.classList.add('selected');
+                    if (singleSelectedDesk && !selectedDesks.has(singleSelectedDesk)) singleSelectedDesk.classList.remove('selected');
+                    singleSelectedDesk = null;
+                } else {
+                    if (singleSelectedDesk) singleSelectedDesk.classList.remove('selected');
+                    singleSelectedDesk = element; singleSelectedDesk.classList.add('selected');
+                }
+
+                startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                startY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+
+                let targets = (isShiftDown && selectedDesks.has(element)) ? Array.from(selectedDesks) : [element];
+                targets.forEach(desk => { desk.dataset.trueTop = parseFloat(desk.style.top) || 0; desk.dataset.trueLeft = parseFloat(desk.style.left) || 0; });
+
+                document.addEventListener('mouseup', closeDragElement); document.addEventListener('mousemove', elementDrag);
+                document.addEventListener('touchend', closeDragElement); document.addEventListener('touchmove', elementDrag, { passive: false });
+            }
+
+            function elementDrag(e) {
+                e.preventDefault();
+                let dx = ((e.type.includes('mouse') ? e.clientX : e.touches[0].clientX) - startX) / currentZoom;
+                let dy = ((e.type.includes('mouse') ? e.clientY : e.touches[0].clientY) - startY) / currentZoom;
+                startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX; startY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+                const room = document.getElementById('room');
+                let targets = (isShiftDown && selectedDesks.has(element)) ? Array.from(selectedDesks) : [element];
+
+                let safeDx = dx; let safeDy = dy;
+                targets.forEach(desk => {
+                    let snapTop = Math.round((parseFloat(desk.dataset.trueTop) + dy) / GRID_SIZE) * GRID_SIZE;
+                    let snapLeft = Math.round((parseFloat(desk.dataset.trueLeft) + dx) / GRID_SIZE) * GRID_SIZE;
+                    if (snapTop < 0 || snapTop + desk.offsetHeight > room.offsetHeight) safeDy = 0; 
+                    if (snapLeft < 0 || snapLeft + desk.offsetWidth > room.offsetWidth) safeDx = 0; 
+                });
+
+                targets.forEach(desk => {
+                    desk.dataset.trueTop = parseFloat(desk.dataset.trueTop) + safeDy; desk.dataset.trueLeft = parseFloat(desk.dataset.trueLeft) + safeDx;
+                    desk.style.top = (Math.round(desk.dataset.trueTop / GRID_SIZE) * GRID_SIZE) + "px";
+                    desk.style.left = (Math.round(desk.dataset.trueLeft / GRID_SIZE) * GRID_SIZE) + "px";
+                });
+            }
+
+            function closeDragElement() {
+                document.removeEventListener('mouseup', closeDragElement); document.removeEventListener('mousemove', elementDrag);
+                document.removeEventListener('touchend', closeDragElement); document.removeEventListener('touchmove', elementDrag);
+            }
+        }
+
+        // --- INFINITE WORKSPACE PANNING LOGIC ---
+        const workspace = document.getElementById('workspace');
+        let isPanning = false; let panStartMouseX, panStartMouseY, panStartX, panStartY;
+
+        function panStart(e) {
+            if (e.target.classList.contains('desk') || e.target.classList.contains('student-name') || e.target.classList.contains('lock-icon')) return;
+            isPanning = true;
+            panStartMouseX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX; panStartMouseY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+            panStartX = panX; panStartY = panY;
+            if (singleSelectedDesk) { singleSelectedDesk.classList.remove('selected'); singleSelectedDesk = null; }
+        }
+
+        function panMove(e) {
+            if (!isPanning) return;
+            e.preventDefault();
+            let newPanX = panStartX + ((e.type.includes('mouse') ? e.clientX : e.touches[0].clientX) - panStartMouseX);
+            let newPanY = panStartY + ((e.type.includes('mouse') ? e.clientY : e.touches[0].clientY) - panStartMouseY);
+            const room = document.getElementById('room');
+            const maxX = (workspace.clientWidth / 2) + ((room.offsetWidth * currentZoom) / 3); const maxY = (workspace.clientHeight / 2) + ((room.offsetHeight * currentZoom) / 3);
+            if (newPanX > maxX) newPanX = maxX; if (newPanX < -maxX) newPanX = -maxX;
+            if (newPanY > maxY) newPanY = maxY; if (newPanY < -maxY) newPanY = -maxY;
+            panX = newPanX; panY = newPanY; applyTransform();
+        }
+
+        function panEnd() { isPanning = false; }
+
+        workspace.addEventListener('mousedown', panStart); workspace.addEventListener('touchstart', panStart, {passive: false});
+        window.addEventListener('mousemove', panMove); window.addEventListener('touchmove', panMove, {passive: false});
+        window.addEventListener('mouseup', panEnd); window.addEventListener('touchend', panEnd);
+
+        window.onload = function() {
+            initColors(); updateRoomSize(); clearAndGenerateDesks();
+            loadLayoutsFromStorage(); loadSeatingPlansFromStorage(); loadClassListsFromStorage();
+            resetView(); updateDiceView(); resetTimer(); updateTicker();
+        };
+    </script>
+</body>
+</html>
