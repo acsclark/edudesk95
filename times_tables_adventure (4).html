@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Times Tables Adventure</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --purple-50:#EEEDFE;--purple-200:#AFA9EC;--purple-600:#534AB7;--purple-800:#3C3489;--purple-900:#26215C;
+  --amber-50:#FAEEDA;--amber-600:#854F0B;--amber-400:#EF9F27;
+  --red-50:#FCEBEB;--red-600:#A32D2D;--red-800:#791F1F;
+  --green-50:#EAF3DE;--green-600:#3B6D11;--green-800:#27500A;
+  --teal-50:#E1F5EE;--teal-600:#0F6E56;--teal-200:#5DCAA5;
+  --yellow-800:#412402;
+  --bg:#f8f7ff;--surface:#fff;--text:#1a1830;--muted:#5f5c7a;--border:rgba(83,74,183,0.15);
+}
+body { font-family:'Nunito Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; align-items:flex-start; justify-content:center; padding:2rem 1rem 4rem; }
+#app { width:100%; max-width:540px; }
+.screen { display:none; }
+.screen.active { display:block; animation:fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+h1 { font-family:'Nunito',sans-serif; font-size:28px; font-weight:800; color:var(--text); margin-bottom:0.4rem; }
+h2 { font-family:'Nunito',sans-serif; font-size:22px; font-weight:700; color:var(--text); margin-bottom:0.4rem; }
+h3 { font-family:'Nunito',sans-serif; font-size:16px; font-weight:700; color:var(--text); margin-bottom:0.3rem; }
+p { font-size:15px; color:var(--muted); line-height:1.6; }
+.btn { border:1.5px solid var(--border); background:var(--surface); color:var(--text); padding:10px 22px; border-radius:12px; font-size:15px; font-family:'Nunito',sans-serif; font-weight:700; cursor:pointer; transition:background 0.15s,transform 0.1s,box-shadow 0.15s; }
+.btn:hover { background:#f0eeff; transform:translateY(-1px); box-shadow:0 4px 12px rgba(83,74,183,0.12); }
+.btn:active { transform:scale(0.97); }
+.btn-primary { background:var(--purple-600); border-color:var(--purple-600); color:#fff; box-shadow:0 4px 16px rgba(83,74,183,0.3); }
+.btn-primary:hover { background:var(--purple-800); border-color:var(--purple-800); }
+.btn-success { background:var(--green-600); border-color:var(--green-600); color:#fff; box-shadow:0 4px 16px rgba(59,109,17,0.25); }
+.btn-success:hover { background:var(--green-800); border-color:var(--green-800); }
+.btn-amber { background:#BA7517; border-color:#BA7517; color:#fff; box-shadow:0 4px 16px rgba(186,117,23,0.3); }
+.btn-amber:hover { background:var(--amber-600); border-color:var(--amber-600); }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:1.25rem; margin-bottom:1rem; box-shadow:0 2px 8px rgba(83,74,183,0.06); }
+.chip { display:inline-block; padding:4px 12px; border-radius:999px; font-size:12px; font-weight:700; font-family:'Nunito',sans-serif; margin:2px; }
+.chip-bad { background:var(--red-50); color:var(--red-800); }
+.chip-ok { background:var(--amber-50); color:var(--yellow-800); }
+.chip-good { background:var(--green-50); color:var(--green-800); }
+.progress-bar { height:8px; background:#ede9fb; border-radius:999px; overflow:hidden; margin:0.5rem 0; }
+.progress-fill { height:100%; border-radius:999px; background:var(--purple-600); transition:width 0.4s ease; }
+.big-question { font-family:'Nunito',sans-serif; font-size:48px; font-weight:800; color:var(--purple-900); text-align:center; margin:1.2rem 0 0.8rem; letter-spacing:-1px; }
+.answer-input { display:block; width:130px; font-size:32px; font-family:'Nunito',sans-serif; font-weight:700; text-align:center; border:2.5px solid var(--border); border-radius:14px; padding:10px; margin:0 auto 0.8rem; background:var(--surface); color:var(--text); outline:none; transition:border-color 0.15s,box-shadow 0.15s; }
+.answer-input:focus { border-color:var(--purple-600); box-shadow:0 0 0 3px rgba(83,74,183,0.15); }
+.feedback { text-align:center; font-size:18px; font-weight:700; font-family:'Nunito',sans-serif; min-height:28px; margin-bottom:0.4rem; }
+.feedback.correct { color:var(--green-600); }
+.feedback.wrong { color:var(--red-600); }
+.timer-wrap { background:#ede9fb; border-radius:999px; overflow:hidden; height:12px; margin-bottom:1rem; }
+.timer-bar { height:100%; border-radius:999px; background:var(--purple-600); transition:width 0.5s linear,background 0.3s; }
+.trick-card { background:var(--purple-50); border:1px solid var(--purple-200); border-radius:14px; padding:1.1rem 1.25rem; margin-bottom:1rem; }
+.trick-title { font-size:15px; font-weight:700; font-family:'Nunito',sans-serif; color:var(--purple-900); margin-bottom:0.4rem; }
+.trick-body { font-size:14px; color:#3C3489; line-height:1.65; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.stat-card { background:var(--purple-50); border-radius:12px; padding:1rem; text-align:center; }
+.stat-num { font-size:32px; font-weight:800; font-family:'Nunito',sans-serif; color:var(--purple-900); }
+.stat-label { font-size:12px; color:var(--purple-600); margin-top:2px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
+.streak-row { display:flex; align-items:center; justify-content:center; gap:8px; font-size:14px; color:var(--muted); margin-top:0.4rem; }
+.streak-val { font-weight:700; color:var(--amber-600); font-family:'Nunito',sans-serif; }
+.home-hero { text-align:center; padding:2rem 0 1rem; }
+.hero-icon { font-size:64px; margin-bottom:0.5rem; display:block; animation:bounce 2s infinite; }
+@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+.celebration { text-align:center; font-size:20px; font-family:'Nunito',sans-serif; font-weight:700; min-height:28px; margin-top:0.4rem; color:var(--amber-600); }
+.step { display:flex; align-items:flex-start; gap:10px; margin:0.6rem 0; }
+.step-num { flex-shrink:0; width:26px; height:26px; border-radius:50%; background:var(--purple-600); color:#fff; font-family:'Nunito',sans-serif; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+.q-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; }
+.q-counter { font-size:14px; color:var(--muted); font-weight:600; }
+.timer-label { font-size:15px; font-weight:800; font-family:'Nunito',sans-serif; color:var(--purple-600); }
+
+/* Coach hint box */
+.hint-box { border-radius:14px; padding:1rem 1.2rem; margin-bottom:0.75rem; transition:opacity 0.8s ease; }
+.hint-box.full { background:var(--teal-50); border:1.5px solid var(--teal-200); opacity:1; }
+.hint-box.fading { background:var(--amber-50); border:1.5px solid #FAC775; opacity:0.7; }
+.hint-box.gone { opacity:0; pointer-events:none; height:0; padding:0; margin:0; border:none; overflow:hidden; }
+.hint-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.35rem; }
+.hint-label.full { color:var(--teal-600); }
+.hint-label.fading { color:#854F0B; }
+.hint-text { font-size:14px; font-weight:600; font-family:'Nunito',sans-serif; color:#085041; line-height:1.55; }
+.hint-text.fading { color:#633806; }
+.hint-steps { margin-top:0.5rem; }
+.hint-step { font-size:13px; color:#0F6E56; padding:2px 0; }
+.hint-step.fading { color:#854F0B; }
+.hint-fading-note { font-size:12px; color:var(--amber-600); font-style:italic; margin-top:0.4rem; }
+
+/* Coach screen */
+.coach-hero { text-align:center; padding:1rem 0 0.5rem; }
+.coach-table-badge { display:inline-flex; align-items:center; justify-content:center; width:72px; height:72px; border-radius:50%; background:var(--purple-600); color:#fff; font-family:'Nunito',sans-serif; font-size:28px; font-weight:800; margin-bottom:0.75rem; box-shadow:0 6px 20px rgba(83,74,183,0.35); }
+.coach-steps { counter-reset:cstep; }
+.coach-step { display:flex; gap:12px; margin:0.75rem 0; align-items:flex-start; }
+.coach-step-num { flex-shrink:0; width:28px; height:28px; border-radius:50%; background:var(--purple-50); border:2px solid var(--purple-200); color:var(--purple-800); font-family:'Nunito',sans-serif; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; }
+.coach-step-text { font-size:14px; color:var(--text); line-height:1.6; padding-top:4px; }
+.coach-step-text strong { font-weight:700; color:var(--purple-900); }
+.example-row { display:flex; gap:8px; flex-wrap:wrap; margin:0.5rem 0; }
+.example-pill { background:var(--purple-50); border:1px solid var(--purple-200); border-radius:8px; padding:6px 12px; font-family:'Nunito',sans-serif; font-size:14px; font-weight:700; color:var(--purple-900); }
+.table-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin:0.75rem 0; }
+.table-cell { background:var(--purple-50); border:1px solid var(--purple-200); border-radius:8px; padding:6px 4px; text-align:center; font-family:'Nunito',sans-serif; font-size:13px; font-weight:700; color:var(--purple-900); }
+.table-cell.highlight { background:var(--purple-600); color:#fff; border-color:var(--purple-600); }
+.phase-badge { display:inline-block; padding:4px 12px; border-radius:999px; font-size:12px; font-weight:700; font-family:'Nunito',sans-serif; }
+.phase-guided { background:var(--teal-50); color:var(--teal-600); }
+.phase-fading { background:var(--amber-50); color:#854F0B; }
+.phase-solo { background:var(--green-50); color:var(--green-600); }
+
+/* Challenge mode */
+.challenge-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; }
+.ch-stat { text-align:center; }
+.ch-stat-num { font-family:'Nunito',sans-serif; font-size:22px; font-weight:800; color:var(--purple-900); line-height:1; }
+.ch-stat-label { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-top:2px; }
+.per-q-timer-wrap { height:6px; background:#ede9fb; border-radius:999px; overflow:hidden; margin-bottom:0.5rem; }
+.per-q-timer-bar { height:100%; border-radius:999px; background:var(--green-600); transition:width 0.1s linear,background 0.2s; }
+.repeat-badge { display:inline-block; background:var(--amber-50); border:1.5px solid #FAC775; color:#854F0B; border-radius:8px; padding:4px 12px; font-size:13px; font-weight:700; font-family:'Nunito',sans-serif; margin-bottom:0.5rem; }
+.ch-big-timer { font-family:'Nunito',sans-serif; font-size:18px; font-weight:800; color:var(--purple-600); }
+.challenge-results-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:1rem 0; }
+.ch-res-card { background:var(--purple-50); border-radius:12px; padding:0.85rem; text-align:center; }
+.ch-res-num { font-size:28px; font-weight:800; font-family:'Nunito',sans-serif; color:var(--purple-900); }
+.ch-res-label { font-size:11px; color:var(--purple-600); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; margin-top:2px; }
+.ch-trophy { text-align:center; padding:1rem 0 0.5rem; }
+.ch-trophy-icon { font-size:64px; display:block; }
+.repeat-list { max-height:160px; overflow-y:auto; }
+.repeat-item { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); font-size:14px; }
+.repeat-item:last-child { border-bottom:none; }
+
+/* Time limit toggle */
+.time-toggle-wrap { display:flex; align-items:center; justify-content:center; gap:10px; background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:10px 16px; width:100%; max-width:320px; }
+.time-toggle-label { font-family:'Nunito',sans-serif; font-size:14px; font-weight:700; color:var(--muted); transition:color 0.2s; }
+.time-toggle-label.active { color:var(--purple-900); }
+.toggle-track { position:relative; width:52px; height:28px; background:#ccc; border-radius:999px; cursor:pointer; transition:background 0.25s; flex-shrink:0; border:none; padding:0; }
+.toggle-track.on { background:var(--purple-600); }
+.toggle-thumb { position:absolute; top:3px; left:3px; width:22px; height:22px; background:#fff; border-radius:50%; box-shadow:0 1px 4px rgba(0,0,0,0.2); transition:transform 0.25s; }
+.toggle-track.on .toggle-thumb { transform:translateX(24px); }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HOME -->
+<div id="screen-home" class="screen active">
+  <div class="home-hero">
+    <span class="hero-icon">🌟</span>
+    <h1>Times Tables Adventure</h1>
+    <p style="margin:0.5rem 0 2rem;font-size:16px;">Practise your 2× to 12× tables and become a maths superstar!</p>
+  </div>
+  <div class="card">
+    <h3>How it works</h3>
+    <div style="margin-top:0.75rem;">
+      <div class="step"><div class="step-num">1</div><p>Take a <strong>5-minute test</strong> to find which tables are tricky for you</p></div>
+      <div class="step"><div class="step-num">2</div><p>Get a <strong>coaching session</strong> on your hardest table with step-by-step tricks</p></div>
+      <div class="step"><div class="step-num">3</div><p>Practise with <strong>guided hints</strong> that slowly disappear as you get confident</p></div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:1rem;display:flex;flex-direction:column;gap:12px;align-items:center;">
+    <button class="btn btn-primary" onclick="startTest()" style="font-size:17px;padding:14px 40px;width:100%;max-width:320px;">Start the test! →</button>
+    <button class="btn btn-amber" onclick="startChallenge()" style="font-size:17px;padding:14px 40px;width:100%;max-width:320px;">⚡ 100 Questions Challenge</button>
+    <!-- Time limit toggle -->
+    <div class="time-toggle-wrap">
+      <span class="time-toggle-label active" id="toggle-label-5">5 sec</span>
+      <button class="toggle-track" id="time-toggle-btn" onclick="toggleTimeLimit()" aria-label="Toggle time limit">
+        <div class="toggle-thumb"></div>
+      </button>
+      <span class="time-toggle-label" id="toggle-label-8">8 sec</span>
+    </div>
+    <p id="challenge-desc" style="font-size:13px;color:var(--muted);max-width:320px;">Answer 100 questions in 5 minutes. Any question you get wrong <em>or</em> take longer than <span id="desc-secs">5</span> seconds will come back 2 questions later!</p>
+  </div>
+</div>
+
+<!-- TEST -->
+<div id="screen-test" class="screen">
+  <div class="q-header">
+    <span class="q-counter" id="q-counter">Question 1 of 40</span>
+    <span class="timer-label" id="timer-text">5:00</span>
+  </div>
+  <div class="timer-wrap"><div id="timer-bar" class="timer-bar" style="width:100%"></div></div>
+  <div class="progress-bar"><div id="q-progress" class="progress-fill" style="width:0%"></div></div>
+  <div class="big-question" id="question-text">2 × 3 = ?</div>
+  <input type="number" id="answer-input" class="answer-input" placeholder="?" min="0" max="999"/>
+  <div class="feedback" id="feedback"></div>
+  <div class="streak-row">Streak: <span class="streak-val" id="streak-stars">—</span></div>
+  <div style="text-align:center;margin-top:1rem;">
+    <button class="btn" onclick="submitAnswer()">Check ✓</button>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="screen-results" class="screen">
+  <h2>🎉 Test complete!</h2>
+  <div class="grid-2" style="margin:1rem 0;">
+    <div class="stat-card"><div class="stat-num" id="res-score">—</div><div class="stat-label">Correct</div></div>
+    <div class="stat-card"><div class="stat-num" id="res-accuracy">—</div><div class="stat-label">Accuracy</div></div>
+  </div>
+  <div class="card">
+    <h3>Your tables snapshot</h3>
+    <div id="table-badges" style="margin-top:0.75rem;"></div>
+    <div style="margin-top:0.75rem;font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;">
+      <span class="chip chip-good">Green = great</span>
+      <span class="chip chip-ok">Yellow = getting there</span>
+      <span class="chip chip-bad">Red = needs work</span>
+    </div>
+  </div>
+  <div id="weakness-section"></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:1rem;">
+    <button class="btn btn-primary" onclick="goToCoach()" id="coach-btn">Get coaching →</button>
+    <button class="btn" onclick="startTest()">Retake test</button>
+  </div>
+</div>
+
+<!-- COACH SCREEN -->
+<div id="screen-coach" class="screen">
+  <div class="coach-hero">
+    <div class="coach-table-badge" id="coach-badge">7×</div>
+    <h2 id="coach-heading">Let's crack the 7× table!</h2>
+    <p id="coach-intro" style="margin:0.3rem 0 1rem;"></p>
+  </div>
+  <div class="card" id="coach-trick-card">
+    <h3 id="coach-trick-title"></h3>
+    <div class="coach-steps" id="coach-steps"></div>
+  </div>
+  <div id="coach-table-visual" style="margin-bottom:1rem;"></div>
+  <div class="card" style="background:var(--teal-50);border-color:var(--teal-200);">
+    <h3 style="color:var(--teal-600);">🎯 Now let's practise!</h3>
+    <p style="color:#085041;margin-top:0.3rem;">You'll get <strong style="color:#085041;">5 questions with the full hint</strong>, then 5 with a fading hint, then you fly solo. Ready?</p>
+  </div>
+  <div style="text-align:center;">
+    <button class="btn btn-primary" onclick="startCoachPractice()" style="font-size:16px;padding:12px 32px;">Let's go! →</button>
+  </div>
+</div>
+
+<!-- COACHED PRACTICE -->
+<div id="screen-cpractice" class="screen">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+    <div>
+      <span id="cp-phase-badge" class="phase-badge phase-guided">Guided</span>
+      <span id="cp-counter" style="font-size:13px;color:var(--muted);margin-left:8px;"></span>
+    </div>
+    <button class="btn" onclick="showScreen('screen-results')" style="font-size:13px;padding:6px 14px;">← Results</button>
+  </div>
+  <div class="progress-bar" style="margin-bottom:0.75rem;"><div id="cp-progress" class="progress-fill" style="width:0%"></div></div>
+
+  <!-- Hint box - shown/faded/hidden based on phase -->
+  <div id="cp-hint-box" class="hint-box full">
+    <div id="cp-hint-label" class="hint-label full">💡 Hint — use the trick!</div>
+    <div id="cp-hint-text" class="hint-text"></div>
+    <div id="cp-hint-steps" class="hint-steps"></div>
+    <div id="cp-hint-fading-note" class="hint-fading-note" style="display:none;">Hint fading — try to remember it yourself!</div>
+  </div>
+
+  <div class="big-question" id="cp-question">7 × 3 = ?</div>
+  <input type="number" id="cp-answer" class="answer-input" placeholder="?" min="0" max="999"/>
+  <div class="feedback" id="cp-feedback"></div>
+  <div class="streak-row">Streak: <span class="streak-val" id="cp-streak">—</span></div>
+  <div style="text-align:center;margin-top:0.75rem;">
+    <button class="btn btn-success" onclick="submitCP()">Check ✓</button>
+  </div>
+  <div class="celebration" id="cp-celebration"></div>
+</div>
+
+<!-- 100 QUESTIONS CHALLENGE -->
+<div id="screen-challenge" class="screen">
+
+  <!-- Circular progress + flanking stats -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;gap:8px;">
+
+    <!-- Left stat: Time -->
+    <div class="ch-stat" style="flex:1;text-align:center;">
+      <div class="ch-big-timer" id="ch-timer-text" style="font-size:20px;">5:00</div>
+      <div class="ch-stat-label">Time left</div>
+    </div>
+
+    <!-- Centre: SVG ring -->
+    <div style="flex:0 0 auto;position:relative;width:130px;height:130px;">
+      <svg width="130" height="130" viewBox="0 0 130 130" style="transform:rotate(-90deg);">
+        <!-- Track ring -->
+        <circle cx="65" cy="65" r="54" fill="none" stroke="#ede9fb" stroke-width="11"/>
+        <!-- Correct (green, inner) -->
+        <circle id="ch-ring-correct" cx="65" cy="65" r="54" fill="none"
+          stroke="#3B6D11" stroke-width="11"
+          stroke-dasharray="339.3" stroke-dashoffset="339.3"
+          stroke-linecap="round" style="transition:stroke-dashoffset 0.4s ease,stroke 0.3s;"/>
+        <!-- Answered (purple, outer — slightly larger radius so it sits outside) -->
+        <circle id="ch-ring-answered" cx="65" cy="65" r="54" fill="none"
+          stroke="#534AB7" stroke-width="4" opacity="0.35"
+          stroke-dasharray="339.3" stroke-dashoffset="339.3"
+          stroke-linecap="round" style="transition:stroke-dashoffset 0.4s ease;"/>
+      </svg>
+      <!-- Centre labels (not rotated) -->
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+        <div id="ch-ring-label-num" style="font-family:'Nunito',sans-serif;font-size:30px;font-weight:800;color:#26215C;line-height:1;">0</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#534AB7;">/ 100</div>
+        <div id="ch-ring-label-pct" style="font-size:11px;font-weight:700;color:#3B6D11;margin-top:1px;">0%</div>
+      </div>
+    </div>
+
+    <!-- Right stat: Correct -->
+    <div class="ch-stat" style="flex:1;text-align:center;">
+      <div class="ch-stat-num" id="ch-correct-count" style="font-size:20px;">0</div>
+      <div class="ch-stat-label">Correct ✓</div>
+    </div>
+
+  </div>
+
+  <!-- Overall time bar -->
+  <div class="timer-wrap" style="margin-bottom:0.4rem;"><div id="ch-timer-bar" class="timer-bar" style="width:100%"></div></div>
+  <!-- Per-question 5s timer -->
+  <div class="per-q-timer-wrap"><div id="ch-per-q-bar" class="per-q-timer-bar" style="width:100%"></div></div>
+  <div id="ch-repeat-badge" class="repeat-badge" style="display:none;">🔁 Try again — you can do it!</div>
+  <div class="big-question" id="ch-question">2 × 3 = ?</div>
+  <input type="number" id="ch-answer" class="answer-input" placeholder="?" min="0" max="999"/>
+  <div class="feedback" id="ch-feedback"></div>
+  <div style="text-align:center;margin-top:0.75rem;">
+    <button class="btn btn-primary" onclick="submitChallenge()" style="font-size:16px;padding:12px 32px;">Check ✓</button>
+  </div>
+  <div style="text-align:center;margin-top:0.75rem;">
+    <button class="btn" onclick="if(confirm('Quit the challenge?')){clearInterval(chTimer);clearTimeout(chPerQTimeout);showScreen('screen-home');}" style="font-size:13px;padding:6px 14px;color:var(--muted);">✕ Quit</button>
+  </div>
+</div>
+
+<!-- CHALLENGE RESULTS -->
+<div id="screen-challenge-results" class="screen">
+  <div class="ch-trophy">
+    <span class="ch-trophy-icon" id="ch-trophy-icon">🏆</span>
+    <h2 id="ch-results-heading" style="margin-top:0.5rem;">Challenge complete!</h2>
+    <p id="ch-results-sub" style="margin-top:0.3rem;"></p>
+  </div>
+  <div class="challenge-results-grid">
+    <div class="ch-res-card"><div class="ch-res-num" id="chr-answered">—</div><div class="ch-res-label">Answered</div></div>
+    <div class="ch-res-card"><div class="ch-res-num" id="chr-correct">—</div><div class="ch-res-label">Correct</div></div>
+    <div class="ch-res-card"><div class="ch-res-num" id="chr-accuracy">—</div><div class="ch-res-label">Accuracy</div></div>
+  </div>
+  <div class="card" id="chr-repeats-card" style="display:none;">
+    <h3>🔁 Questions that needed repeating</h3>
+    <p style="margin-top:0.3rem;font-size:13px;">These came back because you were wrong or took over 5 seconds. Keep practising them!</p>
+    <div class="repeat-list" id="chr-repeats-list" style="margin-top:0.75rem;"></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:1rem;">
+    <button class="btn btn-amber" onclick="startChallenge()" style="flex:1;">⚡ Try again</button>
+    <button class="btn btn-primary" onclick="showScreen('screen-home')" style="flex:1;">🏠 Home</button>
+  </div>
+</div>
+
+<!-- FREE PRACTICE (for all weak tables after coaching) -->
+<div id="screen-practice" class="screen">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+    <h2 id="practice-title">Focused practice</h2>
+    <button class="btn" onclick="showScreen('screen-results')" style="font-size:13px;padding:6px 14px;">← Results</button>
+  </div>
+  <div id="practice-trick" style="margin-bottom:1rem;"></div>
+  <div class="progress-bar" style="margin-bottom:0.75rem;"><div id="p-progress" class="progress-fill" style="width:0%"></div></div>
+  <div class="big-question" id="p-question">2 × 3 = ?</div>
+  <input type="number" id="p-answer" class="answer-input" placeholder="?" min="0" max="999"/>
+  <div class="feedback" id="p-feedback"></div>
+  <div class="streak-row">Streak: <span class="streak-val" id="p-streak">—</span></div>
+  <div style="text-align:center;margin-top:1rem;">
+    <button class="btn btn-success" onclick="submitPractice()">Check ✓</button>
+  </div>
+  <div class="celebration" id="p-celebration"></div>
+</div>
+
+</div>
+
+<script>
+// ── TRICK DATA ──────────────────────────────────────────────────────────────
+// Each trick has: title, intro, steps[], hint (short inline hint), hintSteps (per-question working)
+const TRICKS = {
+  2: {
+    title: "The Doubling Trick",
+    intro: "The 2× table just means doubling — adding the number to itself!",
+    steps: [
+      { text: "Think of <strong>2× as + itself</strong>. So 2 × 7 = 7 + 7." },
+      { text: "Count in 2s out loud: 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24." },
+      { text: "Anything × 2 always gives an <strong>even number</strong>." }
+    ],
+    hint: "Double the number — add it to itself!",
+    hintWorking: (n) => `2 × ${n} = ${n} + ${n} = ${2*n}`
+  },
+  3: {
+    title: "Count in 3s + Digit Sum Check",
+    intro: "The 3× table has a clever checking trick using digit sums!",
+    steps: [
+      { text: "Learn the sequence: <strong>3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36</strong>" },
+      { text: "The digits of any 3× answer <strong>always add up to 3, 6, or 9</strong>. Try: 3×8=24 → 2+4=6 ✓" },
+      { text: "Use your <strong>2× and add one more group</strong>: 3×7 = (2×7)+7 = 14+7 = 21" }
+    ],
+    hint: "2× then add one more group — or count in 3s!",
+    hintWorking: (n) => `3 × ${n} = (2×${n}) + ${n} = ${2*n} + ${n} = ${3*n}`
+  },
+  4: {
+    title: "The Double-Double Trick",
+    intro: "4× is just doubling twice — easy when you know your 2×!",
+    steps: [
+      { text: "<strong>Step 1:</strong> Double the number once." },
+      { text: "<strong>Step 2:</strong> Double your answer again." },
+      { text: "Example: 4 × 7 → double 7 = 14 → double 14 = <strong>28</strong>" }
+    ],
+    hint: "Double it, then double again!",
+    hintWorking: (n) => `4 × ${n} → double ${n} = ${2*n} → double again = ${4*n}`
+  },
+  5: {
+    title: "The Clock / Half-of-10 Trick",
+    intro: "5× answers always end in 0 or 5 — and there's a super fast shortcut!",
+    steps: [
+      { text: "5× answers <strong>always end in 0 or 5</strong> — if yours doesn't, it's wrong!" },
+      { text: "For <strong>even numbers</strong>: halve it, then put a 0 on the end. 5×8 → 8÷2=4 → <strong>40</strong>" },
+      { text: "For <strong>odd numbers</strong>: subtract 1, halve, then put a 5 on the end. 5×7 → 6÷2=3 → <strong>35</strong>" }
+    ],
+    hint: n => n%2===0 ? `Even number: halve ${n} = ${n/2}, add 0 → ${5*n}` : `Odd: ${n}-1=${n-1}, halve=${Math.floor(n/2)}, add 5 → ${5*n}`,
+    hintWorking: (n) => n%2===0 ? `5 × ${n}: halve ${n} = ${n/2}, add zero → ${5*n}` : `5 × ${n}: (${n}−1)=${n-1}, ÷2=${Math.floor(n/2)}, add 5 → ${5*n}`
+  },
+  6: {
+    title: "5× Plus One More Group",
+    intro: "6× = 5× + the number itself. Use your 5× table as a launching pad!",
+    steps: [
+      { text: "<strong>6× = 5× + the number</strong>. Always." },
+      { text: "Example: 6 × 7 = (5 × 7) + 7 = 35 + 7 = <strong>42</strong>" },
+      { text: "Bonus: 6 × any <strong>even</strong> number ends in that number's last digit. 6×4=24, 6×8=48." }
+    ],
+    hint: "5× then add one more group!",
+    hintWorking: (n) => `6 × ${n} = (5×${n}) + ${n} = ${5*n} + ${n} = ${6*n}`
+  },
+  7: {
+    title: "The 5,6,7,8 Trick + Build from 5×",
+    intro: "7× is everyone's trickiest! Here's how to always work it out fast.",
+    steps: [
+      { text: "<strong>Remember this:</strong> 5, 6, 7, 8 → 56 = 7 × 8! The numbers are in order!" },
+      { text: "Build from 5×: <strong>7× = 5× + 2×</strong>. E.g. 7×6 = (5×6)+(2×6) = 30+12 = <strong>42</strong>" },
+      { text: "Key facts to memorise: 7×7=<strong>49</strong>, 7×8=<strong>56</strong>, 7×9=<strong>63</strong>" }
+    ],
+    hint: "7× = 5× + 2× — use two easy tables!",
+    hintWorking: (n) => `7 × ${n} = (5×${n}) + (2×${n}) = ${5*n} + ${2*n} = ${7*n}`
+  },
+  8: {
+    title: "The Triple-Double (or 10 minus 2×)",
+    intro: "8× = double, double, double! Or think of it as 10× minus 2×.",
+    steps: [
+      { text: "<strong>Method 1 — triple double:</strong> 8×6 → 6→12→24→48" },
+      { text: "<strong>Method 2 — 10 minus 2×:</strong> 8×7 = (10×7) − (2×7) = 70 − 14 = <strong>56</strong>" },
+      { text: "Key fact: <strong>5,6,7,8 → 56 = 7×8</strong>. Use it both ways!" }
+    ],
+    hint: "10× minus 2× is fastest!",
+    hintWorking: (n) => `8 × ${n} = (10×${n}) − (2×${n}) = ${10*n} − ${2*n} = ${8*n}`
+  },
+  9: {
+    title: "The Magic Finger Trick",
+    intro: "9× has the most satisfying trick in all of maths — use your fingers!",
+    steps: [
+      { text: "Hold out <strong>10 fingers</strong>. To do 9 × N: <strong>fold down finger N</strong>." },
+      { text: "Fingers to the <strong>left</strong> of the folded one = <strong>tens</strong>. To the <strong>right</strong> = <strong>ones</strong>." },
+      { text: "E.g. 9×7: fold finger 7 → 6 fingers left, 3 right → <strong>63</strong>. Try it!" }
+    ],
+    hint: "9× = 10× minus the number itself!",
+    hintWorking: (n) => `9 × ${n} = (10×${n}) − ${n} = ${10*n} − ${n} = ${9*n}`
+  },
+  10: {
+    title: "Just Add a Zero!",
+    intro: "10× is the easiest table. Everything builds from 10×.",
+    steps: [
+      { text: "Put a <strong>0</strong> on the end of the number. That's it!" },
+      { text: "10×7 = 70. 10×12 = 120. 10×100 = 1000." },
+      { text: "All other tables relate to 10×. It's the <strong>anchor</strong>!" }
+    ],
+    hint: "Just add a zero on the end!",
+    hintWorking: (n) => `10 × ${n} = ${10*n} (put a 0 after ${n})`
+  },
+  11: {
+    title: "Repeat the Digit (up to 9)",
+    intro: "11× has one of the most satisfying patterns in the whole table!",
+    steps: [
+      { text: "For 11×2 to 11×9: <strong>just repeat the digit!</strong> 11×3=33, 11×7=77, 11×9=99" },
+      { text: "For 11×10: just do 10×11 = 110." },
+      { text: "11×11=121, 11×12=132. Think: 110+11=121, 121+11=132." }
+    ],
+    hint: n => n<=9 ? `Repeat the digit: ${n}${n}` : n===10 ? `110` : n===11 ? `121` : `132`,
+    hintWorking: (n) => n<=9 ? `11 × ${n} = ${n}${n} (repeat the digit!)` : `11 × ${n} = ${11*n} (count on from 11×10=110)`
+  },
+  12: {
+    title: "12 = 10 + 2 Trick",
+    intro: "12× = 10× + 2×. Split it into two tables you already know!",
+    steps: [
+      { text: "<strong>12× = 10× + 2×</strong> every single time." },
+      { text: "12 × 7 = (10×7) + (2×7) = 70 + 14 = <strong>84</strong>" },
+      { text: "12 × 9 = (10×9) + (2×9) = 90 + 18 = <strong>108</strong>" }
+    ],
+    hint: "10× plus 2× of the number!",
+    hintWorking: (n) => `12 × ${n} = (10×${n}) + (2×${n}) = ${10*n} + ${2*n} = ${12*n}`
+  }
+};
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+const ALL_TABLES = [2,3,4,5,6,7,8,9,10,11,12];
+let testQuestions=[], testIndex=0, testResults={}, testTimer=null, testSeconds=300, streak=0;
+let weakTables=[], worstTable=null;
+// coached practice
+let cpQuestions=[], cpIndex=0, cpStreak=0, cpPhase=0; // phase 0=guided(1-5), 1=fading(6-10), 2=solo(11+)
+// free practice
+let practiceQuestions=[], practiceIndex=0, pStreak=0;
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function shuffle(arr){return [...arr].sort(()=>Math.random()-0.5);}
+function updateStreak(id,val){
+  const s=val>=5?'⭐⭐⭐⭐⭐':val>=4?'⭐⭐⭐⭐':val>=3?'⭐⭐⭐':val>=2?'⭐⭐':val>=1?'⭐':'—';
+  document.getElementById(id).textContent=s+(val>0?' ×'+val:'');
+}
+function getHint(table, n) {
+  const t = TRICKS[table];
+  const hw = t.hintWorking;
+  return typeof hw === 'function' ? hw(n) : hw;
+}
+
+// ── TEST ──────────────────────────────────────────────────────────────────
+function generateTestQuestions(){
+  let qs=[];
+  ALL_TABLES.forEach(t=>[2,3,4,5,6,7,8,9,10,11,12].forEach(n=>qs.push({table:t,n,answer:t*n})));
+  return shuffle(qs).slice(0,40);
+}
+
+function startTest(){
+  testQuestions=generateTestQuestions();
+  testIndex=0; testResults={};
+  ALL_TABLES.forEach(t=>{testResults[t]={correct:0,total:0,wrong:0};});
+  streak=0; testSeconds=300;
+  showScreen('screen-test');
+  renderTestQ();
+  startTimer();
+  const inp=document.getElementById('answer-input');
+  inp.focus();
+  inp.onkeydown=e=>{if(e.key==='Enter')submitAnswer();};
+}
+
+function startTimer(){
+  clearInterval(testTimer);
+  testTimer=setInterval(()=>{
+    testSeconds--;
+    const m=Math.floor(testSeconds/60), s=testSeconds%60;
+    document.getElementById('timer-text').textContent=m+':'+String(s).padStart(2,'0');
+    const pct=(testSeconds/300)*100;
+    const bar=document.getElementById('timer-bar');
+    bar.style.width=pct+'%';
+    bar.style.background=testSeconds<60?'#E24B4A':testSeconds<120?'#EF9F27':'#534AB7';
+    if(testSeconds<=0){clearInterval(testTimer);endTest();}
+  },1000);
+}
+
+function renderTestQ(){
+  if(testIndex>=testQuestions.length){endTest();return;}
+  const q=testQuestions[testIndex];
+  document.getElementById('question-text').textContent=q.table+' × '+q.n+' = ?';
+  document.getElementById('q-counter').textContent='Question '+(testIndex+1)+' of '+testQuestions.length;
+  document.getElementById('q-progress').style.width=((testIndex/testQuestions.length)*100)+'%';
+  document.getElementById('answer-input').value='';
+  document.getElementById('feedback').textContent='';
+  document.getElementById('feedback').className='feedback';
+  updateStreak('streak-stars',streak);
+  setTimeout(()=>document.getElementById('answer-input').focus(),50);
+}
+
+function submitAnswer(){
+  const val=parseInt(document.getElementById('answer-input').value);
+  if(isNaN(val))return;
+  const q=testQuestions[testIndex];
+  testResults[q.table].total++;
+  const fb=document.getElementById('feedback');
+  if(val===q.answer){
+    testResults[q.table].correct++; streak++;
+    fb.textContent='✓ Correct!'; fb.className='feedback correct';
+  } else {
+    testResults[q.table].wrong++; streak=0;
+    fb.textContent='✗ It\'s '+q.answer; fb.className='feedback wrong';
+  }
+  updateStreak('streak-stars',streak);
+  testIndex++;
+  setTimeout(renderTestQ,700);
+}
+
+function endTest(){
+  clearInterval(testTimer);
+  showScreen('screen-results');
+  renderResults();
+}
+
+// ── RESULTS ──────────────────────────────────────────────────────────────
+function renderResults(){
+  const total=Object.values(testResults).reduce((a,b)=>a+b.total,0);
+  const correct=Object.values(testResults).reduce((a,b)=>a+b.correct,0);
+  document.getElementById('res-score').textContent=correct+'/'+total;
+  document.getElementById('res-accuracy').textContent=total>0?Math.round((correct/total)*100)+'%':'—';
+
+  weakTables=[];
+  let worstScore=1, worstT=null;
+  const badges=document.getElementById('table-badges');
+  badges.innerHTML='';
+  ALL_TABLES.forEach(t=>{
+    const r=testResults[t];
+    const pct=r.total>0?r.correct/r.total:1;
+    let cls;
+    if(pct>=0.8) cls='chip-good';
+    else if(pct>=0.5){cls='chip-ok'; weakTables.push(t);}
+    else{cls='chip-bad'; weakTables.push(t);}
+    if(pct<worstScore||(pct===worstScore&&r.wrong>(testResults[worstT]||{wrong:0}).wrong)){
+      worstScore=pct; worstT=t;
+    }
+    const span=document.createElement('span');
+    span.className='chip '+cls;
+    span.textContent=t+'×'+(pct>=0.8?' ✓':pct>=0.5?' ~':' ✗');
+    badges.appendChild(span);
+  });
+  worstTable = worstT;
+
+  const ws=document.getElementById('weakness-section');
+  if(weakTables.length===0){
+    ws.innerHTML='<div class="card"><h3>🏆 Amazing!</h3><p style="margin-top:0.4rem;">You nailed all your tables! Keep practising to stay sharp.</p></div>';
+    document.getElementById('coach-btn').textContent='Free practice';
+  } else {
+    // Show the single worst table prominently, then tips for others
+    ws.innerHTML='';
+    if(worstTable) {
+      const trick=TRICKS[worstTable];
+      const div=document.createElement('div');
+      div.className='card';
+      div.style.borderColor='rgba(83,74,183,0.3)';
+      div.innerHTML='<h3 style="color:var(--purple-600);">🎯 Your biggest challenge: '+worstTable+'× table</h3>'
+        +'<p style="margin-top:0.4rem;">We\'ll give you a full coaching session on this one with a memory trick, examples, and guided practice.</p>';
+      ws.appendChild(div);
+    }
+    document.getElementById('coach-btn').textContent='Get coaching on '+worstTable+'× →';
+  }
+}
+
+// ── COACH SCREEN ──────────────────────────────────────────────────────────
+function goToCoach(){
+  if(!worstTable){startFreePractice();return;}
+  buildCoachScreen(worstTable);
+  showScreen('screen-coach');
+}
+
+function buildCoachScreen(t){
+  const trick=TRICKS[t];
+  document.getElementById('coach-badge').textContent=t+'×';
+  document.getElementById('coach-heading').textContent='Let\'s crack the '+t+'× table!';
+  document.getElementById('coach-intro').textContent=trick.intro;
+  document.getElementById('coach-trick-title').textContent='🧠 '+trick.title;
+
+  const stepsEl=document.getElementById('coach-steps');
+  stepsEl.innerHTML='';
+  trick.steps.forEach((s,i)=>{
+    const div=document.createElement('div');
+    div.className='coach-step';
+    div.innerHTML='<div class="coach-step-num">'+(i+1)+'</div><div class="coach-step-text">'+s.text+'</div>';
+    stepsEl.appendChild(div);
+  });
+
+  // Show the full multiplication table for this t, with answers highlighted
+  const vis=document.getElementById('coach-table-visual');
+  let html='<div class="card"><h3>The full '+t+'× table</h3><div class="table-grid" style="margin-top:0.6rem;">';
+  [1,2,3,4,5,6,7,8,9,10,11,12].forEach(n=>{
+    const highlight = (n===7||n===8||n===9) ? ' highlight' : '';
+    html+='<div class="table-cell'+highlight+'">'+t+'×'+n+'='+t*n+'</div>';
+  });
+  html+='</div><p style="font-size:12px;margin-top:0.5rem;">Purple cells are often the trickiest ones to remember.</p></div>';
+  vis.innerHTML=html;
+}
+
+// ── COACHED PRACTICE ──────────────────────────────────────────────────────
+// Phase 0 (q 1-5):  full hint shown
+// Phase 1 (q 6-10): hint fading (reduced opacity, fading label)
+// Phase 2 (q 11+):  hint hidden completely
+
+function startCoachPractice(){
+  const t=worstTable;
+  cpQuestions=[];
+  // Focus entirely on the worst table, all multipliers
+  [2,3,4,5,6,7,8,9,10,11,12].forEach(n=>cpQuestions.push({table:t,n,answer:t*n}));
+  // Repeat set so they get plenty of practice
+  cpQuestions=[...cpQuestions,...cpQuestions.map(q=>({...q}))];
+  cpQuestions=shuffle(cpQuestions);
+  cpIndex=0; cpStreak=0; cpPhase=0;
+  showScreen('screen-cpractice');
+  renderCP();
+  const inp=document.getElementById('cp-answer');
+  inp.focus();
+  inp.onkeydown=e=>{if(e.key==='Enter')submitCP();};
+}
+
+function getPhase(idx){
+  if(idx<5) return 0;   // guided
+  if(idx<10) return 1;  // fading
+  return 2;             // solo
+}
+
+function renderCP(){
+  if(cpIndex>=cpQuestions.length){
+    cpQuestions=shuffle(cpQuestions);
+    cpIndex=10; // stay in solo mode after completion
+  }
+  const q=cpQuestions[cpIndex];
+  cpPhase=getPhase(cpIndex);
+
+  // Phase badge
+  const pBadge=document.getElementById('cp-phase-badge');
+  const counter=document.getElementById('cp-counter');
+  if(cpPhase===0){
+    pBadge.className='phase-badge phase-guided'; pBadge.textContent='💡 Guided';
+    counter.textContent='Question '+(cpIndex+1)+' — hint is here to help!';
+  } else if(cpPhase===1){
+    pBadge.className='phase-badge phase-fading'; pBadge.textContent='🌅 Hint fading…';
+    counter.textContent='Question '+(cpIndex+1)+' — try to remember the trick!';
+  } else {
+    pBadge.className='phase-badge phase-solo'; pBadge.textContent='🚀 Flying solo!';
+    counter.textContent='Question '+(cpIndex+1)+' — you\'ve got this!';
+  }
+
+  document.getElementById('cp-progress').style.width=(Math.min(cpIndex/20,1)*100)+'%';
+  document.getElementById('cp-question').textContent=q.table+' × '+q.n+' = ?';
+  document.getElementById('cp-answer').value='';
+  document.getElementById('cp-feedback').textContent='';
+  document.getElementById('cp-feedback').className='feedback';
+  document.getElementById('cp-celebration').textContent='';
+  updateStreak('cp-streak',cpStreak);
+
+  // Hint box
+  const hintBox=document.getElementById('cp-hint-box');
+  const hintLabel=document.getElementById('cp-hint-label');
+  const hintText=document.getElementById('cp-hint-text');
+  const hintSteps=document.getElementById('cp-hint-steps');
+  const fadingNote=document.getElementById('cp-hint-fading-note');
+  const trick=TRICKS[q.table];
+
+  if(cpPhase===0){
+    hintBox.className='hint-box full';
+    hintLabel.className='hint-label full'; hintLabel.textContent='💡 Hint — use the trick!';
+    const hintStr = typeof trick.hint==='function' ? trick.hint(q.n) : trick.hint;
+    hintText.className='hint-text'; hintText.textContent=hintStr;
+    hintSteps.innerHTML='<div class="hint-step">→ '+getHint(q.table,q.n)+'</div>';
+    fadingNote.style.display='none';
+  } else if(cpPhase===1){
+    hintBox.className='hint-box fading';
+    hintLabel.className='hint-label fading'; hintLabel.textContent='🌅 Hint fading — try to recall it!';
+    const hintStr = typeof trick.hint==='function' ? trick.hint(q.n) : trick.hint;
+    hintText.className='hint-text fading'; hintText.textContent=hintStr;
+    hintSteps.innerHTML='<div class="hint-step fading">→ Can you work it out? '+getHint(q.table,q.n)+'</div>';
+    fadingNote.style.display='block';
+  } else {
+    hintBox.className='hint-box gone';
+  }
+
+  setTimeout(()=>document.getElementById('cp-answer').focus(),50);
+}
+
+function submitCP(){
+  const val=parseInt(document.getElementById('cp-answer').value);
+  if(isNaN(val))return;
+  const q=cpQuestions[cpIndex];
+  const fb=document.getElementById('cp-feedback');
+  const cel=document.getElementById('cp-celebration');
+  if(val===q.answer){
+    cpStreak++;
+    fb.textContent='✓ Correct!'; fb.className='feedback correct';
+    if(cpStreak===10) cel.textContent='🌟 10 in a row! You\'ve really got this!';
+    else if(cpStreak===5) cel.textContent='🔥 5 in a row! Amazing!';
+    else if(cpStreak===3) cel.textContent='✨ 3 in a row — keep going!';
+    else cel.textContent='';
+  } else {
+    cpStreak=0;
+    fb.textContent='✗ It\'s '+q.answer+'.  ('+q.table+' × '+q.n+' = '+q.answer+')';
+    fb.className='feedback wrong';
+    cel.textContent='';
+  }
+  updateStreak('cp-streak',cpStreak);
+  cpIndex++;
+
+  // After 20 questions offer to move on
+  if(cpIndex===20){
+    setTimeout(()=>{
+      const keep=confirm('Amazing work! You\'ve done 20 questions on the '+worstTable+'× table. Want to keep going with all your weak tables?');
+      if(keep) startFreePractice();
+    },1000);
+    return;
+  }
+  setTimeout(renderCP,900);
+}
+
+// ── FREE PRACTICE ─────────────────────────────────────────────────────────
+function startFreePractice(){
+  const tables=weakTables.length>0?weakTables:ALL_TABLES;
+  practiceQuestions=[];
+  tables.forEach(t=>[2,3,4,5,6,7,8,9,10,11,12].forEach(n=>practiceQuestions.push({table:t,n,answer:t*n})));
+  practiceQuestions=shuffle(practiceQuestions);
+  practiceIndex=0; pStreak=0;
+  document.getElementById('practice-title').textContent=weakTables.length>0?'Practising: '+weakTables.map(t=>t+'×').join(', '):'All tables — free practice';
+  const trickDiv=document.getElementById('practice-trick');
+  if(worstTable&&TRICKS[worstTable]){
+    const trick=TRICKS[worstTable];
+    trickDiv.innerHTML='<div class="trick-card"><div class="trick-title">💡 Remember your '+worstTable+'× trick: '+trick.title+'</div><div class="trick-body">'+trick.steps.map(s=>s.text.replace(/<[^>]+>/g,'')).join(' • ')+'</div></div>';
+  } else trickDiv.innerHTML='';
+  showScreen('screen-practice');
+  renderPracticeQ();
+  const inp=document.getElementById('p-answer');
+  inp.focus();
+  inp.onkeydown=e=>{if(e.key==='Enter')submitPractice();};
+}
+
+function renderPracticeQ(){
+  if(practiceIndex>=practiceQuestions.length){practiceQuestions=shuffle(practiceQuestions);practiceIndex=0;}
+  const q=practiceQuestions[practiceIndex];
+  document.getElementById('p-question').textContent=q.table+' × '+q.n+' = ?';
+  document.getElementById('p-progress').style.width=((practiceIndex/practiceQuestions.length)*100)+'%';
+  document.getElementById('p-answer').value='';
+  document.getElementById('p-feedback').textContent='';
+  document.getElementById('p-feedback').className='feedback';
+  document.getElementById('p-celebration').textContent='';
+  updateStreak('p-streak',pStreak);
+  setTimeout(()=>document.getElementById('p-answer').focus(),50);
+}
+
+function submitPractice(){
+  const val=parseInt(document.getElementById('p-answer').value);
+  if(isNaN(val))return;
+  const q=practiceQuestions[practiceIndex];
+  const fb=document.getElementById('p-feedback');
+  const cel=document.getElementById('p-celebration');
+  if(val===q.answer){
+    pStreak++;
+    fb.textContent='✓ Correct!'; fb.className='feedback correct';
+    if(pStreak===10) cel.textContent='🌟 10 in a row! Superstar!';
+    else if(pStreak===5) cel.textContent='🔥 5 in a row! On fire!';
+    else if(pStreak===3) cel.textContent='✨ 3 in a row!';
+    else cel.textContent='';
+  } else {
+    pStreak=0;
+    fb.textContent='✗ It\'s '+q.answer+' ('+q.table+'×'+q.n+'='+q.answer+')';
+    fb.className='feedback wrong';
+    cel.textContent='';
+  }
+  updateStreak('p-streak',pStreak);
+  practiceIndex++;
+  setTimeout(renderPracticeQ,900);
+}
+
+// ── 100 QUESTIONS CHALLENGE ──────────────────────────────────────────────────
+// Rules:
+//   • 100 base questions (all 11×11 combos from 2×2 to 12×12, shuffled, first 100)
+//   • 5 minute overall countdown
+//   • Per-question 5-second timer shown as a thin bar
+//   • If wrong OR time > 5s: mark as needs-repeat, insert a copy 2 positions ahead
+//   • Keep reinserting until answered correctly within 5s
+//   • Track every question that ever triggered a repeat (for results screen)
+
+let chQuestions=[],chIndex=0,chCorrectCount=0,chAnsweredCount=0;
+let chTimer=null,chSeconds=300;
+let chPerQTimer=null,chPerQSeconds=5,chPerQTimeout=null;
+let chPerQStart=0; // timestamp when current question was shown
+let chRepeatedQuestions={}; // key=`table×n`, value=repeat count
+let chAnsweredCorrectlyFast=new Set(); // questions mastered (correct + fast)
+let chDone=false;
+let chQuestionLocked=false; // true between submission and next question rendering
+let chTimeLimit=5; // seconds per question — 5 or 8
+
+function toggleTimeLimit(){
+  chTimeLimit = chTimeLimit===5 ? 8 : 5;
+  const btn=document.getElementById('time-toggle-btn');
+  const l5=document.getElementById('toggle-label-5');
+  const l8=document.getElementById('toggle-label-8');
+  const desc=document.getElementById('desc-secs');
+  if(chTimeLimit===8){
+    btn.classList.add('on');
+    l5.classList.remove('active'); l8.classList.add('active');
+  } else {
+    btn.classList.remove('on');
+    l8.classList.remove('active'); l5.classList.add('active');
+  }
+  if(desc) desc.textContent=chTimeLimit;
+}
+
+function updateChallengeRing(){
+  // Circumference of r=54: 2*PI*54 = 339.29
+  const C=339.29;
+  const answered=chAnsweredCount;
+  const correct=chCorrectCount;
+  // Purple thin ring = fraction of 100 answered
+  const answeredFrac=Math.min(answered/100,1);
+  // Green thick ring = fraction of 100 correct
+  const correctFrac=Math.min(correct/100,1);
+  const ringAnswered=document.getElementById('ch-ring-answered');
+  const ringCorrect=document.getElementById('ch-ring-correct');
+  if(ringAnswered) ringAnswered.style.strokeDashoffset=C-(C*answeredFrac);
+  if(ringCorrect){
+    ringCorrect.style.strokeDashoffset=C-(C*correctFrac);
+    // Colour shifts green→amber→red based on accuracy so far
+    const acc=answered>0?correct/answered:1;
+    ringCorrect.style.stroke=acc>=0.85?'#3B6D11':acc>=0.6?'#BA7517':'#A32D2D';
+  }
+  const labelNum=document.getElementById('ch-ring-label-num');
+  const labelPct=document.getElementById('ch-ring-label-pct');
+  if(labelNum) labelNum.textContent=chAnsweredCount;
+  if(labelPct){
+    const pct=answered>0?Math.round(correct/answered*100):0;
+    labelPct.textContent=pct+'% ✓';
+    labelPct.style.color=pct>=85?'#3B6D11':pct>=60?'#BA7517':'#A32D2D';
+  }
+}
+
+function generateChallengeQuestions(){
+  let qs=[];
+  ALL_TABLES.forEach(t=>[2,3,4,5,6,7,8,9,10,11,12].forEach(n=>qs.push({table:t,n,answer:t*n,isRepeat:false})));
+  return shuffle(qs).slice(0,100);
+}
+
+function startChallenge(){
+  chQuestions=generateChallengeQuestions();
+  chIndex=0; chCorrectCount=0; chAnsweredCount=0; chSeconds=300;
+  chRepeatedQuestions={}; chAnsweredCorrectlyFast=new Set(); chDone=false; chQuestionLocked=false;
+  clearInterval(chTimer);
+  clearTimeout(chPerQTimeout);
+  showScreen('screen-challenge');
+  updateChallengeRing();
+  startChallengeTimer();
+  renderChallengeQ();
+  // Attach Enter key handler once; submitChallenge guards against double-fire
+  const inp=document.getElementById('ch-answer');
+  inp.onkeydown=null; // clear any old handler
+  inp.addEventListener('keydown', function chEnter(e){
+    if(e.key==='Enter'){ e.preventDefault(); submitChallenge(); }
+  });
+}
+
+function startChallengeTimer(){
+  clearInterval(chTimer);
+  chTimer=setInterval(()=>{
+    if(chDone){clearInterval(chTimer);return;}
+    chSeconds--;
+    const m=Math.floor(chSeconds/60), s=chSeconds%60;
+    document.getElementById('ch-timer-text').textContent=m+':'+String(s).padStart(2,'0');
+    const pct=(chSeconds/300)*100;
+    const bar=document.getElementById('ch-timer-bar');
+    bar.style.width=pct+'%';
+    bar.style.background=chSeconds<60?'#E24B4A':chSeconds<120?'#EF9F27':'#534AB7';
+    if(chSeconds<=0){endChallenge('time');}
+  },1000);
+}
+
+function startPerQTimer(){
+  clearTimeout(chPerQTimeout);
+  chPerQStart=Date.now();
+  const bar=document.getElementById('ch-per-q-bar');
+  bar.style.transition='none';
+  bar.style.width='100%';
+  bar.style.background='#3B6D11';
+  bar.offsetWidth;
+  bar.style.transition=`width ${chTimeLimit}s linear, background ${chTimeLimit*0.4}s linear`;
+  bar.style.width='0%';
+  bar.style.background='#E24B4A';
+  chPerQTimeout=setTimeout(()=>{
+    if(chDone)return;
+    handleChallengeResult(null, true);
+  }, chTimeLimit*1000);
+}
+
+function renderChallengeQ(){
+  if(chIndex>=chQuestions.length||chDone){endChallenge('done');return;}
+  chQuestionLocked=false;
+  const q=chQuestions[chIndex];
+  document.getElementById('ch-question').textContent=q.table+' × '+q.n+' = ?';
+  const inp=document.getElementById('ch-answer');
+  inp.value='';
+  inp.focus();
+  document.getElementById('ch-feedback').textContent='';
+  document.getElementById('ch-feedback').className='feedback';
+  document.getElementById('ch-repeat-badge').style.display=q.isRepeat?'inline-block':'none';
+  startPerQTimer();
+}
+
+function submitChallenge(){
+  if(chDone||chQuestionLocked)return;
+  const val=parseInt(document.getElementById('ch-answer').value);
+  if(isNaN(val))return;
+  const elapsed=(Date.now()-chPerQStart)/1000;
+  const isCorrect=(val===chQuestions[chIndex].answer);
+  const isFast=(elapsed<=chTimeLimit);
+  handleChallengeResult(val, false, isCorrect, isFast);
+}
+
+function handleChallengeResult(val, timedOut, isCorrect, isFast){
+  clearTimeout(chPerQTimeout);
+  if(chDone||chQuestionLocked)return;
+  chQuestionLocked=true;
+  const q=chQuestions[chIndex];
+  const fb=document.getElementById('ch-feedback');
+  chAnsweredCount++;
+
+  // Reset bar visually
+  const bar=document.getElementById('ch-per-q-bar');
+  bar.style.transition='none';
+  bar.style.width='100%';
+
+  const needsRepeat = timedOut || !isCorrect || !isFast;
+
+  if(timedOut){
+    fb.textContent='⏱ Too slow! '+q.table+' × '+q.n+' = '+q.answer; fb.className='feedback wrong';
+  } else if(!isCorrect){
+    fb.textContent='✗ It\'s '+q.answer+'.  ('+q.table+' × '+q.n+' = '+q.answer+')'; fb.className='feedback wrong';
+  } else if(!isFast){
+    fb.textContent='✓ Correct — but a bit slow! Aim for under 5s 🚀'; fb.className='feedback wrong';
+    chCorrectCount++;
+  } else {
+    fb.textContent='✓ Correct!'; fb.className='feedback correct';
+    chCorrectCount++;
+  }
+
+  document.getElementById('ch-correct-count').textContent=chCorrectCount;
+  updateChallengeRing();
+
+  if(needsRepeat){
+    // Record this question as needing repeating
+    const key=q.table+'×'+q.n;
+    chRepeatedQuestions[key]=(chRepeatedQuestions[key]||0)+1;
+    // Insert a repeat copy 2 positions ahead (after current index+1, so at chIndex+2)
+    const repeatQ={table:q.table,n:q.n,answer:q.answer,isRepeat:true};
+    const insertAt=Math.min(chIndex+2, chQuestions.length);
+    chQuestions.splice(insertAt,0,repeatQ);
+  } else {
+    // Mark as mastered
+    chAnsweredCorrectlyFast.add(q.table+'×'+q.n);
+  }
+
+  chIndex++;
+  setTimeout(()=>{
+    if(chIndex>=chQuestions.length){endChallenge('done');return;}
+    renderChallengeQ();
+  },750);
+}
+
+function endChallenge(reason){
+  if(chDone)return;
+  chDone=true;
+  clearInterval(chTimer);
+  clearTimeout(chPerQTimeout);
+  showScreen('screen-challenge-results');
+
+  // Trophy and heading
+  const acc=chAnsweredCount>0?Math.round((chCorrectCount/chAnsweredCount)*100):0;
+  const icon=document.getElementById('ch-trophy-icon');
+  const heading=document.getElementById('ch-results-heading');
+  const sub=document.getElementById('ch-results-sub');
+  if(reason==='time'){
+    heading.textContent='Time\'s up! Great effort!';
+    icon.textContent=acc>=80?'🏅':'💪';
+    sub.textContent='You answered '+chAnsweredCount+' questions in 5 minutes.';
+  } else {
+    heading.textContent='Challenge complete! 🎉';
+    icon.textContent=acc===100?'🏆':acc>=90?'🥇':acc>=75?'🥈':'🥉';
+    sub.textContent=acc===100?'Perfect score — you\'re a maths superstar!':acc>=90?'Fantastic work! Almost perfect!':acc>=75?'Great job — keep practising the tricky ones!':'Nice effort! Keep going and you\'ll crack them all!';
+  }
+
+  document.getElementById('chr-answered').textContent=chAnsweredCount;
+  document.getElementById('chr-correct').textContent=chCorrectCount;
+  document.getElementById('chr-accuracy').textContent=acc+'%';
+
+  // Show repeated questions breakdown
+  const repeatKeys=Object.keys(chRepeatedQuestions);
+  const repeatsCard=document.getElementById('chr-repeats-card');
+  const repeatsList=document.getElementById('chr-repeats-list');
+  if(repeatKeys.length>0){
+    repeatsCard.style.display='block';
+    // Sort by most repeated first
+    repeatKeys.sort((a,b)=>chRepeatedQuestions[b]-chRepeatedQuestions[a]);
+    repeatsList.innerHTML='';
+    repeatKeys.forEach(key=>{
+      const count=chRepeatedQuestions[key];
+      const mastered=chAnsweredCorrectlyFast.has(key);
+      const div=document.createElement('div');
+      div.className='repeat-item';
+      div.innerHTML='<span style="font-weight:700;font-family:\'Nunito\',sans-serif;">'+key+'</span>'
+        +'<span style="display:flex;align-items:center;gap:8px;">'
+        +'<span style="font-size:12px;color:var(--muted);">repeated '+count+'×</span>'
+        +(mastered?'<span style="color:var(--green-600);font-weight:700;font-size:13px;">✓ mastered</span>':'<span style="color:var(--amber-600);font-weight:700;font-size:13px;">keep practising</span>')
+        +'</span>';
+      repeatsList.appendChild(div);
+    });
+  } else {
+    repeatsCard.style.display='none';
+  }
+}
+</script>
+</body>
+</html>
