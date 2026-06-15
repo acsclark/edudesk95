@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Falling Letters Anagram Game - V4</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #0f0;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #controls {
+            padding: 15px 20px;
+            background-color: #111;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            z-index: 10;
+            border-bottom: 2px solid #333;
+        }
+        input[type="password"], input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            background: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            outline: none;
+            width: 180px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+            transition: background 0.2s, color 0.2s, transform 0.1s;
+        }
+        button:hover {
+            background: #0f0;
+            color: #000;
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #222;
+            padding: 8px 15px;
+            border-radius: 5px;
+            border: 1px solid #444;
+        }
+        .control-group label {
+            font-weight: bold;
+            color: #fff;
+            font-size: 14px;
+        }
+        input[type="range"] {
+            cursor: pointer;
+            width: 100px;
+        }
+        #letterCountDisplay {
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            background: #003300;
+            padding: 8px 15px;
+            border-radius: 5px;
+            border: 1px solid #0f0;
+        }
+        #game-area {
+            position: relative;
+            flex-grow: 1;
+            width: 100%;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        #reveal-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.95);
+            font-size: 8vw;
+            font-weight: bold;
+            letter-spacing: 15px;
+            text-shadow: 0 0 20px #0f0;
+            text-transform: uppercase;
+            color: #fff;
+        }
+        #instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #555;
+            text-align: center;
+            font-size: 20px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <input type="password" id="wordInput" placeholder="Secret word..." autocomplete="off" />
+        <button id="startBtn">Start Rain</button>
+        <button id="revealBtn">Reveal</button>
+        
+        <div class="control-group">
+            <label for="speedSlider">Speed</label>
+            <input type="range" id="speedSlider" min="0.2" max="4" step="0.2" value="1.5" title="Adjust falling speed" />
+        </div>
+
+        <div class="control-group">
+            <label for="sizeSlider">Size</label>
+            <!-- Original size was 56. Min is half (28), Max is double (112) -->
+            <input type="range" id="sizeSlider" min="28" max="112" step="2" value="56" title="Adjust font size" />
+        </div>
+        
+        <div id="letterCountDisplay">Letters: 0</div>
+    </div>
+    
+    <div id="game-area">
+        <div id="instructions">Enter a word above and click "Start Rain"</div>
+        <canvas id="matrixCanvas"></canvas>
+        <div id="reveal-area"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const revealBtn = document.getElementById('revealBtn');
+        const wordInput = document.getElementById('wordInput');
+        const revealArea = document.getElementById('reveal-area');
+        const instructions = document.getElementById('instructions');
+        const speedSlider = document.getElementById('speedSlider');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const letterCountDisplay = document.getElementById('letterCountDisplay');
+
+        let animationId;
+        let activeLetters = [];
+        let originalWord = "";
+        
+        const fonts = ['monospace', 'sans-serif', 'serif', 'Impact', 'Courier New', 'Arial', 'Georgia', 'Verdana'];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - document.getElementById('controls').offsetHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function draw() {
+            // Clear canvas completely each frame
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const currentSpeedMultiplier = parseFloat(speedSlider.value);
+            const currentFontSize = parseInt(sizeSlider.value);
+            
+            // Calculate available columns based on current font size
+            const currentColumns = Math.max(1, Math.floor(canvas.width / currentFontSize));
+            const trailLength = 12;
+
+            activeLetters.forEach(drop => {
+                // Ensure the column is still valid if font size increased
+                let safeCol = drop.col % currentColumns;
+                let currentX = (safeCol * currentFontSize) + (currentFontSize / 2);
+
+                for (let i = 0; i < trailLength; i++) {
+                    let yPos = drop.y - (i * (currentFontSize * 0.85));
+                    
+                    if (yPos < -currentFontSize || yPos > canvas.height + currentFontSize) continue;
+
+                    let isUpper = Math.random() > 0.5;
+                    let displayChar = isUpper ? drop.char.toUpperCase() : drop.char.toLowerCase();
+                    let randomFont = fonts[Math.floor(Math.random() * fonts.length)];
+                    let weight = Math.random() > 0.7 ? 'bold ' : '';
+                    let style = Math.random() > 0.8 ? 'italic ' : '';
+
+                    ctx.font = style + weight + currentFontSize + 'px ' + randomFont;
+
+                    if (i === 0) {
+                        ctx.fillStyle = '#FFF'; 
+                    } else {
+                        let opacity = 1 - (i / trailLength);
+                        ctx.fillStyle = `rgba(0, 255, 0, ${opacity})`;
+                    }
+                    
+                    ctx.textAlign = "center";
+                    ctx.fillText(displayChar, currentX, yPos);
+                }
+
+                drop.y += drop.baseSpeed * currentSpeedMultiplier;
+
+                // Reset to top when off screen
+                if (drop.y - (trailLength * currentFontSize) > canvas.height) {
+                    drop.y = Math.random() * -300 - 50;
+                    // Assign a new random column when restarting the drop
+                    drop.col = Math.floor(Math.random() * currentColumns);
+                }
+            });
+            
+            animationId = requestAnimationFrame(draw);
+        }
+
+        startBtn.addEventListener('click', () => {
+            originalWord = wordInput.value.trim();
+            if (!originalWord) {
+                alert("Please enter a secret word first!");
+                return;
+            }
+
+            const cleanedWord = originalWord.replace(/\s+/g, '').toUpperCase();
+            if (!cleanedWord) return;
+            
+            letterCountDisplay.textContent = `Letters: ${cleanedWord.length}`;
+
+            let letters = cleanedWord.split('');
+            for (let i = letters.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [letters[i], letters[j]] = [letters[j], letters[i]];
+            }
+
+            const currentFontSize = parseInt(sizeSlider.value);
+            let columns = Math.max(1, Math.floor(canvas.width / currentFontSize));
+            let availableColumns = Array.from({length: columns}, (_, i) => i);
+            
+            for (let i = availableColumns.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [availableColumns[i], availableColumns[j]] = [availableColumns[j], availableColumns[i]];
+            }
+
+            activeLetters = letters.map((char, index) => {
+                let col = availableColumns[index % availableColumns.length]; 
+                return {
+                    char: char,
+                    col: col, // Store column index instead of fixed X coordinate
+                    y: Math.random() * -canvas.height * 1.5,
+                    baseSpeed: (Math.random() * 1.5 + 1.0)
+                };
+            });
+
+            instructions.style.display = 'none';
+            revealArea.style.display = 'none';
+            
+            if (animationId) cancelAnimationFrame(animationId);
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            draw();
+        });
+
+        revealBtn.addEventListener('click', () => {
+            if (!originalWord) return;
+            if (animationId) cancelAnimationFrame(animationId);
+            revealArea.textContent = originalWord;
+            revealArea.style.display = 'flex';
+        });
+        
+        wordInput.addEventListener('dblclick', () => {
+            wordInput.type = wordInput.type === 'password' ? 'text' : 'password';
+        });
+    </script>
+</body>
+</html>
