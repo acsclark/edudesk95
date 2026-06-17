@@ -220,7 +220,7 @@
         }
 
         // --- Game Logic ---
-        const WORDS = ["APPLE", "BEACH", "CHAIR", "DANCE", "EAGLE", "FROST", "GRAPE", "HOUSE", "IGLOO", "JUICE"];
+        const WORDS = ["APPLE", "BEACH", "CHAIR", "DANCE", "EAGLE", "FROST", "GRAPE", "HOUSE", "IGLOO", "JUICE", "PAPER"];
         let secretWord = WORDS[Math.floor(Math.random() * WORDS.length)];
         let currentRow = 0;
         let currentTile = 0;
@@ -264,7 +264,11 @@
             });
         }
 
-        function showMessage(msg) { messageDisplay.textContent = msg; messageDisplay.classList.add("show"); setTimeout(() => messageDisplay.classList.remove("show"), 2000); }
+        function showMessage(msg) { 
+            messageDisplay.textContent = msg; 
+            messageDisplay.classList.add("show"); 
+            setTimeout(() => messageDisplay.classList.remove("show"), 2500); 
+        }
 
         function handleKeyPress(key) {
             if (isGameOver) return;
@@ -290,19 +294,68 @@
 
         function checkGuess() {
             let guess = "";
-            for (let i = 0; i < 5; i++) guess += document.getElementById(`tile-${currentRow}-${i}`).textContent;
-            
+            let rowTiles = [];
             for (let i = 0; i < 5; i++) {
                 let tile = document.getElementById(`tile-${currentRow}-${i}`);
-                if (guess[i] === secretWord[i]) tile.classList.add("correct");
-                else if (secretWord.includes(guess[i])) tile.classList.add("present");
-                else tile.classList.add("absent");
+                guess += tile.textContent;
+                rowTiles.push(tile);
             }
-            if (guess === secretWord) { showMessage("YOU WIN!"); endGame(); }
-            else { currentRow++; currentTile = 0; if (currentRow === 6) { showMessage("GAME OVER!"); endGame(); } }
+
+            let secretArray = secretWord.split("");
+            let guessArray = guess.split("");
+            let tileClasses = Array(5).fill("absent");
+
+            // Pass 1: Find exact matches (correct/teal)
+            for (let i = 0; i < 5; i++) {
+                if (guessArray[i] === secretArray[i]) {
+                    tileClasses[i] = "correct";
+                    secretArray[i] = null; // Consume the letter in secret word
+                    guessArray[i] = null;  // Prevent second pass from checking this
+                }
+            }
+
+            // Pass 2: Find present matches (orange)
+            for (let i = 0; i < 5; i++) {
+                if (guessArray[i] !== null && secretArray.includes(guessArray[i])) {
+                    tileClasses[i] = "present";
+                    // Consume the letter so duplicate letters in guess aren't both marked orange
+                    secretArray[secretArray.indexOf(guessArray[i])] = null; 
+                }
+            }
+
+            // Apply classes to tiles and keyboard
+            for (let i = 0; i < 5; i++) {
+                rowTiles[i].classList.add(tileClasses[i]);
+                updateKeyboardColor(guess[i], tileClasses[i]);
+            }
+
+            if (guess === secretWord) { 
+                showMessage("YOU WIN!"); 
+                endGame(); 
+            } else { 
+                currentRow++; 
+                currentTile = 0; 
+                if (currentRow === 6) { 
+                    showMessage("GAME OVER! Word was " + secretWord); 
+                    endGame(); 
+                } 
+            }
+        }
+
+        function updateKeyboardColor(letter, colorClass) {
+            let keyBtn = document.getElementById(`key-${letter}`);
+            if (!keyBtn) return;
+            // Don't downgrade a correct key to present/absent
+            if (keyBtn.classList.contains("correct")) return;
+            // Don't downgrade a present key to absent
+            if (keyBtn.classList.contains("present") && colorClass === "absent") return;
+            
+            keyBtn.classList.remove("present", "absent", "correct");
+            keyBtn.classList.add(colorClass);
         }
 
         function endGame() { isGameOver = true; playAgainBtn.style.display = 'block'; }
+        
         function resetGame() {
             isGameOver = false; currentRow = 0; currentTile = 0;
             secretWord = WORDS[Math.floor(Math.random() * WORDS.length)];
@@ -313,18 +366,11 @@
 
         // --- Physical Keyboard Support ---
         document.addEventListener("keydown", (e) => {
-            // Ignore if using modifier keys (like Ctrl+R to refresh)
             if (e.ctrlKey || e.altKey || e.metaKey) return;
-
             let key = e.key.toUpperCase();
-            
-            if (key === 'ENTER') {
-                handleKeyPress('ENTER');
-            } else if (key === 'BACKSPACE') {
-                handleKeyPress('⌫');
-            } else if (/^[A-Z]$/.test(key)) { // Only accept letters A-Z
-                handleKeyPress(key);
-            }
+            if (key === 'ENTER') handleKeyPress('ENTER');
+            else if (key === 'BACKSPACE') handleKeyPress('⌫');
+            else if (/^[A-Z]$/.test(key)) handleKeyPress(key);
         });
 
         initBoard(); initKeyboard();
