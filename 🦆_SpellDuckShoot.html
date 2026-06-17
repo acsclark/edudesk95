@@ -7,7 +7,6 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@600&family=Share+Tech+Mono&display=swap');
 
-        /* Added 100vw and overflow: hidden to prevent iframe scrolling/black screen issues */
         body {
             margin: 0;
             padding: 0;
@@ -19,21 +18,19 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
-            width: 100vw;
+            width: 100vw; /* FIXED: Added to constrain within iframe */
             user-select: none;
-            overflow: hidden; 
+            overflow: hidden;
         }
 
-        /* Added transform-origin for auto-scaling */
         #game-wrapper {
             position: relative;
             box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
             border-radius: 10px;
             overflow: hidden;
             border: 2px solid #0ff;
-            width: 950px;
-            transform-origin: center center;
-            background-color: #020205;
+            width: 950px; /* FIXED: Explicit width for scaling */
+            transform-origin: center center; /* FIXED: Keeps scaling centered */
         }
 
         /* Futuristic Header */
@@ -133,19 +130,9 @@
             padding: 8px 30px;
             border-bottom: 2px solid #0ff;
         }
-        
-        #stage-indicator { font-size: 18px; color: #0ff; font-family: 'Orbitron', sans-serif; display: flex; align-items: center; gap: 15px; }
+        #stage-indicator { font-size: 18px; color: #0ff; font-family: 'Orbitron', sans-serif; }
         #spelled-tracker { font-size: 36px; letter-spacing: 12px; font-family: 'Orbitron', monospace; text-shadow: 0 0 10px #fff; }
         #modifier-tag { font-size: 14px; color: #000; background: #0ff; padding: 2px 10px; border-radius: 2px; font-weight: bold; box-shadow: 0 0 8px #0ff;}
-
-        /* Exit Button */
-        #exit-btn {
-            background: rgba(255, 0, 85, 0.1); color: #ff0055; border: 1px solid #ff0055;
-            padding: 3px 10px; font-family: 'Orbitron'; font-size: 12px; font-weight: bold;
-            cursor: pointer; border-radius: 3px; transition: 0.2s;
-        }
-        #exit-btn:hover { background: #ff0055; color: #000; box-shadow: 0 0 10px #ff0055; }
-        #exit-btn.hidden { display: none; }
 
         /* Cyberpunk Grid Background */
         #booth {
@@ -159,8 +146,6 @@
             position: relative;
             cursor: none;
             overflow: hidden;
-            /* Prevents long-press text selection on iOS */
-            -webkit-touch-callout: none;
         }
 
         /* Neon Shelves */
@@ -181,9 +166,9 @@
         .duck {
             position: absolute;
             bottom: 10px;
-            width: 110px;
-            height: 110px;
-            font-size: 95px;
+            width: 95px;
+            height: 95px;
+            font-size: 85px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -205,22 +190,22 @@
             color: #0ff;
             border: 2px solid #0ff;
             border-radius: 50%;
-            width: 42px;
-            height: 42px;
-            font-size: 24px;
+            width: 36px;
+            height: 36px;
+            font-size: 26px;
             font-weight: bold;
             display: flex;
             justify-content: center;
             align-items: center;
-            top: 30px;
-            left: 20px;
+            top: 25px;
+            left: 15px;
             font-family: 'Share Tech Mono', monospace; 
             pointer-events: none;
             box-shadow: inset 0 0 5px #0ff;
         }
 
         .duck-letter.small-text {
-            font-size: 15px;
+            font-size: 16px;
             letter-spacing: -1px;
         }
 
@@ -370,7 +355,7 @@
         </div>
 
         <div id="tracker-bar">
-            <div id="stage-indicator">STAGE 1/5 <button id="exit-btn" class="hidden" onclick="abortGame()">ABORT</button></div>
+            <div id="stage-indicator">STAGE 1/5</div>
             <div id="spelled-tracker">INITIALIZE</div>
             <div id="modifier-tag">STANDBY</div>
         </div>
@@ -384,16 +369,7 @@
             <div id="flash"></div>
             <div id="danger-light"></div>
 
-            <div id="mode-selection-screen" class="overlay">
-                <h1>SELECT PROTOCOL</h1>
-                <p>Choose your training module to begin.</p>
-                <div class="grid-container" style="display: flex; justify-content: center; gap: 20px;">
-                    <button class="level-btn" style="padding: 15px 30px;" onclick="showSpellingMenu()">SPELLING DRILL</button>
-                    <button class="level-btn" style="padding: 15px 30px;" onclick="startMathChallenge()">MATH (X12) PROTOCOL</button>
-                </div>
-            </div>
-
-            <div id="start-screen" class="overlay hidden">
+            <div id="start-screen" class="overlay">
                 <h1>CYBER-DUCK PROTOCOL</h1>
                 <p>Survive the 5-stage holographic gauntlet.<br><strong style="color:#ff00ff; text-shadow:0 0 8px #ff00ff;">DO NOT TOUCH PINK DECOY TARGETS STARTING AT STAGE 4!</strong></p>
                 
@@ -418,12 +394,6 @@
                 </div>
             </div>
 
-            <div id="pause-screen" class="overlay hidden">
-                <h1 style="color:#0ff; text-shadow: 0 0 15px #0ff; margin-bottom: 10px;">SYSTEM PAUSED</h1>
-                <p style="color:#fff; font-size: 24px;">AWAITING OPERATOR INPUT</p>
-                <p style="font-size: 16px; color: #aaa; margin-top: 20px;">(Touch screen to resume)</p>
-            </div>
-
             <div id="intermission-screen" class="overlay hidden">
                 <h1 style="color:#0f0; text-shadow: 0 0 15px #0f0;">TARGET SECURED</h1>
                 <p id="intermission-msg"></p>
@@ -439,17 +409,14 @@
     </div>
 
     <script>
-        // Global scale variable to fix the offset mapping
-        window.gameScale = 1;
-
-        // --- Auto-Scaling Logic for Iframe ---
+        // --- FIXED: Auto-Scaling Logic for Iframe ---
         function resizeGame() {
             const wrapper = document.getElementById('game-wrapper');
             let scaleX = window.innerWidth / 960;
-            let scaleY = window.innerHeight / 650;
-            window.gameScale = Math.min(scaleX, scaleY);
-            if (window.gameScale > 1) window.gameScale = 1;
-            wrapper.style.transform = `scale(${window.gameScale})`;
+            let scaleY = window.innerHeight / 680;
+            let scale = Math.min(scaleX, scaleY);
+            if (scale > 1) scale = 1;
+            wrapper.style.transform = `scale(${scale})`;
         }
         window.addEventListener('resize', resizeGame);
         resizeGame();
@@ -463,11 +430,9 @@
             8: ["ACCOMMODATE", "BUSINESS", "CONSCIENCE", "DEFINITELY", "ENVIRONMENT", "GUARANTEE", "PARLIAMENT", "PHYSIQUE", "RESTAURANT", "VEHICLE"]
         };
 
-        let gameMode = "SPELLING"; 
+        let gameMode = "SPELLING"; // Keep standard
         let selectedLevelName = "YR 4";
         let challengeWords = [];
-        let mathEquationText = "";
-        let mathSolvedCount = 0;
         let currentWordIndex = 0;
         
         let targetWord = "";
@@ -476,10 +441,6 @@
         let ammoRemaining = 0;
         let isPlaying = false;
         
-        // Touch Variables
-        let lastTouchEndTime = 0;
-        let touchPauseTimeout = null;
-        let isPausedForTouch = false;
         let mouseX = -1000;
         let mouseY = -1000;
         
@@ -499,26 +460,28 @@
         const stageIndicator = document.getElementById('stage-indicator');
         const modifierTag = document.getElementById('modifier-tag');
         const revealBtn = document.getElementById('reveal-btn');
-        const exitBtn = document.getElementById('exit-btn');
         
-        const modeScreen = document.getElementById('mode-selection-screen');
         const startScreen = document.getElementById('start-screen');
         const intermissionScreen = document.getElementById('intermission-screen');
         const intermissionMsg = document.getElementById('intermission-msg');
         const gameOverScreen = document.getElementById('game-over-screen');
         const endTitle = document.getElementById('end-title');
         const endMessage = document.getElementById('end-message');
-        const pauseScreen = document.getElementById('pause-screen');
 
-        // Crosshair Mapping (Mouse)
+        // Crosshair Mapping
         booth.addEventListener('mousemove', (e) => {
-            if (!isPlaying || isPausedForTouch) return;
+            if (!isPlaying) { crosshair.style.display = 'none'; return; }
             crosshair.style.display = 'block';
             const rect = booth.getBoundingClientRect();
             
-            // Adjusted scaling logic for perfect mouse tracking
-            crosshair.style.left = `${(e.clientX - rect.left) / window.gameScale}px`;
-            crosshair.style.top = `${(e.clientY - rect.top) / window.gameScale}px`;
+            // Adjust tracking logic for iframes so it scales properly
+            let currentScale = window.innerWidth / 960;
+            let currentScaleY = window.innerHeight / 680;
+            let scaleToUse = Math.min(currentScale, currentScaleY);
+            if (scaleToUse > 1) scaleToUse = 1;
+
+            crosshair.style.left = `${(e.clientX - rect.left) / scaleToUse}px`;
+            crosshair.style.top = `${(e.clientY - rect.top) / scaleToUse}px`;
             mouseX = e.clientX; mouseY = e.clientY;
         });
 
@@ -527,127 +490,23 @@
             mouseX = -1000; mouseY = -1000;
         });
 
-        // --- IPAD / TOUCHSCREEN CONTROLS ---
-        booth.addEventListener('touchstart', (e) => {
-            if (!isPlaying) return;
-            e.preventDefault(); 
-
-            if (isPausedForTouch) {
-                isPausedForTouch = false;
-                pauseScreen.classList.add('hidden');
-                lastTouchEndTime = 0; 
-                return;
-            }
-
-            const touch = e.touches[0];
-            const now = Date.now();
-            clearTimeout(touchPauseTimeout);
-
-            if (lastTouchEndTime > 0 && (now - lastTouchEndTime) <= 1000) {
-                // --- FIRE AT EXACT CROSSHAIR POSITION ---
-                // Get absolute screen coordinates of the visual crosshair
-                const cr = crosshair.getBoundingClientRect();
-                const targetX = cr.left + (cr.width / 2);
-                const targetY = cr.top + (cr.height / 2);
-
-                // Briefly hide crosshair so elementFromPoint doesn't click the crosshair itself
-                crosshair.style.display = 'none';
-                
-                const hitElement = document.elementFromPoint(targetX, targetY);
-                const hitDuck = hitElement ? hitElement.closest('.duck') : null;
-                fireAtTarget(hitDuck);
-                
-                lastTouchEndTime = 0; // Reset
-            } else {
-                // --- START DRAGGING TO AIM ---
-                const rect = booth.getBoundingClientRect();
-                
-                // Intentional offset so finger doesn't block the visual crosshair
-                const offsetX = -20 * window.gameScale; // Shift left
-                const offsetY = -40 * window.gameScale; // Shift up
-
-                crosshair.style.display = 'block';
-                crosshair.style.left = `${(touch.clientX + offsetX - rect.left) / window.gameScale}px`;
-                crosshair.style.top = `${(touch.clientY + offsetY - rect.top) / window.gameScale}px`;
-                
-                // Sync the decoy collision tracker to the crosshair's center, not the physical finger
-                const cr = crosshair.getBoundingClientRect();
-                mouseX = cr.left + (cr.width / 2);
-                mouseY = cr.top + (cr.height / 2);
-
-                lastTouchEndTime = 0; 
-            }
-        }, {passive: false});
-
-        booth.addEventListener('touchmove', (e) => {
-            if (!isPlaying || isPausedForTouch || lastTouchEndTime > 0) return;
-            e.preventDefault();
-            
-            const touch = e.touches[0];
-            const rect = booth.getBoundingClientRect();
-            
-            // Maintain offset
-            const offsetX = -20 * window.gameScale;
-            const offsetY = -40 * window.gameScale;
-            
-            crosshair.style.display = 'block';
-            crosshair.style.left = `${(touch.clientX + offsetX - rect.left) / window.gameScale}px`;
-            crosshair.style.top = `${(touch.clientY + offsetY - rect.top) / window.gameScale}px`;
-            
-            const cr = crosshair.getBoundingClientRect();
-            mouseX = cr.left + (cr.width / 2);
-            mouseY = cr.top + (cr.height / 2);
-            
-        }, {passive: false});
-
-        booth.addEventListener('touchend', (e) => {
-            if (!isPlaying) return;
-            e.preventDefault();
-            
-            if (lastTouchEndTime === 0) {
-                // Just finished dragging. Leave crosshair visible exactly where they left it.
-                lastTouchEndTime = Date.now();
-            }
-
-            // Move collision tracker off screen so they don't accidentally hover a decoy while lifting finger
-            mouseX = -1000;
-            mouseY = -1000;
-
-            // If no touch for 2 seconds, enter pause state
-            clearTimeout(touchPauseTimeout);
-            touchPauseTimeout = setTimeout(() => {
-                if (isPlaying && !isPausedForTouch) {
-                    isPausedForTouch = true;
-                    pauseScreen.classList.remove('hidden');
-                    crosshair.style.display = 'none';
-                }
-            }, 2000);
-        }, {passive: false});
-
-
-        // Scan Target Mechanic
+        // Scan Target Mechanic (Costs 1 Ammo, Shows for 1 Second)
         revealBtn.addEventListener('click', () => {
-            if (!isPlaying || isPausedForTouch || ammoRemaining <= 0) return;
+            if (!isPlaying || ammoRemaining <= 0) return;
+            
             ammoRemaining--;
             updateUI();
+            
+            // Show word
             targetWordDisplay.innerText = targetWord;
-            setTimeout(() => { if (isPlaying && !isPausedForTouch) targetWordDisplay.innerText = "*****"; }, 1000);
+            
+            // Hide after 1 second
+            setTimeout(() => {
+                if (isPlaying) targetWordDisplay.innerText = "*****";
+            }, 1000);
         });
 
         // --- Menu Routing ---
-        function showSpellingMenu() {
-            gameMode = "SPELLING";
-            modeScreen.classList.add('hidden');
-            startScreen.classList.remove('hidden');
-        }
-
-        function startMathChallenge() {
-            gameMode = "MATH";
-            selectedLevelName = "MULTIPLICATION X12";
-            modeScreen.classList.add('hidden');
-            beginSequence();
-        }
-
         function startSpellingChallenge(year) {
             selectedLevelName = `YEAR ${year}`;
             let poolCopy = [...spellingLevels[year]];
@@ -681,75 +540,22 @@
             setupStage();
         }
 
-        // --- Math Generation ---
-        function generateMathQuestion() {
-            let min = 1, max = 9;
-            if (currentWordIndex >= 2) max = 12; // Stage 3, 4, 5 introduce x12
-            if (currentWordIndex >= 3) min = 3;  // Stage 4, 5 remove simple x1, x2
-            
-            let a = Math.floor(Math.random() * (max - min + 1)) + min;
-            let b = Math.floor(Math.random() * (max - min + 1)) + min;
-            targetWord = (a * b).toString();
-            mathEquationText = `SOLVE: ${a} × ${b}`;
-            spelledTracker.innerText = `${mathEquationText} [${mathSolvedCount}/10]`;
-            
-            targetWordDisplay.innerText = targetWord;
-            setTimeout(() => { if (isPlaying) targetWordDisplay.innerText = "*****"; }, 1000);
-        }
-
-        // --- Abort Engine ---
-        function abortGame() {
-            isPlaying = false;
-            isPausedForTouch = false;
-            clearTimeout(touchPauseTimeout);
-            clearInterval(gameTimer);
-            clearInterval(spawnInterval);
-            crosshair.style.display = 'none';
-            booth.classList.remove('shake-active');
-            dangerLight.classList.remove('flash-active');
-            document.querySelectorAll('.duck').forEach(d => d.remove());
-            ducks = [];
-            
-            exitBtn.classList.add('hidden');
-            pauseScreen.classList.add('hidden');
-            intermissionScreen.classList.add('hidden');
-            gameOverScreen.classList.add('hidden');
-            startScreen.classList.add('hidden');
-            modeScreen.classList.remove('hidden');
-
-            targetWordDisplay.innerText = "SYSTEM_READY";
-            spelledTracker.innerText = "INITIALIZE";
-            stageIndicator.innerHTML = `STANDBY`;
-            timerDisplay.innerText = "--";
-            ammoDisplay.innerText = "--";
-        }
-
         // --- Stage Setup ---
         function setupStage() {
             currentSpelled = "";
-            isPausedForTouch = false;
             booth.classList.remove('shake-active');
             dangerLight.classList.remove('flash-active');
             crosshair.style.display = 'none';
             document.querySelectorAll('.duck').forEach(d => d.remove());
             ducks = [];
 
-            // Show Exit Button safely
-            stageIndicator.innerHTML = `STAGE ${currentWordIndex + 1}/5 <button id="exit-btn" onclick="abortGame()">ABORT</button>`;
+            stageIndicator.innerText = `STAGE ${currentWordIndex + 1}/5`;
 
-            if (gameMode === "SPELLING") {
-                targetWord = challengeWords[currentWordIndex];
-                let baseTimeReduction = currentWordIndex * 6; 
-                timeRemaining = Math.max(15, (30 + targetWord.length * 2) - baseTimeReduction);
-                ammoRemaining = targetWord.length + 12;
-                updateSpelledTracker();
-                targetWordDisplay.innerText = targetWord;
-            } else if (gameMode === "MATH") {
-                mathSolvedCount = 0;
-                timeRemaining = Math.max(40, 90 - (currentWordIndex * 10)); // 90s, 80s, 70s...
-                ammoRemaining = 40; // Generous ammo for 10 math questions
-                generateMathQuestion();
-            }
+            targetWord = challengeWords[currentWordIndex];
+            let baseTimeReduction = currentWordIndex * 6; 
+            timeRemaining = Math.max(15, (30 + targetWord.length * 2) - baseTimeReduction);
+            ammoRemaining = targetWord.length + 12;
+            updateSpelledTracker();
 
             // Neon modifier tags
             if (currentWordIndex === 0) { modifierTag.innerText = "STANDARD"; modifierTag.style.background = "#0ff"; }
@@ -762,6 +568,9 @@
             intermissionScreen.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
             
+            // Initialization display
+            targetWordDisplay.innerText = targetWord;
+            
             setTimeout(() => {
                 targetWordDisplay.innerText = "*****";
                 isPlaying = true;
@@ -771,7 +580,6 @@
 
         function startGameTimers() {
             gameTimer = setInterval(() => {
-                if (isPausedForTouch) return; // Skip if iPad user paused
                 timeRemaining--;
                 updateUI();
 
@@ -784,11 +592,7 @@
             }, 1000);
 
             let spawnRate = currentWordIndex === 4 ? 600 : 850;
-            spawnInterval = setInterval(() => {
-                if (isPausedForTouch) return;
-                spawnDuck();
-            }, spawnRate);
-            
+            spawnInterval = setInterval(spawnDuck, spawnRate);
             requestAnimationFrame(moveDucks);
         }
 
@@ -809,28 +613,17 @@
             if (isDecoy) {
                 letterBadge.innerText = "☢️";
             } else {
-                if (gameMode === "SPELLING") {
-                    const nextNeededLetter = targetWord[currentSpelled.length];
-                    if (Math.random() < 0.45 && nextNeededLetter) {
-                        letterBadge.innerText = nextNeededLetter;
-                    } else {
-                        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                        letterBadge.innerText = alphabet[Math.floor(Math.random() * alphabet.length)];
-                    }
-                } else if (gameMode === "MATH") {
-                    if (Math.random() < 0.35) {
-                        letterBadge.innerText = targetWord; 
-                    } else {
-                        letterBadge.innerText = Math.floor(Math.random() * 144) + 1; 
-                        if (letterBadge.innerText === targetWord) letterBadge.innerText = "0"; // Prevent accidental correct answers
-                    }
-                    if (letterBadge.innerText.length > 1) {
-                        letterBadge.classList.add('small-text');
-                    }
+                const nextNeededLetter = targetWord[currentSpelled.length];
+                if (Math.random() < 0.45 && nextNeededLetter) {
+                    letterBadge.innerText = nextNeededLetter;
+                } else {
+                    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                    letterBadge.innerText = alphabet[Math.floor(Math.random() * alphabet.length)];
                 }
             }
 
             duck.appendChild(letterBadge);
+
             if (currentWordIndex === 2 || currentWordIndex === 4) { duck.classList.add('rotating'); }
 
             const shelfNum = Math.floor(Math.random() * 3) + 1;
@@ -860,34 +653,32 @@
         function moveDucks() {
             if (!isPlaying) return;
 
-            if (!isPausedForTouch) {
-                for (let i = ducks.length - 1; i >= 0; i--) {
-                    let d = ducks[i];
-                    d.x += d.speed;
-                    d.element.style.left = `${d.x}px`;
+            for (let i = ducks.length - 1; i >= 0; i--) {
+                let d = ducks[i];
+                d.x += d.speed;
+                d.element.style.left = `${d.x}px`;
 
-                    // Pink Decoy Collision Logic (Hover Check)
-                    if (d.decoy) {
-                        const rect = d.element.getBoundingClientRect();
-                        const hitBuffer = 15; 
-                        if (mouseX > rect.left + hitBuffer && mouseX < rect.right - hitBuffer &&
-                            mouseY > rect.top + hitBuffer && mouseY < rect.bottom - hitBuffer) {
-                            triggerDecoyPenalty();
-                            break; 
-                        }
+                // Pink Decoy Collision Logic (Hover Check)
+                if (d.decoy) {
+                    const rect = d.element.getBoundingClientRect();
+                    const hitBuffer = 15; 
+                    if (mouseX > rect.left + hitBuffer && mouseX < rect.right - hitBuffer &&
+                        mouseY > rect.top + hitBuffer && mouseY < rect.bottom - hitBuffer) {
+                        triggerDecoyPenalty();
+                        break; 
                     }
+                }
 
-                    if (d.x > 1100 || d.x < -160) {
-                        d.element.remove();
-                        ducks.splice(i, 1);
-                    }
+                if (d.x > 1100 || d.x < -160) {
+                    d.element.remove();
+                    ducks.splice(i, 1);
                 }
             }
             requestAnimationFrame(moveDucks);
         }
 
-        // --- Core Shooting Logic (Shared by Mouse & Touch) ---
-        function fireAtTarget(hitDuck) {
+        // --- Shooting Mechanics ---
+        booth.addEventListener('mousedown', (e) => {
             if (!isPlaying || timeRemaining <= 0 || ammoRemaining <= 0) return;
 
             flash.style.opacity = '1';
@@ -896,6 +687,7 @@
             ammoRemaining--;
             updateUI();
 
+            const hitDuck = e.target.closest('.duck');
             if (hitDuck) {
                 const duckIndex = ducks.findIndex(d => d.element === hitDuck);
                 if (duckIndex > -1) {
@@ -904,49 +696,22 @@
                     if (targetObj.decoy) {
                         triggerDecoyPenalty();
                     } else {
-                        let isCorrect = false;
-
-                        if (gameMode === "SPELLING") {
-                            if (targetObj.letter === targetWord[currentSpelled.length]) isCorrect = true;
-                        } else if (gameMode === "MATH") {
-                            if (targetObj.letter === targetWord) isCorrect = true;
-                        }
-
-                        if (isCorrect) {
-                            if (gameMode === "SPELLING") {
-                                currentSpelled += targetObj.letter;
-                                updateSpelledTracker();
-                                if (currentSpelled === targetWord) advanceGame();
-                            } else if (gameMode === "MATH") {
-                                mathSolvedCount++;
-                                ammoRemaining += 1; // Bonus ammo for correct math shot
-                                if (mathSolvedCount >= 10) {
-                                    advanceGame();
-                                } else {
-                                    generateMathQuestion();
-                                }
-                            }
-                            hitDuck.remove();
-                            ducks.splice(duckIndex, 1);
-                        } else {
-                            // WRONG TARGET CLICKED -> Drop animation
-                            hitDuck.classList.add('falling');
-                            ducks.splice(duckIndex, 1); // Stop horizontal movement immediately
-                            setTimeout(() => { if(hitDuck.parentNode) hitDuck.remove(); }, 600);
+                        const expectedLetter = targetWord[currentSpelled.length];
+                        if (targetObj.letter === expectedLetter) {
+                            currentSpelled += targetObj.letter;
+                            updateSpelledTracker();
+                            if (currentSpelled === targetWord) advanceGame();
                         }
                     }
+
+                    hitDuck.remove();
+                    ducks.splice(duckIndex, 1);
                 }
             }
 
             if (ammoRemaining <= 0 && currentSpelled !== targetWord && isPlaying) {
                 endGame(false, "OUT OF ENERGY AMMUNITION");
             }
-        }
-
-        // Mousedown handler for PC players
-        booth.addEventListener('mousedown', (e) => {
-            if (isPausedForTouch) return;
-            fireAtTarget(e.target.closest('.duck'));
         });
 
         // --- Progression Handlers ---
@@ -967,8 +732,6 @@
 
         function endGame(isWin, msg) {
             isPlaying = false;
-            isPausedForTouch = false;
-            clearTimeout(touchPauseTimeout);
             clearInterval(gameTimer);
             clearInterval(spawnInterval);
             crosshair.style.display = 'none';
@@ -983,7 +746,7 @@
             if (isWin) {
                 endMessage.innerHTML = `${msg}<br><br>Data Protocol: [${selectedLevelName}] cleared.`;
             } else {
-                let failTarget = gameMode === "SPELLING" ? targetWord : mathEquationText + " = " + targetWord;
+                let failTarget = targetWord;
                 endMessage.innerHTML = `${msg}<br><br>Connection lost on target: <strong>${failTarget}</strong> (Stage ${currentWordIndex + 1}/5)`;
             }
             
@@ -995,10 +758,10 @@
         
         document.getElementById('restart-btn').addEventListener('click', () => {
             gameOverScreen.classList.add('hidden');
-            modeScreen.classList.remove('hidden');
+            startScreen.classList.remove('hidden');
             targetWordDisplay.innerText = "SYSTEM_READY";
             spelledTracker.innerText = "INITIALIZE";
-            stageIndicator.innerHTML = `STANDBY <button id="exit-btn" class="hidden" onclick="abortGame()">ABORT</button>`;
+            stageIndicator.innerText = "STAGE 1/5";
             modifierTag.innerText = "STANDBY";
             modifierTag.style.background = "#0ff";
             modifierTag.style.color = "#000";
