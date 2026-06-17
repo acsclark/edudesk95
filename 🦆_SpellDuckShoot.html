@@ -30,7 +30,6 @@
             border: 2px solid #0ff;
         }
 
-        /* Futuristic Header */
         #marquee {
             background: #050510;
             border-bottom: 3px solid #0ff;
@@ -71,12 +70,7 @@
         .stat-label { font-size: 12px; color: #0ff; text-transform: uppercase; letter-spacing: 2px; }
         .stat-value { font-size: 24px; font-family: 'Orbitron', sans-serif; color: #fff; text-shadow: 0 0 8px #0ff; }
 
-        #word-area {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 2;
-        }
+        #word-area { display: flex; flex-direction: column; align-items: center; z-index: 2; }
 
         #target-word-display {
             font-family: 'Orbitron', sans-serif;
@@ -108,16 +102,9 @@
             border-radius: 3px;
             cursor: pointer;
             transition: all 0.1s;
-            position: relative;
-            z-index: 10;
         }
+        #reveal-btn:active { background: #0ff; color: #000; }
 
-        #reveal-btn:active {
-            background: #0ff;
-            color: #000;
-        }
-
-        /* Tracker Bar */
         #tracker-bar {
             background: #050510;
             color: #fff;
@@ -126,12 +113,12 @@
             align-items: center;
             padding: 8px 30px;
             border-bottom: 2px solid #0ff;
+            height: 50px;
         }
         #stage-indicator { font-size: 18px; color: #0ff; font-family: 'Orbitron', sans-serif; }
-        #spelled-tracker { font-size: 36px; letter-spacing: 12px; font-family: 'Orbitron', monospace; text-shadow: 0 0 10px #fff; }
+        #spelled-tracker { font-size: 36px; letter-spacing: 8px; font-family: 'Orbitron', monospace; text-shadow: 0 0 10px #fff; }
         #modifier-tag { font-size: 14px; color: #000; background: #0ff; padding: 2px 10px; border-radius: 2px; font-weight: bold; box-shadow: 0 0 8px #0ff;}
 
-        /* Cyberpunk Grid Background */
         #booth {
             width: 950px;
             height: 550px;
@@ -145,7 +132,6 @@
             overflow: hidden;
         }
 
-        /* Neon Shelves */
         .shelf {
             position: absolute;
             width: 100%;
@@ -159,7 +145,6 @@
         #shelf-2 { top: 300px; }
         #shelf-3 { top: 460px; }
 
-        /* CYBER DUCKS */
         .duck {
             position: absolute;
             bottom: 10px;
@@ -170,164 +155,63 @@
             justify-content: center;
             align-items: center;
             cursor: none;
-            line-height: 1;
             filter: drop-shadow(0 0 10px #0ff) hue-rotate(120deg) saturate(150%);
         }
 
-        /* PINK DECOY DUCK */
-        .duck.decoy {
-            filter: drop-shadow(0 0 15px #ff00ff) hue-rotate(240deg) saturate(300%) brightness(1.2);
-            z-index: 5;
-        }
-
-        /* NEON LETTERS/NUMBERS */
         .duck-letter {
             position: absolute;
             background: #000;
             color: #0ff;
-            border: 2px solid #0ff;
+            border: 3px solid #0ff;
             border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            font-size: 26px;
+            width: 65px;         /* Much larger badge */
+            height: 65px;        /* Much larger badge */
+            font-size: 38px;     /* Much larger text */
             font-weight: bold;
             display: flex;
             justify-content: center;
             align-items: center;
-            top: 25px;
-            left: 15px;
-            font-family: 'Share Tech Mono', monospace; 
+            top: 10px;           /* Adjusted to stay centered on duck body */
+            left: 12px;          /* Adjusted to stay centered on duck body */
+            font-family: 'Orbitron', sans-serif;
+            box-shadow: inset 0 0 10px #0ff, 0 0 10px #0ff;
             pointer-events: none;
-            box-shadow: inset 0 0 5px #0ff;
         }
 
-        .duck-letter.small-text { font-size: 16px; letter-spacing: -1px; }
-
-        .duck.decoy .duck-letter {
-            color: #ff00ff;
-            border-color: #ff00ff;
-            box-shadow: inset 0 0 5px #ff00ff;
-        }
-
-        @keyframes letterSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .rotating .duck-letter { animation: letterSpin 1.5s linear infinite; }
-
-        @keyframes fallOff { 0% { transform: translateY(0) rotate(0deg); } 100% { transform: translateY(600px) rotate(180deg); opacity: 0; } }
-        .falling { animation: fallOff 0.6s forwards; pointer-events: none; }
-
-        /* CYBER TARGET CROSSHAIR */
         #crosshair {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            border: 2px solid #0ff;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 100;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8), inset 0 0 10px rgba(0, 255, 255, 0.4);
-            display: none;
+            position: absolute; width: 50px; height: 50px; border: 2px solid #0ff; border-radius: 50%;
+            transform: translate(-50%, -50%); pointer-events: none; z-index: 100;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8); display: none;
         }
-        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #0ff; box-shadow: 0 0 5px #0ff; }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #0ff; }
         #crosshair::before { top: 50%; left: -10px; right: -10px; height: 2px; transform: translateY(-50%); }
         #crosshair::after { left: 50%; top: -10px; bottom: -10px; width: 2px; transform: translateX(-50%); }
-        #crosshair-dot {
-            position: absolute; width: 4px; height: 4px; background: #fff; box-shadow: 0 0 5px #fff;
-            border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        }
 
-        /* EMERGENCY SHAKE & FLASH */
-        @keyframes boothShake {
-            0% { transform: translate(2px, 1px) rotate(0deg); }
-            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(0px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(2px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(2px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(0deg); }
-        }
-        .shake-active { animation: boothShake 0.15s infinite; }
-
-        @keyframes emergencyRed { 0%, 100% { opacity: 0; } 50% { opacity: 0.5; } }
-        #danger-light { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #ff0033; opacity: 0; pointer-events: none; z-index: 40; }
-        .flash-active { animation: emergencyRed 0.4s infinite; }
-
-        /* HUD OVERLAYS */
         .overlay {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 5, 0.95);
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 5, 0.95);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 200; text-align: center; padding: 20px; border: 1px solid #0ff;
-            cursor: default; 
         }
-        .overlay h1 { font-family: 'Orbitron', sans-serif; font-size: 50px; margin: 0 0 10px 0; color: #0ff; text-shadow: 0 0 15px #0ff;}
-        .overlay p { font-size: 20px; max-width: 600px; line-height: 1.5; color: #ccc; margin-bottom: 25px; }
-        
-        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 30px; width: 600px; }
-        
-        .level-btn {
-            background: rgba(0, 255, 255, 0.1); color: #0ff; border: 1px solid #0ff;
-            padding: 12px 5px; font-size: 18px; font-family: 'Orbitron', sans-serif;
-            border-radius: 4px; cursor: pointer; transition: all 0.2s;
-        }
-        .level-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 15px #0ff; }
-
-        /* Custom Word Input Section */
-        .custom-words-container {
-            background: rgba(0, 255, 255, 0.05); border: 1px dashed #0ff; padding: 20px; border-radius: 5px;
-            display: flex; flex-direction: column; align-items: center; width: 600px;
-        }
-        .custom-words-container h3 { margin: 0 0 15px 0; color: #fff; font-family: 'Orbitron', sans-serif; font-size: 16px; letter-spacing: 2px;}
-        .input-row { display: flex; gap: 10px; width: 100%; justify-content: center; margin-bottom: 15px; }
-        .word-input {
-            width: 90px; padding: 8px; background: #000; border: 1px solid #0ff;
-            color: #0ff; font-family: 'Orbitron', sans-serif; text-align: center;
-            font-size: 14px; text-transform: uppercase; outline: none;
-        }
-        .word-input:focus { box-shadow: 0 0 10px #0ff; }
-
-        .play-btn {
-            background: #0f0; color: #000; border: none; padding: 12px 35px; font-size: 20px; 
-            font-family: 'Orbitron', sans-serif; font-weight: bold; border-radius: 3px; cursor: pointer; 
-            transition: all 0.2s; box-shadow: 0 0 15px rgba(0, 255, 0, 0.5); margin-top: 10px;
-        }
-        .play-btn:hover { transform: scale(1.05); box-shadow: 0 0 25px #0f0; background: #fff; }
+        .overlay h1 { font-family: 'Orbitron'; font-size: 50px; color: #0ff; margin-bottom: 30px; }
+        .level-btn { background: rgba(0, 255, 255, 0.1); color: #0ff; border: 1px solid #0ff; padding: 15px 30px; font-family: 'Orbitron'; cursor: pointer; margin: 10px; font-size: 18px; transition: 0.2s; }
+        .level-btn:hover { background: #0ff; color: #000; }
         .hidden { display: none !important; }
-
-        /* Shoot Flash */
-        #flash {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: #0ff; opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.05s;
-        }
-    </style>
+        #flash { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #0ff; opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.05s; }
+    </script>
 </head>
 <body>
 
     <div id="game-wrapper">
         <div id="marquee">
-            <div class="stat-box">
-                <div class="stat-label">Timer</div>
-                <div class="stat-value" id="timer-display">--</div>
-            </div>
-            
+            <div class="stat-box"><div class="stat-label">Hits</div><div class="stat-value" id="hits-display">0</div></div>
             <div id="word-area">
-                <div id="target-word-display">SYSTEM_READY</div>
-                <button id="reveal-btn">SCAN TARGET (-1 AMMO)</button>
+                <div id="target-word-display">SYSTEM READY</div>
             </div>
-
-            <div class="stat-box">
-                <div class="stat-label">Energy</div>
-                <div class="stat-value" id="ammo-display">--</div>
-            </div>
+            <div class="stat-box"><div class="stat-label">Mode</div><div class="stat-value" id="mode-display">--</div></div>
         </div>
-
         <div id="tracker-bar">
-            <div id="stage-indicator">STAGE 1/5</div>
-            <div id="spelled-tracker">INITIALIZE</div>
+            <div id="stage-indicator">TARGET:</div>
+            <div id="spelled-tracker">AWAITING INPUT</div>
             <div id="modifier-tag">STANDBY</div>
         </div>
 
@@ -335,493 +219,213 @@
             <div class="shelf" id="shelf-1"></div>
             <div class="shelf" id="shelf-2"></div>
             <div class="shelf" id="shelf-3"></div>
-
-            <div id="crosshair"><div id="crosshair-dot"></div></div>
+            
+            <div id="crosshair"></div>
             <div id="flash"></div>
-            <div id="danger-light"></div>
 
-            <!-- Mode Selection Screen -->
-            <div id="mode-selection-screen" class="overlay">
+            <div id="mode-screen" class="overlay">
                 <h1>SELECT PROTOCOL</h1>
-                <p>Choose your training module to begin.</p>
-                <div class="grid-container" style="display: flex; justify-content: center; gap: 20px;">
-                    <button class="level-btn" style="padding: 15px 30px;" onclick="showSpellingMenu()">SPELLING DRILL</button>
-                    <button class="level-btn" style="padding: 15px 30px;" onclick="startMathChallenge()">MATH (X12) PROTOCOL</button>
-                </div>
-            </div>
-
-            <!-- Spelling Setup Screen -->
-            <div id="start-screen" class="overlay hidden">
-                <h1>CYBER-DUCK PROTOCOL</h1>
-                <p>Survive the 5-stage holographic gauntlet.<br><strong style="color:#ff00ff; text-shadow:0 0 8px #ff00ff;">DO NOT TOUCH PINK DECOY TARGETS STARTING AT STAGE 4!</strong></p>
-                
-                <div class="grid-container">
-                    <button class="level-btn" onclick="startSpellingChallenge(4)">LOAD YR 4</button>
-                    <button class="level-btn" onclick="startSpellingChallenge(5)">LOAD YR 5</button>
-                    <button class="level-btn" onclick="startSpellingChallenge(6)">LOAD YR 6</button>
-                    <button class="level-btn" onclick="startSpellingChallenge(7)">LOAD YR 7</button>
-                    <button class="level-btn" onclick="startSpellingChallenge(8)">LOAD YR 8</button>
-                </div>
-
-                <div class="custom-words-container">
-                    <h3>// OVERRIDE: UPLOAD CUSTOM DATA ARRAY</h3>
-                    <div class="input-row">
-                        <input type="text" class="word-input" id="cw-0" placeholder="WORD 1" maxlength="12">
-                        <input type="text" class="word-input" id="cw-1" placeholder="WORD 2" maxlength="12">
-                        <input type="text" class="word-input" id="cw-2" placeholder="WORD 3" maxlength="12">
-                        <input type="text" class="word-input" id="cw-3" placeholder="WORD 4" maxlength="12">
-                        <input type="text" class="word-input" id="cw-4" placeholder="WORD 5" maxlength="12">
-                    </div>
-                    <button class="level-btn" style="width: 100%; border-color:#0f0; color:#0f0;" onclick="startCustomChallenge()">INITIALIZE CUSTOM RUN</button>
-                </div>
-            </div>
-
-            <!-- Intermission Overlay -->
-            <div id="intermission-screen" class="overlay hidden">
-                <h1 style="color:#0f0; text-shadow: 0 0 15px #0f0;">TARGET SECURED</h1>
-                <p id="intermission-msg"></p>
-                <button class="play-btn" id="next-word-btn">PROCEED TO NEXT STAGE</button>
-            </div>
-
-            <!-- Game Over / Victory Screen -->
-            <div id="game-over-screen" class="overlay hidden">
-                <h1 id="end-title">SYSTEM FAILURE</h1>
-                <p id="end-message"></p>
-                <button class="play-btn" id="restart-btn" style="background: #0ff; box-shadow: 0 0 15px #0ff;">REBOOT SYSTEM</button>
+                <button class="level-btn" onclick="startSpelling()">SPELLING DRILL</button>
+                <button class="level-btn" onclick="startMathChallenge()">MATH (X12) PROTOCOL</button>
             </div>
         </div>
     </div>
 
     <script>
-        // --- Word Pools ---
-        const spellingLevels = {
-            4: ["EACH", "EVERY", "FRONT", "CHIEF", "CATCH", "MONEY", "READY", "UNDER", "WHILE", "YOUNG"],
-            5: ["ABSENT", "BEAUTY", "CAUGHT", "DOLLAR", "FLIGHT", "LAUGHTER", "RESCUE", "STATION", "SILENT", "TOMORROW"],
-            6: ["BICYCLE", "CHIMNEY", "DIFFERENT", "EXPLORE", "LANGUAGE", "NEIGHBOUR", "POSSIBLE", "STRANGE", "THROUGH", "WEATHER"],
-            7: ["ACCIDENT", "ARGUMENT", "CELEBRATE", "DISEASE", "EMBARRASS", "FREQUENCY", "GOVERNMENT", "MATERIAL", "QUEUE", "SEPARATE"],
-            8: ["ACCOMMODATE", "BUSINESS", "CONSCIENCE", "DEFINITELY", "ENVIRONMENT", "GUARANTEE", "PARLIAMENT", "PHYSIQUE", "RESTAURANT", "VEHICLE"]
-        };
-
-        let gameMode = "SPELLING"; // "SPELLING" or "MATH"
-        let selectedLevelName = "YR 4";
-        let challengeWords = [];
-        let currentWordIndex = 0;
-        
-        // Mode Specific Variables
-        let targetWord = ""; 
-        let currentSpelled = "";
-        let mathQuestionsSolved = 0;
-        let mathEquationText = "";
-
-        let timeRemaining = 0;
-        let ammoRemaining = 0;
+        let gameMode = "";
         let isPlaying = false;
-        
-        let mouseX = -1000;
-        let mouseY = -1000;
-        
-        let gameTimer, spawnInterval;
         let ducks = [];
+        let mathSolvedCount = 0;
+        let currentMathAnswer = 0;
+        let spellingTarget = "";
+        let spellingCurrent = "";
+        let lastTime = 0;
+        let duckTimer = 0;
+        let totalHits = 0;
 
-        // --- DOM Elements ---
+        const words = ["CYBER", "NEON", "HACK", "GHOST", "NINJA", "SYSTEM", "GLITCH"];
         const booth = document.getElementById('booth');
         const crosshair = document.getElementById('crosshair');
         const flash = document.getElementById('flash');
-        const dangerLight = document.getElementById('danger-light');
-        
-        const timerDisplay = document.getElementById('timer-display');
-        const ammoDisplay = document.getElementById('ammo-display');
-        const targetWordDisplay = document.getElementById('target-word-display');
-        const spelledTracker = document.getElementById('spelled-tracker');
-        const stageIndicator = document.getElementById('stage-indicator');
-        const modifierTag = document.getElementById('modifier-tag');
-        const revealBtn = document.getElementById('reveal-btn');
-        
-        const modeScreen = document.getElementById('mode-selection-screen');
-        const startScreen = document.getElementById('start-screen');
-        const intermissionScreen = document.getElementById('intermission-screen');
-        const intermissionMsg = document.getElementById('intermission-msg');
-        const gameOverScreen = document.getElementById('game-over-screen');
-        const endTitle = document.getElementById('end-title');
-        const endMessage = document.getElementById('end-message');
 
-        // Crosshair Mapping
+        // Crosshair movement
         booth.addEventListener('mousemove', (e) => {
-            if (!isPlaying) { crosshair.style.display = 'none'; return; }
+            if(!isPlaying) return;
             crosshair.style.display = 'block';
             const rect = booth.getBoundingClientRect();
-            crosshair.style.left = `${e.clientX - rect.left}px`;
-            crosshair.style.top = `${e.clientY - rect.top}px`;
-            mouseX = e.clientX; mouseY = e.clientY;
+            crosshair.style.left = (e.clientX - rect.left) + 'px';
+            crosshair.style.top = (e.clientY - rect.top) + 'px';
         });
 
-        booth.addEventListener('mouseleave', () => { 
-            crosshair.style.display = 'none'; 
-            mouseX = -1000; mouseY = -1000;
+        booth.addEventListener('mouseleave', () => {
+            crosshair.style.display = 'none';
         });
 
-        // Scan Target Mechanic (Costs 1 Ammo, Shows for 1 Second)
-        revealBtn.addEventListener('click', () => {
-            if (!isPlaying || ammoRemaining <= 0) return;
-            
-            ammoRemaining--;
-            updateUI();
-            
-            targetWordDisplay.innerText = targetWord;
-            setTimeout(() => {
-                if (isPlaying) targetWordDisplay.innerText = "*****";
-            }, 1000);
-        });
-
-        // --- Menu Routing ---
-        function showSpellingMenu() {
+        function startSpelling() {
             gameMode = "SPELLING";
-            modeScreen.classList.add('hidden');
-            startScreen.classList.remove('hidden');
+            document.getElementById('mode-display').innerText = "SPL";
+            document.getElementById('modifier-tag').innerText = "ACTIVE";
+            spellingTarget = words[Math.floor(Math.random() * words.length)];
+            document.getElementById('target-word-display').innerText = spellingTarget;
+            spellingCurrent = "";
+            document.getElementById('spelled-tracker').innerText = "_ ".repeat(spellingTarget.length).trim();
+            startGame();
         }
 
         function startMathChallenge() {
             gameMode = "MATH";
-            selectedLevelName = "MULTIPLICATION X12";
-            modeScreen.classList.add('hidden');
-            beginSequence();
+            document.getElementById('mode-display').innerText = "MTH";
+            document.getElementById('modifier-tag').innerText = "ACTIVE";
+            document.getElementById('target-word-display').innerText = "SOLVE EQUATION";
+            mathSolvedCount = 0;
+            nextMathQuestion();
+            startGame();
         }
 
-        function startSpellingChallenge(year) {
-            gameMode = "SPELLING";
-            selectedLevelName = `YEAR ${year}`;
-            let poolCopy = [...spellingLevels[year]];
-            challengeWords = [];
-            for (let i = 0; i < 5; i++) {
-                let randIndex = Math.floor(Math.random() * poolCopy.length);
-                challengeWords.push(poolCopy.splice(randIndex, 1)[0]);
-            }
-            beginSequence();
-        }
-
-        function startCustomChallenge() {
-            let customArr = [];
-            for(let i=0; i<5; i++) {
-                let val = document.getElementById(`cw-${i}`).value;
-                val = val.trim().toUpperCase().replace(/[^A-Z]/g, '');
-                if(val.length === 0) {
-                    alert("ERROR: Please enter 5 valid words containing letters only.");
-                    return;
-                }
-                customArr.push(val);
-            }
-            gameMode = "SPELLING";
-            selectedLevelName = "CUSTOM OVERRIDE";
-            challengeWords = customArr;
-            beginSequence();
-        }
-
-        function beginSequence() {
-            currentWordIndex = 0;
-            startScreen.classList.add('hidden');
-            setupStage();
-        }
-
-        // --- Math Generation ---
-        function generateMathQuestion() {
+        function nextMathQuestion() {
             let a = Math.floor(Math.random() * 12) + 1;
             let b = Math.floor(Math.random() * 12) + 1;
-            targetWord = (a * b).toString();
-            mathEquationText = `${a} × ${b} = ?  [${mathQuestionsSolved}/10]`;
-            spelledTracker.innerText = mathEquationText;
-            
-            // Show answer briefly at start of new question
-            targetWordDisplay.innerText = targetWord;
-            setTimeout(() => { if (isPlaying) targetWordDisplay.innerText = "*****"; }, 1000);
+            currentMathAnswer = a * b;
+            document.getElementById('spelled-tracker').innerText = `${a} × ${b}`;
         }
 
-        // --- Stage Setup ---
-        function setupStage() {
-            currentSpelled = "";
-            mathQuestionsSolved = 0;
-            
-            booth.classList.remove('shake-active');
-            dangerLight.classList.remove('flash-active');
-            crosshair.style.display = 'none';
+        function startGame() {
+            document.getElementById('mode-screen').classList.add('hidden');
+            isPlaying = true;
+            totalHits = 0;
+            document.getElementById('hits-display').innerText = totalHits;
             
             // Clear existing ducks
-            document.querySelectorAll('.duck').forEach(d => d.remove());
+            ducks.forEach(d => d.el.remove());
             ducks = [];
-
-            stageIndicator.innerText = `STAGE ${currentWordIndex + 1}/5`;
-
-            // Setup parameters based on mode
-            if (gameMode === "SPELLING") {
-                targetWord = challengeWords[currentWordIndex];
-                let baseTimeReduction = currentWordIndex * 6; 
-                timeRemaining = Math.max(15, (30 + targetWord.length * 2) - baseTimeReduction);
-                ammoRemaining = targetWord.length + 12;
-                updateSpelledTracker();
-                targetWordDisplay.innerText = targetWord;
-            } else if (gameMode === "MATH") {
-                timeRemaining = 60; // 60 seconds per stage
-                ammoRemaining = 45; // Generous ammo for 10 questions
-                generateMathQuestion();
-            }
-
-            // Neon modifier tags
-            if (currentWordIndex === 0) { modifierTag.innerText = "STANDARD"; modifierTag.style.background = "#0ff"; }
-            if (currentWordIndex === 1) { modifierTag.innerText = "VELOCITY UP"; modifierTag.style.background = "#0af"; }
-            if (currentWordIndex === 2) { modifierTag.innerText = "SCRAMBLERS ACTIVE"; modifierTag.style.background = "#a0f"; }
-            if (currentWordIndex === 3) { modifierTag.innerText = "AVOID PINK DECOYS"; modifierTag.style.background = "#ff00ff"; modifierTag.style.color = "#fff"; }
-            if (currentWordIndex === 4) { modifierTag.innerText = "MAXIMUM OVERDRIVE"; modifierTag.style.background = "#f00"; modifierTag.style.color = "#fff";}
-
-            updateUI();
-            intermissionScreen.classList.add('hidden');
-            gameOverScreen.classList.add('hidden');
             
-            setTimeout(() => {
-                targetWordDisplay.innerText = "*****";
-                isPlaying = true;
-                startGameTimers();
-            }, 2000);
-        }
-
-        function startGameTimers() {
-            // Clear previous timers to prevent doubling
-            clearInterval(gameTimer);
-            clearInterval(spawnInterval);
-
-            gameTimer = setInterval(() => {
-                timeRemaining--;
-                updateUI();
-
-                if (timeRemaining <= 5 && timeRemaining > 0) {
-                    booth.classList.add('shake-active');
-                    dangerLight.classList.add('flash-active');
-                } else if (timeRemaining <= 0) {
-                    endGame(false, "ENERGY DEPLETED / TIME EXPIRED");
-                }
-            }, 1000);
-
-            let spawnRate = currentWordIndex === 4 ? 600 : 850;
-            spawnInterval = setInterval(spawnDuck, spawnRate);
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
         }
 
         function spawnDuck() {
             if (!isPlaying) return;
-
+            
             const duck = document.createElement('div');
             duck.className = 'duck';
             duck.innerHTML = '🦆';
+            const badge = document.createElement('div');
+            badge.className = 'duck-letter';
 
-            let isDecoy = false;
-            if (currentWordIndex >= 3 && Math.random() < 0.30) {
-                isDecoy = true;
-                duck.classList.add('decoy');
-            }
-
-            const letterBadge = document.createElement('div');
-            letterBadge.className = 'duck-letter';
-
-            if (isDecoy) {
-                letterBadge.innerText = "☢️";
+            let val = "";
+            if (gameMode === "MATH") {
+                // 30% chance to spawn the correct answer, otherwise random up to 144
+                val = (Math.random() < 0.3) ? currentMathAnswer : Math.floor(Math.random() * 144) + 1;
             } else {
-                if (gameMode === "SPELLING") {
-                    const nextNeededLetter = targetWord[currentSpelled.length];
-                    if (Math.random() < 0.45 && nextNeededLetter) {
-                        letterBadge.innerText = nextNeededLetter;
-                    } else {
-                        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                        letterBadge.innerText = alphabet[Math.floor(Math.random() * alphabet.length)];
-                    }
-                } else if (gameMode === "MATH") {
-                    if (Math.random() < 0.35) {
-                        letterBadge.innerText = targetWord; // Correct answer
-                    } else {
-                        letterBadge.innerText = Math.floor(Math.random() * 144) + 1; // Wrong answer
-                    }
-                    if (letterBadge.innerText.length > 1) {
-                        letterBadge.classList.add('small-text');
-                    }
+                // Spelling mode logic: 40% chance to spawn the next needed letter
+                if (Math.random() < 0.4 && spellingCurrent.length < spellingTarget.length) {
+                    val = spellingTarget[spellingCurrent.length];
+                } else {
+                    val = String.fromCharCode(65 + Math.floor(Math.random() * 26)); // Random A-Z
                 }
             }
-
-            duck.appendChild(letterBadge);
-
-            if (currentWordIndex === 2 || currentWordIndex === 4) { duck.classList.add('rotating'); }
-
-            const shelfNum = Math.floor(Math.random() * 3) + 1;
-            document.getElementById(`shelf-${shelfNum}`).appendChild(duck);
-
-            let direction = (shelfNum === 2) ? -1 : 1;
-            let startX = (direction === 1) ? -110 : 1000; 
             
-            let speedMultiplier = 1.0;
-            if (currentWordIndex === 1) speedMultiplier = 1.6;
-            if (currentWordIndex === 4) speedMultiplier = 2.0;
-            let speed = (Math.random() * 1.6 + 1.4) * direction * speedMultiplier;
-
-            ducks.push({ element: duck, x: startX, speed: speed, letter: letterBadge.innerText, decoy: isDecoy });
+            badge.innerText = val;
+            duck.appendChild(badge);
+            
+            let shelfNum = Math.floor(Math.random() * 3) + 1;
+            document.getElementById('shelf-' + shelfNum).appendChild(duck);
+            
+            let speed = Math.random() * 2 + 1.5;
+            duck.style.left = '-100px';
+            ducks.push({ el: duck, x: -100, speed: speed, val: val.toString() });
         }
 
-        function triggerDecoyPenalty() {
-            dangerLight.style.opacity = "0.8";
-            dangerLight.style.background = "#ff00ff";
-            setTimeout(() => { dangerLight.style.opacity = "0"; }, 150);
+        function gameLoop(currentTime) {
+            if (!isPlaying) return;
+            
+            let deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            duckTimer += deltaTime;
 
-            ducks.forEach(d => d.element.classList.add('falling'));
-            ducks = [];
-            setTimeout(() => { document.querySelectorAll('.duck.falling').forEach(el => el.remove()); }, 600);
-        }
+            // Spawn rate
+            if (duckTimer > 800) {
+                spawnDuck();
+                duckTimer = 0;
+            }
 
-        // --- GLOBAL PHYSICS ENGINE LOOP ---
-        // This runs constantly but only updates ducks when isPlaying = true.
-        // Prevents the "glitching" double-loop bug.
-        function engineLoop() {
-            if (isPlaying) {
-                for (let i = ducks.length - 1; i >= 0; i--) {
-                    let d = ducks[i];
-                    d.x += d.speed;
-                    d.element.style.left = `${d.x}px`;
-
-                    // Pink Decoy Collision Logic (Hover Check)
-                    if (d.decoy) {
-                        const rect = d.element.getBoundingClientRect();
-                        const hitBuffer = 15; 
-                        if (mouseX > rect.left + hitBuffer && mouseX < rect.right - hitBuffer &&
-                            mouseY > rect.top + hitBuffer && mouseY < rect.bottom - hitBuffer) {
-                            triggerDecoyPenalty();
-                            break; 
-                        }
-                    }
-
-                    // Remove when off-screen
-                    if (d.x > 1100 || d.x < -160) {
-                        d.element.remove();
-                        ducks.splice(i, 1);
-                    }
+            // Move ducks
+            for (let i = ducks.length - 1; i >= 0; i--) {
+                let d = ducks[i];
+                d.x += d.speed * (deltaTime / 16); // Normalize speed across refresh rates
+                d.el.style.left = d.x + 'px';
+                
+                // Remove if off screen
+                if (d.x > 950) { 
+                    d.el.remove(); 
+                    ducks.splice(i, 1); 
                 }
             }
-            requestAnimationFrame(engineLoop);
+            requestAnimationFrame(gameLoop);
         }
-        // Start engine once on load
-        requestAnimationFrame(engineLoop);
 
-        // --- Shooting Mechanics ---
-        booth.addEventListener('mousedown', (e) => {
-            if (!isPlaying || timeRemaining <= 0 || ammoRemaining <= 0) return;
+        // Shooting mechanism
+        booth.onmousedown = (e) => {
+            if (!isPlaying) return;
+            
+            // Screen flash
+            flash.style.opacity = 0.8;
+            setTimeout(() => flash.style.opacity = 0, 50);
 
-            flash.style.opacity = '1';
-            setTimeout(() => { flash.style.opacity = '0'; }, 50);
-
-            ammoRemaining--;
-            updateUI();
-
-            const hitDuck = e.target.closest('.duck');
-            if (hitDuck) {
-                const duckIndex = ducks.findIndex(d => d.element === hitDuck);
-                if (duckIndex > -1) {
-                    const targetObj = ducks[duckIndex];
-
-                    if (targetObj.decoy) {
-                        triggerDecoyPenalty();
-                    } else {
-                        if (gameMode === "SPELLING") {
-                            const expectedLetter = targetWord[currentSpelled.length];
-                            if (targetObj.letter === expectedLetter) {
-                                currentSpelled += targetObj.letter;
-                                updateSpelledTracker();
-                                if (currentSpelled === targetWord) advanceGame();
+            let target = e.target.closest('.duck');
+            if (target) {
+                let dIndex = ducks.findIndex(item => item.el === target);
+                if (dIndex > -1) {
+                    let d = ducks[dIndex];
+                    
+                    if (gameMode === "MATH") {
+                        if (d.val === currentMathAnswer.toString()) {
+                            mathSolvedCount++;
+                            totalHits++;
+                            document.getElementById('hits-display').innerText = totalHits;
+                            
+                            if (mathSolvedCount >= 10) { 
+                                setTimeout(() => {
+                                    alert("STAGE CLEAR! 10 Equations Solved."); 
+                                    endGame();
+                                }, 100);
+                            } else {
+                                nextMathQuestion();
                             }
-                        } else if (gameMode === "MATH") {
-                            if (targetObj.letter === targetWord) {
-                                mathQuestionsSolved++;
-                                ammoRemaining += 1; // Reward ammo on hit
-                                updateUI();
-                                if (mathQuestionsSolved >= 10) {
-                                    advanceGame();
-                                } else {
-                                    generateMathQuestion();
-                                }
+                        }
+                    } else if (gameMode === "SPELLING") {
+                        if (d.val === spellingTarget[spellingCurrent.length]) {
+                            spellingCurrent += d.val;
+                            
+                            // Create the display string with found letters and underscores
+                            let displayStr = spellingCurrent.split('').join(' ') + ' ' + "_ ".repeat(spellingTarget.length - spellingCurrent.length).trim();
+                            document.getElementById('spelled-tracker').innerText = displayStr;
+                            totalHits++;
+                            document.getElementById('hits-display').innerText = totalHits;
+
+                            if (spellingCurrent === spellingTarget) {
+                                setTimeout(() => {
+                                    alert("WORD COMPLETE!");
+                                    endGame();
+                                }, 100);
                             }
                         }
                     }
-
-                    hitDuck.remove();
-                    ducks.splice(duckIndex, 1);
+                    
+                    // Remove the duck that was shot
+                    target.remove();
+                    ducks.splice(dIndex, 1);
                 }
             }
+        };
 
-            if (ammoRemaining <= 0 && isPlaying) {
-                endGame(false, "OUT OF ENERGY AMMUNITION");
-            }
-        });
-
-        // --- Progression Handlers ---
-        function advanceGame() {
+        function endGame() {
             isPlaying = false;
-            clearInterval(gameTimer);
-            clearInterval(spawnInterval);
+            document.getElementById('mode-screen').classList.remove('hidden');
+            document.getElementById('target-word-display').innerText = "SYSTEM READY";
+            document.getElementById('spelled-tracker').innerText = "AWAITING INPUT";
+            document.getElementById('modifier-tag').innerText = "STANDBY";
             crosshair.style.display = 'none';
-            currentWordIndex++;
-
-            if (currentWordIndex < 5) {
-                intermissionMsg.innerHTML = `Data sequence ${currentWordIndex} verified.<br><br>Prepare for <strong>STAGE ${currentWordIndex + 1}</strong>.`;
-                intermissionScreen.classList.remove('hidden');
-            } else {
-                endGame(true, "MISSION ACCOMPLISHED. ALL TARGETS NEUTRALIZED.");
-            }
-        }
-
-        function endGame(isWin, msg) {
-            isPlaying = false;
-            clearInterval(gameTimer);
-            clearInterval(spawnInterval);
-            crosshair.style.display = 'none';
-            
-            booth.classList.remove('shake-active');
-            dangerLight.classList.remove('flash-active');
-
-            endTitle.innerText = isWin ? "SYSTEM MASTERED" : "SYSTEM FAILURE";
-            endTitle.style.color = isWin ? "#0f0" : "#f00";
-            endTitle.style.textShadow = isWin ? "0 0 15px #0f0" : "0 0 15px #f00";
-            
-            if (isWin) {
-                endMessage.innerHTML = `${msg}<br><br>Data Protocol: [${selectedLevelName}] cleared.`;
-            } else {
-                let failTarget = gameMode === "SPELLING" ? targetWord : mathEquationText;
-                endMessage.innerHTML = `${msg}<br><br>Connection lost on target: <strong>${failTarget}</strong>`;
-            }
-            
-            gameOverScreen.classList.remove('hidden');
-        }
-
-        // --- UI Events ---
-        document.getElementById('next-word-btn').addEventListener('click', setupStage);
-        
-        document.getElementById('restart-btn').addEventListener('click', () => {
-            gameOverScreen.classList.add('hidden');
-            modeScreen.classList.remove('hidden');
-            targetWordDisplay.innerText = "SYSTEM_READY";
-            spelledTracker.innerText = "INITIALIZE";
-            stageIndicator.innerText = "STAGE 1/5";
-            modifierTag.innerText = "STANDBY";
-            modifierTag.style.background = "#0ff";
-            modifierTag.style.color = "#000";
-            timerDisplay.innerText = "--";
-            ammoDisplay.innerText = "--";
-            
-            for(let i=0; i<5; i++) document.getElementById(`cw-${i}`).value = "";
-        });
-
-        function updateUI() {
-            timerDisplay.innerText = timeRemaining >= 0 ? timeRemaining : 0;
-            ammoDisplay.innerText = ammoRemaining >= 0 ? ammoRemaining : 0;
-        }
-
-        function updateSpelledTracker() {
-            if (gameMode !== "SPELLING") return;
-            let displayArr = [];
-            for (let i = 0; i < targetWord.length; i++) {
-                displayArr.push(i < currentSpelled.length ? targetWord[i] : '_');
-            }
-            spelledTracker.innerText = displayArr.join(' ');
         }
     </script>
 </body>
