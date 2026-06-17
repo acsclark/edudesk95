@@ -220,7 +220,24 @@
         }
 
         // --- Game Logic ---
-        const WORDS = ["APPLE", "BEACH", "CHAIR", "DANCE", "EAGLE", "FROST", "GRAPE", "HOUSE", "IGLOO", "JUICE", "PAPER"];
+        const WORDS = [
+            "APPLE", "BEACH", "CHAIR", "DANCE", "EAGLE", "FROST", "GRAPE", "HOUSE", "IGLOO", "JUICE", "PAPER",
+            "ABOUT", "ALERT", "ARGUE", "BAKER", "BLAME", "BLEND", "BRAVE", "BRICK", "BRING", "BROAD",
+            "BROKE", "BROWN", "BUILD", "BUYER", "CATCH", "CAUSE", "CHAIN", "CHASE", "CHEAP", "CHECK",
+            "CHIEF", "CHILD", "CHINA", "CLAIM", "CLASS", "CLEAN", "CLEAR", "CLOCK", "CLOSE", "COACH",
+            "COAST", "COUNT", "COURT", "COVER", "CREAM", "CRIME", "CROSS", "CROWD", "CROWN", "CURVE",
+            "CYCLE", "DAILY", "DEALT", "DEATH", "DELAY", "DEPTH", "DOING", "DOUBT", "DOZEN", "DRAFT",
+            "DRAMA", "DRAWN", "DREAM", "DRESS", "DRILL", "DRINK", "DRIVE", "DYING", "EAGER", "EARLY",
+            "EARTH", "EIGHT", "ELITE", "EMPTY", "ENEMY", "ENJOY", "ENTER", "ENTRY", "EQUAL", "ERROR",
+            "EVENT", "EXACT", "EXIST", "EXTRA", "FAITH", "FALSE", "FAULT", "FIBER", "FIELD", "FIFTH",
+            "FIFTY", "FIGHT", "FINAL", "FIRST", "FIXED", "FLASH", "FLEET", "FLOOR", "FLUID", "FOCUS",
+            "FORCE", "FORTH", "FORTY", "FORUM", "FOUND", "FRAME", "FRANK", "FRAUD", "FRESH", "FRONT",
+            "FRUIT", "FULLY", "FUNNY", "GIANT", "GIVEN", "GLASS", "GLOBE", "GOING", "GRACE", "GRAND",
+            "GRANT", "GRASS", "GREAT", "GREEN", "GROSS", "GROUP", "GROWN", "GUARD", "GUESS", "GUEST",
+            "GUIDE", "HAPPY", "HEART", "HEAVY", "HENCE", "HORSE", "HOTEL", "HUMAN", "IDEAL", "IMAGE",
+            "INDEX", "INNER", "INPUT", "ISSUE", "JOINT", "JUDGE", "KNOWN", "LABEL", "LARGE", "LASER"
+        ];
+        
         let secretWord = WORDS[Math.floor(Math.random() * WORDS.length)];
         let currentRow = 0;
         let currentTile = 0;
