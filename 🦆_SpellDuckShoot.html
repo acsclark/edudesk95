@@ -7,6 +7,16 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@600&family=Share+Tech+Mono&display=swap');
 
+        /* Strict touch-action and user-select rules to kill iPad magnifier/selection */
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
         body {
             margin: 0;
             padding: 0;
@@ -19,8 +29,8 @@
             justify-content: center;
             height: 100vh;
             width: 100vw;
-            user-select: none;
             overflow: hidden;
+            touch-action: none; /* Prevents all default browser panning/zooming */
         }
 
         #game-wrapper {
@@ -75,65 +85,41 @@
         .stat-label { font-size: 12px; color: #0ff; text-transform: uppercase; letter-spacing: 2px; }
         .stat-value { font-size: 24px; font-family: 'Orbitron', sans-serif; color: #fff; text-shadow: 0 0 8px #0ff; }
 
-        #word-area {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 2;
-        }
+        #word-area { display: flex; flex-direction: column; align-items: center; z-index: 2; }
 
         #target-word-display {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 32px;
-            letter-spacing: 8px;
-            color: #0f0;
-            background: #000;
-            padding: 5px 20px;
-            border-radius: 3px;
-            border: 1px solid #0f0;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
-            margin-bottom: 5px;
-            min-height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 280px;
-            text-shadow: 0 0 10px #0f0;
+            font-family: 'Orbitron', sans-serif; font-size: 32px; letter-spacing: 8px;
+            color: #0f0; background: #000; padding: 5px 20px; border-radius: 3px;
+            border: 1px solid #0f0; box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+            margin-bottom: 5px; min-height: 40px; display: flex; align-items: center;
+            justify-content: center; min-width: 280px; text-shadow: 0 0 10px #0f0;
         }
 
         #reveal-btn {
-            background: rgba(0, 255, 255, 0.1);
-            border: 1px solid #0ff;
-            color: #0ff;
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 16px;
-            font-weight: bold;
-            padding: 5px 15px;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.1s;
-            position: relative;
-            z-index: 10;
+            background: rgba(0, 255, 255, 0.1); border: 1px solid #0ff; color: #0ff;
+            font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: bold;
+            padding: 5px 15px; border-radius: 3px; cursor: pointer; transition: all 0.1s;
+            position: relative; z-index: 10;
         }
-
-        #reveal-btn:active {
-            background: #0ff;
-            color: #000;
-        }
+        #reveal-btn:active { background: #0ff; color: #000; }
 
         /* Spelled Word Tracker Bar */
         #tracker-bar {
-            background: #050510;
-            color: #fff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 30px;
-            border-bottom: 2px solid #0ff;
+            background: #050510; color: #fff; display: flex; justify-content: space-between;
+            align-items: center; padding: 8px 30px; border-bottom: 2px solid #0ff;
         }
-        #stage-indicator { font-size: 18px; color: #0ff; font-family: 'Orbitron', sans-serif; }
+        #stage-indicator { font-size: 18px; color: #0ff; font-family: 'Orbitron', sans-serif; display: flex; align-items: center; gap: 15px; }
         #spelled-tracker { font-size: 36px; letter-spacing: 12px; font-family: 'Orbitron', monospace; text-shadow: 0 0 10px #fff; }
         #modifier-tag { font-size: 14px; color: #000; background: #0ff; padding: 2px 10px; border-radius: 2px; font-weight: bold; box-shadow: 0 0 8px #0ff;}
+
+        /* Exit Button */
+        #exit-btn {
+            background: rgba(255, 0, 85, 0.1); color: #ff0055; border: 1px solid #ff0055;
+            padding: 3px 10px; font-family: 'Orbitron'; font-size: 12px; font-weight: bold;
+            cursor: pointer; border-radius: 3px; transition: 0.2s;
+        }
+        #exit-btn:hover { background: #ff0055; color: #000; box-shadow: 0 0 10px #ff0055; }
+        #exit-btn.hidden { display: none; }
 
         /* Cyberpunk Grid Background */
         #booth {
@@ -147,17 +133,13 @@
             position: relative;
             cursor: none;
             overflow: hidden;
-            -webkit-touch-callout: none; /* Helps prevent long-press text selection */
+            touch-action: none; /* Secondary safeguard */
         }
 
         /* Neon Shelves */
         .shelf {
-            position: absolute;
-            width: 100%;
-            height: 15px;
-            background: #000;
-            border-top: 2px solid #0ff;
-            border-bottom: 1px solid #005555;
+            position: absolute; width: 100%; height: 15px; background: #000;
+            border-top: 2px solid #0ff; border-bottom: 1px solid #005555;
             box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3);
         }
         #shelf-1 { top: 140px; }
@@ -166,92 +148,44 @@
 
         /* CYBER DUCKS */
         .duck {
-            position: absolute;
-            bottom: 10px;
-            width: 95px;
-            height: 95px;
-            font-size: 85px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: none;
-            line-height: 1;
-            filter: drop-shadow(0 0 10px #0ff) hue-rotate(120deg) saturate(150%);
+            position: absolute; bottom: 10px; width: 95px; height: 95px; font-size: 85px;
+            display: flex; justify-content: center; align-items: center; cursor: none;
+            line-height: 1; filter: drop-shadow(0 0 10px #0ff) hue-rotate(120deg) saturate(150%);
         }
-
-        /* PINK DECOY DUCK */
-        .duck.decoy {
-            filter: drop-shadow(0 0 15px #ff00ff) hue-rotate(240deg) saturate(300%) brightness(1.2);
-            z-index: 5;
-        }
+        .duck.decoy { filter: drop-shadow(0 0 15px #ff00ff) hue-rotate(240deg) saturate(300%) brightness(1.2); z-index: 5; }
 
         /* NEON LETTERS */
         .duck-letter {
-            position: absolute;
-            background: #000;
-            color: #0ff;
-            border: 2px solid #0ff;
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            font-size: 26px;
-            font-weight: bold;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            top: 25px;
-            left: 15px;
-            font-family: 'Share Tech Mono', monospace; 
-            pointer-events: none;
-            box-shadow: inset 0 0 5px #0ff;
+            position: absolute; background: #000; color: #0ff; border: 2px solid #0ff;
+            border-radius: 50%; width: 36px; height: 36px; font-size: 26px; font-weight: bold;
+            display: flex; justify-content: center; align-items: center;
+            top: 25px; left: 15px; font-family: 'Share Tech Mono', monospace; 
+            pointer-events: none; box-shadow: inset 0 0 5px #0ff;
         }
+        .duck-letter.small-text { font-size: 16px; letter-spacing: -1px; }
+        .duck.decoy .duck-letter { color: #ff00ff; border-color: #ff00ff; box-shadow: inset 0 0 5px #ff00ff; }
 
-        .duck-letter.small-text {
-            font-size: 16px;
-            letter-spacing: -1px;
-        }
-
-        .duck.decoy .duck-letter {
-            color: #ff00ff;
-            border-color: #ff00ff;
-            box-shadow: inset 0 0 5px #ff00ff;
-        }
-
-        /* ROTATION MECHANIC */
-        @keyframes letterSpin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
+        @keyframes letterSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .rotating .duck-letter { animation: letterSpin 1.5s linear infinite; }
 
-        /* FALLING DUCK ANIMATION */
-        @keyframes fallOff {
-            0% { transform: translateY(0) rotate(0deg); }
-            100% { transform: translateY(600px) rotate(180deg); opacity: 0; }
-        }
+        @keyframes fallOff { 0% { transform: translateY(0) rotate(0deg); } 100% { transform: translateY(600px) rotate(180deg); opacity: 0; } }
         .falling { animation: fallOff 0.6s forwards; pointer-events: none; }
 
         /* CYBER TARGET CROSSHAIR */
         #crosshair {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            border: 2px solid #0ff;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 100;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8), inset 0 0 10px rgba(0, 255, 255, 0.4);
-            display: none;
+            position: absolute; width: 50px; height: 50px; border: 2px solid #0ff; border-radius: 50%;
+            transform: translate(-50%, -50%); pointer-events: none; z-index: 100;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8), inset 0 0 10px rgba(0, 255, 255, 0.4); display: none;
         }
-        #crosshair::before, #crosshair::after {
-            content: ''; position: absolute; background: #0ff; box-shadow: 0 0 5px #0ff;
-        }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #0ff; box-shadow: 0 0 5px #0ff; }
         #crosshair::before { top: 50%; left: -10px; right: -10px; height: 2px; transform: translateY(-50%); }
         #crosshair::after { left: 50%; top: -10px; bottom: -10px; width: 2px; transform: translateX(-50%); }
-        #crosshair-dot {
-            position: absolute; width: 4px; height: 4px; background: #fff; box-shadow: 0 0 5px #fff;
-            border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        #crosshair-dot { position: absolute; width: 4px; height: 4px; background: #fff; box-shadow: 0 0 5px #fff; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        /* SPARKS PARTICLE SYSTEM */
+        .spark {
+            position: absolute; width: 4px; height: 4px; background: #fff; border-radius: 50%;
+            pointer-events: none; z-index: 150; box-shadow: 0 0 10px #0ff, 0 0 5px #0ff;
         }
 
         /* EMERGENCY SHAKE & FLASH */
@@ -270,23 +204,15 @@
         }
         .shake-active { animation: boothShake 0.15s infinite; }
 
-        @keyframes emergencyRed {
-            0%, 100% { opacity: 0; }
-            50% { opacity: 0.5; }
-        }
-        #danger-light {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: #ff0033; opacity: 0; pointer-events: none; z-index: 40;
-        }
+        @keyframes emergencyRed { 0%, 100% { opacity: 0; } 50% { opacity: 0.5; } }
+        #danger-light { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #ff0033; opacity: 0; pointer-events: none; z-index: 40; }
         .flash-active { animation: emergencyRed 0.4s infinite; }
 
         /* HUD OVERLAYS */
         .overlay {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 5, 0.95);
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 5, 0.95);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 200; text-align: center; padding: 20px; border: 1px solid #0ff;
-            cursor: default; 
+            z-index: 200; text-align: center; padding: 20px; border: 1px solid #0ff; cursor: default; 
         }
         .overlay h1 { font-family: 'Orbitron', sans-serif; font-size: 50px; margin: 0 0 10px 0; color: #0ff; text-shadow: 0 0 15px #0ff;}
         .overlay p { font-size: 20px; max-width: 600px; line-height: 1.5; color: #ccc; margin-bottom: 25px; }
@@ -300,40 +226,27 @@
         }
         .level-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 15px #0ff; }
 
-        /* Custom Word Input Section */
         .custom-words-container {
-            background: rgba(0, 255, 255, 0.05);
-            border: 1px dashed #0ff;
-            padding: 20px;
-            border-radius: 5px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 600px;
+            background: rgba(0, 255, 255, 0.05); border: 1px dashed #0ff; padding: 20px;
+            border-radius: 5px; display: flex; flex-direction: column; align-items: center; width: 600px;
         }
         .custom-words-container h3 { margin: 0 0 15px 0; color: #fff; font-family: 'Orbitron', sans-serif; font-size: 16px; letter-spacing: 2px;}
         .input-row { display: flex; gap: 10px; width: 100%; justify-content: center; margin-bottom: 15px; }
         .word-input {
-            width: 90px; padding: 8px; background: #000; border: 1px solid #0ff;
-            color: #0ff; font-family: 'Orbitron', sans-serif; text-align: center;
-            font-size: 14px; text-transform: uppercase; outline: none;
+            width: 90px; padding: 8px; background: #000; border: 1px solid #0ff; color: #0ff;
+            font-family: 'Orbitron', sans-serif; text-align: center; font-size: 14px; text-transform: uppercase; outline: none;
         }
         .word-input:focus { box-shadow: 0 0 10px #0ff; }
 
         .play-btn {
-            background: #0f0; color: #000; border: none;
-            padding: 12px 35px; font-size: 20px; font-family: 'Orbitron', sans-serif; font-weight: bold;
-            border-radius: 3px; cursor: pointer; transition: all 0.2s;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5); margin-top: 10px;
+            background: #0f0; color: #000; border: none; padding: 12px 35px; font-size: 20px;
+            font-family: 'Orbitron', sans-serif; font-weight: bold; border-radius: 3px; cursor: pointer;
+            transition: all 0.2s; box-shadow: 0 0 15px rgba(0, 255, 0, 0.5); margin-top: 10px;
         }
         .play-btn:hover { transform: scale(1.05); box-shadow: 0 0 25px #0f0; background: #fff; }
         .hidden { display: none !important; }
 
-        /* Shoot Flash */
-        #flash {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: #0ff; opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.05s;
-        }
+        #flash { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #0ff; opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.05s; }
     </style>
 </head>
 <body>
@@ -371,13 +284,16 @@
             <div id="flash"></div>
             <div id="danger-light"></div>
 
-            <div id="pause-screen" class="overlay hidden">
-                <h1 style="color:#0ff; text-shadow: 0 0 15px #0ff; margin-bottom: 10px;">SYSTEM PAUSED</h1>
-                <p style="color:#fff; font-size: 24px;">AWAITING OPERATOR INPUT</p>
-                <p style="font-size: 16px; color: #aaa; margin-top: 20px;">(Touch screen to resume)</p>
+            <div id="mode-selection-screen" class="overlay">
+                <h1>SELECT PROTOCOL</h1>
+                <p>Choose your training module to begin.</p>
+                <div class="grid-container" style="display: flex; justify-content: center; gap: 20px;">
+                    <button class="level-btn" style="padding: 15px 30px;" onclick="showSpellingMenu()">SPELLING DRILL</button>
+                    <button class="level-btn" style="padding: 15px 30px;" onclick="startMathChallenge()">MATH (X12) PROTOCOL</button>
+                </div>
             </div>
 
-            <div id="start-screen" class="overlay">
+            <div id="start-screen" class="overlay hidden">
                 <h1>CYBER-DUCK PROTOCOL</h1>
                 <p>Survive the 5-stage holographic gauntlet.<br><strong style="color:#ff00ff; text-shadow:0 0 8px #ff00ff;">DO NOT TOUCH PINK DECOY TARGETS STARTING AT STAGE 4!</strong></p>
                 
@@ -400,6 +316,12 @@
                     </div>
                     <button class="level-btn" style="width: 100%; border-color:#0f0; color:#0f0;" onclick="startCustomChallenge()">INITIALIZE CUSTOM RUN</button>
                 </div>
+            </div>
+
+            <div id="pause-screen" class="overlay hidden">
+                <h1 style="color:#0ff; text-shadow: 0 0 15px #0ff; margin-bottom: 10px;">SYSTEM PAUSED</h1>
+                <p style="color:#fff; font-size: 24px;">AWAITING OPERATOR INPUT</p>
+                <p style="font-size: 16px; color: #aaa; margin-top: 20px;">(Touch screen to resume)</p>
             </div>
 
             <div id="intermission-screen" class="overlay hidden">
@@ -441,9 +363,11 @@
             8: ["ACCOMMODATE", "BUSINESS", "CONSCIENCE", "DEFINITELY", "ENVIRONMENT", "GUARANTEE", "PARLIAMENT", "PHYSIQUE", "RESTAURANT", "VEHICLE"]
         };
 
-        let gameMode = "SPELLING"; // Keeps layout of original uploaded file
+        let gameMode = "SPELLING"; 
         let selectedLevelName = "YR 4";
         let challengeWords = [];
+        let mathEquationText = "";
+        let mathSolvedCount = 0;
         let currentWordIndex = 0;
         
         let targetWord = "";
@@ -458,6 +382,10 @@
         let isPausedForTouch = false;
         let mouseX = -1000;
         let mouseY = -1000;
+        
+        // Exact saved location of the crosshair when lifting finger
+        let savedTargetX = 0;
+        let savedTargetY = 0;
         
         let gameTimer, spawnInterval;
         let ducks = [];
@@ -475,7 +403,9 @@
         const stageIndicator = document.getElementById('stage-indicator');
         const modifierTag = document.getElementById('modifier-tag');
         const revealBtn = document.getElementById('reveal-btn');
+        const exitBtn = document.getElementById('exit-btn');
         
+        const modeScreen = document.getElementById('mode-selection-screen');
         const startScreen = document.getElementById('start-screen');
         const pauseScreen = document.getElementById('pause-screen');
         const intermissionScreen = document.getElementById('intermission-screen');
@@ -490,7 +420,6 @@
             crosshair.style.display = 'block';
             const rect = booth.getBoundingClientRect();
             
-            // Scaled positioning
             crosshair.style.left = `${(e.clientX - rect.left) / window.gameScale}px`;
             crosshair.style.top = `${(e.clientY - rect.top) / window.gameScale}px`;
             mouseX = e.clientX; mouseY = e.clientY;
@@ -504,7 +433,7 @@
         // --- IPAD / TOUCHSCREEN CONTROLS ---
         booth.addEventListener('touchstart', (e) => {
             if (!isPlaying) return;
-            e.preventDefault(); 
+            e.preventDefault(); // Stop iOS selection/magnifier
 
             if (isPausedForTouch) {
                 isPausedForTouch = false;
@@ -518,25 +447,17 @@
             clearTimeout(touchPauseTimeout);
 
             if (lastTouchEndTime > 0 && (now - lastTouchEndTime) <= 1000) {
-                // --- FIRE AT EXACT CROSSHAIR POSITION ---
-                const cr = crosshair.getBoundingClientRect();
-                const targetX = cr.left + (cr.width / 2);
-                const targetY = cr.top + (cr.height / 2);
-
-                crosshair.style.display = 'none'; // Hide temporarily to avoid clicking itself
-                
-                const hitElement = document.elementFromPoint(targetX, targetY);
-                const hitDuck = hitElement ? hitElement.closest('.duck') : null;
-                
-                fireAtTarget(hitDuck);
-                lastTouchEndTime = 0; 
+                // --- FIRE AT THE EXACT SAVED CROSSHAIR POSITION ---
+                crosshair.style.display = 'none'; 
+                triggerShot(savedTargetX, savedTargetY);
+                lastTouchEndTime = 0; // Require another lift to shoot again
             } else {
                 // --- START DRAGGING TO AIM ---
                 const rect = booth.getBoundingClientRect();
                 
-                // Intentional offset so finger doesn't block the visual crosshair
-                const offsetX = -20 * window.gameScale;
-                const offsetY = -40 * window.gameScale;
+                // Offset Right and Up 
+                const offsetX = 30 * window.gameScale;  // Right
+                const offsetY = -40 * window.gameScale; // Up
 
                 crosshair.style.display = 'block';
                 crosshair.style.left = `${(touch.clientX + offsetX - rect.left) / window.gameScale}px`;
@@ -557,7 +478,8 @@
             const touch = e.touches[0];
             const rect = booth.getBoundingClientRect();
             
-            const offsetX = -20 * window.gameScale;
+            // Offset Right and Up
+            const offsetX = 30 * window.gameScale;
             const offsetY = -40 * window.gameScale;
             
             crosshair.style.display = 'block';
@@ -574,14 +496,18 @@
             e.preventDefault();
             
             if (lastTouchEndTime === 0) {
+                // Save the exact center of the crosshair when lifting the finger
+                const cr = crosshair.getBoundingClientRect();
+                savedTargetX = cr.left + (cr.width / 2);
+                savedTargetY = cr.top + (cr.height / 2);
                 lastTouchEndTime = Date.now();
             }
 
-            // Move mouse variables off-screen to avoid triggering decoy collisions while hovering
+            // Move mouse collision off screen
             mouseX = -1000;
             mouseY = -1000;
 
-            // Trigger Pause after 2 seconds
+            // Pause if inactive for 2 seconds
             clearTimeout(touchPauseTimeout);
             touchPauseTimeout = setTimeout(() => {
                 if (isPlaying && !isPausedForTouch) {
@@ -592,22 +518,29 @@
             }, 2000);
         }, {passive: false});
 
-
         // Scan Target Mechanic
         revealBtn.addEventListener('click', () => {
             if (!isPlaying || isPausedForTouch || ammoRemaining <= 0) return;
-            
             ammoRemaining--;
             updateUI();
-            
             targetWordDisplay.innerText = targetWord;
-            
-            setTimeout(() => {
-                if (isPlaying && !isPausedForTouch) targetWordDisplay.innerText = "*****";
-            }, 1000);
+            setTimeout(() => { if (isPlaying && !isPausedForTouch) targetWordDisplay.innerText = "*****"; }, 1000);
         });
 
         // --- Menu Routing ---
+        function showSpellingMenu() {
+            gameMode = "SPELLING";
+            modeScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        }
+
+        function startMathChallenge() {
+            gameMode = "MATH";
+            selectedLevelName = "MULTIPLICATION X12";
+            modeScreen.classList.add('hidden');
+            beginSequence();
+        }
+
         function startSpellingChallenge(year) {
             selectedLevelName = `YEAR ${year}`;
             let poolCopy = [...spellingLevels[year]];
@@ -641,7 +574,48 @@
             setupStage();
         }
 
-        // --- Stage Setup ---
+        function generateMathQuestion() {
+            let min = 1, max = 9;
+            if (currentWordIndex >= 2) max = 12; 
+            if (currentWordIndex >= 3) min = 3;  
+            
+            let a = Math.floor(Math.random() * (max - min + 1)) + min;
+            let b = Math.floor(Math.random() * (max - min + 1)) + min;
+            targetWord = (a * b).toString();
+            mathEquationText = `SOLVE: ${a} × ${b}`;
+            spelledTracker.innerText = `${mathEquationText} [${mathSolvedCount}/10]`;
+            
+            targetWordDisplay.innerText = targetWord;
+            setTimeout(() => { if (isPlaying) targetWordDisplay.innerText = "*****"; }, 1000);
+        }
+
+        function abortGame() {
+            isPlaying = false;
+            isPausedForTouch = false;
+            clearTimeout(touchPauseTimeout);
+            clearInterval(gameTimer);
+            clearInterval(spawnInterval);
+            crosshair.style.display = 'none';
+            booth.classList.remove('shake-active');
+            dangerLight.classList.remove('flash-active');
+            document.querySelectorAll('.duck').forEach(d => d.remove());
+            document.querySelectorAll('.spark').forEach(s => s.remove());
+            ducks = [];
+            
+            exitBtn.classList.add('hidden');
+            pauseScreen.classList.add('hidden');
+            intermissionScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            startScreen.classList.add('hidden');
+            modeScreen.classList.remove('hidden');
+
+            targetWordDisplay.innerText = "SYSTEM_READY";
+            spelledTracker.innerText = "INITIALIZE";
+            stageIndicator.innerHTML = `STANDBY`;
+            timerDisplay.innerText = "--";
+            ammoDisplay.innerText = "--";
+        }
+
         function setupStage() {
             currentSpelled = "";
             isPausedForTouch = false;
@@ -649,17 +623,25 @@
             dangerLight.classList.remove('flash-active');
             crosshair.style.display = 'none';
             document.querySelectorAll('.duck').forEach(d => d.remove());
+            document.querySelectorAll('.spark').forEach(s => s.remove());
             ducks = [];
 
-            stageIndicator.innerText = `STAGE ${currentWordIndex + 1}/5`;
+            stageIndicator.innerHTML = `STAGE ${currentWordIndex + 1}/5 <button id="exit-btn" onclick="abortGame()">ABORT</button>`;
 
-            targetWord = challengeWords[currentWordIndex];
-            let baseTimeReduction = currentWordIndex * 6; 
-            timeRemaining = Math.max(15, (30 + targetWord.length * 2) - baseTimeReduction);
-            ammoRemaining = targetWord.length + 12;
-            updateSpelledTracker();
+            if (gameMode === "SPELLING") {
+                targetWord = challengeWords[currentWordIndex];
+                let baseTimeReduction = currentWordIndex * 6; 
+                timeRemaining = Math.max(15, (30 + targetWord.length * 2) - baseTimeReduction);
+                ammoRemaining = targetWord.length + 12;
+                updateSpelledTracker();
+                targetWordDisplay.innerText = targetWord;
+            } else if (gameMode === "MATH") {
+                mathSolvedCount = 0;
+                timeRemaining = Math.max(40, 90 - (currentWordIndex * 10)); 
+                ammoRemaining = 40; 
+                generateMathQuestion();
+            }
 
-            // Neon modifier tags
             if (currentWordIndex === 0) { modifierTag.innerText = "STANDARD"; modifierTag.style.background = "#0ff"; }
             if (currentWordIndex === 1) { modifierTag.innerText = "VELOCITY UP"; modifierTag.style.background = "#0af"; }
             if (currentWordIndex === 2) { modifierTag.innerText = "SCRAMBLERS ACTIVE"; modifierTag.style.background = "#a0f"; }
@@ -669,8 +651,6 @@
             updateUI();
             intermissionScreen.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
-            
-            targetWordDisplay.innerText = targetWord;
             
             setTimeout(() => {
                 targetWordDisplay.innerText = "*****";
@@ -719,17 +699,28 @@
             if (isDecoy) {
                 letterBadge.innerText = "☢️";
             } else {
-                const nextNeededLetter = targetWord[currentSpelled.length];
-                if (Math.random() < 0.45 && nextNeededLetter) {
-                    letterBadge.innerText = nextNeededLetter;
-                } else {
-                    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                    letterBadge.innerText = alphabet[Math.floor(Math.random() * alphabet.length)];
+                if (gameMode === "SPELLING") {
+                    const nextNeededLetter = targetWord[currentSpelled.length];
+                    if (Math.random() < 0.45 && nextNeededLetter) {
+                        letterBadge.innerText = nextNeededLetter;
+                    } else {
+                        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                        letterBadge.innerText = alphabet[Math.floor(Math.random() * alphabet.length)];
+                    }
+                } else if (gameMode === "MATH") {
+                    if (Math.random() < 0.35) {
+                        letterBadge.innerText = targetWord; 
+                    } else {
+                        letterBadge.innerText = Math.floor(Math.random() * 144) + 1; 
+                        if (letterBadge.innerText === targetWord) letterBadge.innerText = "0"; 
+                    }
+                    if (letterBadge.innerText.length > 1) {
+                        letterBadge.classList.add('small-text');
+                    }
                 }
             }
 
             duck.appendChild(letterBadge);
-
             if (currentWordIndex === 2 || currentWordIndex === 4) { duck.classList.add('rotating'); }
 
             const shelfNum = Math.floor(Math.random() * 3) + 1;
@@ -765,7 +756,6 @@
                     d.x += d.speed;
                     d.element.style.left = `${d.x}px`;
 
-                    // Pink Decoy Collision Logic (Hover Check)
                     if (d.decoy) {
                         const rect = d.element.getBoundingClientRect();
                         const hitBuffer = 15; 
@@ -785,15 +775,50 @@
             requestAnimationFrame(moveDucks);
         }
 
-        // --- Core Shooting Logic ---
-        function fireAtTarget(hitDuck) {
+        // --- Spark Particle Generator ---
+        function createSparks(absX, absY) {
+            const rect = booth.getBoundingClientRect();
+            // Convert absolute screen position to booth coordinates
+            const boothX = (absX - rect.left) / window.gameScale;
+            const boothY = (absY - rect.top) / window.gameScale;
+
+            for (let i = 0; i < 8; i++) {
+                const spark = document.createElement('div');
+                spark.className = 'spark';
+                spark.style.left = `${boothX}px`;
+                spark.style.top = `${boothY}px`;
+                booth.appendChild(spark);
+
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * 40 + 20;
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance;
+
+                spark.animate([
+                    { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+                    { transform: `translate(${tx}px, ${ty}px) scale(0)`, opacity: 0 }
+                ], {
+                    duration: 300 + Math.random() * 200,
+                    easing: 'ease-out'
+                }).onfinish = () => spark.remove();
+            }
+        }
+
+        // --- Unified Shooting Mechanics ---
+        function triggerShot(absX, absY) {
             if (!isPlaying || timeRemaining <= 0 || ammoRemaining <= 0) return;
 
+            // Visual effects
             flash.style.opacity = '1';
             setTimeout(() => { flash.style.opacity = '0'; }, 50);
+            createSparks(absX, absY);
 
             ammoRemaining--;
             updateUI();
+
+            // Find element at exact coordinates
+            const hitElement = document.elementFromPoint(absX, absY);
+            const hitDuck = hitElement ? hitElement.closest('.duck') : null;
 
             if (hitDuck) {
                 const duckIndex = ducks.findIndex(d => d.element === hitDuck);
@@ -803,22 +828,36 @@
                     if (targetObj.decoy) {
                         triggerDecoyPenalty();
                     } else {
+                        let isCorrect = false;
+
                         if (gameMode === "SPELLING") {
-                            const expectedLetter = targetWord[currentSpelled.length];
-                            if (targetObj.letter === expectedLetter) {
+                            if (targetObj.letter === targetWord[currentSpelled.length]) isCorrect = true;
+                        } else if (gameMode === "MATH") {
+                            if (targetObj.letter === targetWord) isCorrect = true;
+                        }
+
+                        if (isCorrect) {
+                            if (gameMode === "SPELLING") {
                                 currentSpelled += targetObj.letter;
                                 updateSpelledTracker();
                                 if (currentSpelled === targetWord) advanceGame();
+                            } else if (gameMode === "MATH") {
+                                mathSolvedCount++;
+                                ammoRemaining += 1; 
+                                if (mathSolvedCount >= 10) {
+                                    advanceGame();
+                                } else {
+                                    generateMathQuestion();
+                                }
                             }
-                        } else if (gameMode === "MATH") {
-                            if (targetObj.letter === targetWord) {
-                                advanceGame();
-                            }
+                            hitDuck.remove();
+                            ducks.splice(duckIndex, 1);
+                        } else {
+                            hitDuck.classList.add('falling');
+                            ducks.splice(duckIndex, 1);
+                            setTimeout(() => { if(hitDuck.parentNode) hitDuck.remove(); }, 600);
                         }
                     }
-
-                    hitDuck.remove();
-                    ducks.splice(duckIndex, 1);
                 }
             }
 
@@ -830,7 +869,7 @@
         // Mousedown handler for PC players
         booth.addEventListener('mousedown', (e) => {
             if (isPausedForTouch) return;
-            fireAtTarget(e.target.closest('.duck'));
+            triggerShot(e.clientX, e.clientY);
         });
 
         // --- Progression Handlers ---
@@ -874,21 +913,19 @@
             gameOverScreen.classList.remove('hidden');
         }
 
-        // --- UI Events ---
         document.getElementById('next-word-btn').addEventListener('click', setupStage);
         
         document.getElementById('restart-btn').addEventListener('click', () => {
             gameOverScreen.classList.add('hidden');
-            startScreen.classList.remove('hidden');
+            modeScreen.classList.remove('hidden');
             targetWordDisplay.innerText = "SYSTEM_READY";
             spelledTracker.innerText = "INITIALIZE";
-            stageIndicator.innerText = "STAGE 1/5";
+            stageIndicator.innerHTML = `STANDBY`;
             modifierTag.innerText = "STANDBY";
             modifierTag.style.background = "#0ff";
             modifierTag.style.color = "#000";
             timerDisplay.innerText = "--";
             ammoDisplay.innerText = "--";
-            
             for(let i=0; i<5; i++) document.getElementById(`cw-${i}`).value = "";
         });
 
