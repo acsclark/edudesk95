@@ -7,6 +7,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@600&family=Share+Tech+Mono&display=swap');
 
+        /* Added 100vw and overflow: hidden to prevent iframe scrolling/black screen issues */
         body {
             margin: 0;
             padding: 0;
@@ -18,16 +19,20 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
+            width: 100vw;
             user-select: none;
-            overflow: hidden;
+            overflow: hidden; 
         }
 
+        /* Added transform-origin for auto-scaling */
         #game-wrapper {
             position: relative;
             box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
             border-radius: 10px;
             overflow: hidden;
             border: 2px solid #0ff;
+            width: 950px;
+            transform-origin: center center;
         }
 
         /* Futuristic Header */
@@ -127,9 +132,18 @@
             padding: 8px 30px;
             border-bottom: 2px solid #0ff;
         }
-        #stage-indicator { font-size: 18px; color: #0ff; font-family: 'Orbitron', sans-serif; }
+        
+        #stage-indicator { font-size: 18px; color: #0ff; font-family: 'Orbitron', sans-serif; display: flex; align-items: center; gap: 15px; }
         #spelled-tracker { font-size: 36px; letter-spacing: 12px; font-family: 'Orbitron', monospace; text-shadow: 0 0 10px #fff; }
         #modifier-tag { font-size: 14px; color: #000; background: #0ff; padding: 2px 10px; border-radius: 2px; font-weight: bold; box-shadow: 0 0 8px #0ff;}
+
+        /* Exit Button */
+        #exit-btn {
+            background: rgba(255, 0, 85, 0.1); color: #ff0055; border: 1px solid #ff0055;
+            padding: 3px 10px; font-family: 'Orbitron'; font-size: 12px; font-weight: bold;
+            cursor: pointer; border-radius: 3px; transition: 0.2s;
+        }
+        #exit-btn:hover { background: #ff0055; color: #000; box-shadow: 0 0 10px #ff0055; }
 
         /* Cyberpunk Grid Background */
         #booth {
@@ -159,13 +173,13 @@
         #shelf-2 { top: 300px; }
         #shelf-3 { top: 460px; }
 
-        /* CYBER DUCKS */
+        /* CYBER DUCKS - Slightly increased size */
         .duck {
             position: absolute;
             bottom: 10px;
-            width: 95px;
-            height: 95px;
-            font-size: 85px;
+            width: 110px;
+            height: 110px;
+            font-size: 95px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -180,29 +194,29 @@
             z-index: 5;
         }
 
-        /* NEON LETTERS */
+        /* NEON LETTERS - Perfect in-between size */
         .duck-letter {
             position: absolute;
             background: #000;
             color: #0ff;
             border: 2px solid #0ff;
             border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            font-size: 26px;
+            width: 42px;
+            height: 42px;
+            font-size: 24px;
             font-weight: bold;
             display: flex;
             justify-content: center;
             align-items: center;
-            top: 25px;
-            left: 15px;
+            top: 30px;
+            left: 20px;
             font-family: 'Share Tech Mono', monospace; 
             pointer-events: none;
             box-shadow: inset 0 0 5px #0ff;
         }
 
         .duck-letter.small-text {
-            font-size: 16px;
+            font-size: 15px;
             letter-spacing: -1px;
         }
 
@@ -352,7 +366,7 @@
         </div>
 
         <div id="tracker-bar">
-            <div id="stage-indicator">STAGE 1/5</div>
+            <div id="stage-indicator">STAGE 1/5 <button id="exit-btn" class="hidden" onclick="abortGame()">ABORT</button></div>
             <div id="spelled-tracker">INITIALIZE</div>
             <div id="modifier-tag">STANDBY</div>
         </div>
@@ -415,6 +429,16 @@
     </div>
 
     <script>
+        // --- Auto-Scaling Logic for Iframe ---
+        function resizeGame() {
+            const wrapper = document.getElementById('game-wrapper');
+            let scale = Math.min(window.innerWidth / 960, window.innerHeight / 650);
+            if (scale > 1) scale = 1;
+            wrapper.style.transform = `scale(${scale})`;
+        }
+        window.addEventListener('resize', resizeGame);
+        resizeGame();
+
         // --- Word Pools ---
         const spellingLevels = {
             4: ["EACH", "EVERY", "FRONT", "CHIEF", "CATCH", "MONEY", "READY", "UNDER", "WHILE", "YOUNG"],
@@ -424,10 +448,11 @@
             8: ["ACCOMMODATE", "BUSINESS", "CONSCIENCE", "DEFINITELY", "ENVIRONMENT", "GUARANTEE", "PARLIAMENT", "PHYSIQUE", "RESTAURANT", "VEHICLE"]
         };
 
-        let gameMode = "SPELLING"; // "SPELLING" or "MATH"
+        let gameMode = "SPELLING"; 
         let selectedLevelName = "YR 4";
         let challengeWords = [];
         let mathEquationText = "";
+        let mathSolvedCount = 0;
         let currentWordIndex = 0;
         
         let targetWord = "";
@@ -455,6 +480,7 @@
         const stageIndicator = document.getElementById('stage-indicator');
         const modifierTag = document.getElementById('modifier-tag');
         const revealBtn = document.getElementById('reveal-btn');
+        const exitBtn = document.getElementById('exit-btn');
         
         const modeScreen = document.getElementById('mode-selection-screen');
         const startScreen = document.getElementById('start-screen');
@@ -479,20 +505,13 @@
             mouseX = -1000; mouseY = -1000;
         });
 
-        // Scan Target Mechanic (Costs 1 Ammo, Shows for 1 Second)
+        // Scan Target Mechanic
         revealBtn.addEventListener('click', () => {
             if (!isPlaying || ammoRemaining <= 0) return;
-            
             ammoRemaining--;
             updateUI();
-            
-            // Show word or answer
             targetWordDisplay.innerText = targetWord;
-            
-            // Hide after 1 second
-            setTimeout(() => {
-                if (isPlaying) targetWordDisplay.innerText = "*****";
-            }, 1000);
+            setTimeout(() => { if (isPlaying) targetWordDisplay.innerText = "*****"; }, 1000);
         });
 
         // --- Menu Routing ---
@@ -542,6 +561,46 @@
             setupStage();
         }
 
+        // --- Math Generation ---
+        function generateMathQuestion() {
+            let min = 1, max = 9;
+            if (currentWordIndex >= 2) max = 12; // Stage 3, 4, 5 introduce x12
+            if (currentWordIndex >= 3) min = 3;  // Stage 4, 5 remove simple x1, x2
+            
+            let a = Math.floor(Math.random() * (max - min + 1)) + min;
+            let b = Math.floor(Math.random() * (max - min + 1)) + min;
+            targetWord = (a * b).toString();
+            mathEquationText = `SOLVE: ${a} × ${b}`;
+            spelledTracker.innerText = `${mathEquationText} [${mathSolvedCount}/10]`;
+            
+            targetWordDisplay.innerText = targetWord;
+            setTimeout(() => { if (isPlaying) targetWordDisplay.innerText = "*****"; }, 1000);
+        }
+
+        // --- Abort Engine ---
+        function abortGame() {
+            isPlaying = false;
+            clearInterval(gameTimer);
+            clearInterval(spawnInterval);
+            crosshair.style.display = 'none';
+            booth.classList.remove('shake-active');
+            dangerLight.classList.remove('flash-active');
+            document.querySelectorAll('.duck').forEach(d => d.remove());
+            ducks = [];
+            
+            exitBtn.classList.add('hidden');
+            intermissionScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            startScreen.classList.add('hidden');
+            modeScreen.classList.remove('hidden');
+
+            targetWordDisplay.innerText = "SYSTEM_READY";
+            spelledTracker.innerText = "INITIALIZE";
+            stageIndicator.innerHTML = `STANDBY <button id="exit-btn" class="hidden" onclick="abortGame()">ABORT</button>`;
+            timerDisplay.innerText = "--";
+            ammoDisplay.innerText = "--";
+        }
+
         // --- Stage Setup ---
         function setupStage() {
             currentSpelled = "";
@@ -551,23 +610,21 @@
             document.querySelectorAll('.duck').forEach(d => d.remove());
             ducks = [];
 
-            stageIndicator.innerText = `STAGE ${currentWordIndex + 1}/5`;
+            // Show Exit Button safely
+            stageIndicator.innerHTML = `STAGE ${currentWordIndex + 1}/5 <button id="exit-btn" onclick="abortGame()">ABORT</button>`;
 
-            // Setup variables based on mode
             if (gameMode === "SPELLING") {
                 targetWord = challengeWords[currentWordIndex];
                 let baseTimeReduction = currentWordIndex * 6; 
                 timeRemaining = Math.max(15, (30 + targetWord.length * 2) - baseTimeReduction);
                 ammoRemaining = targetWord.length + 12;
                 updateSpelledTracker();
+                targetWordDisplay.innerText = targetWord;
             } else if (gameMode === "MATH") {
-                let a = Math.floor(Math.random() * 12) + 1;
-                let b = Math.floor(Math.random() * 12) + 1;
-                targetWord = (a * b).toString(); // The answer they must shoot
-                mathEquationText = `SOLVE: ${a} × ${b}`;
-                timeRemaining = Math.max(15, 30 - (currentWordIndex * 3));
-                ammoRemaining = 15; // fixed generous ammo for shooting wrong ducks
-                spelledTracker.innerText = mathEquationText;
+                mathSolvedCount = 0;
+                timeRemaining = Math.max(40, 90 - (currentWordIndex * 10)); // 90s, 80s, 70s...
+                ammoRemaining = 40; // Generous ammo for 10 math questions
+                generateMathQuestion();
             }
 
             // Neon modifier tags
@@ -580,9 +637,6 @@
             updateUI();
             intermissionScreen.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
-            
-            // Initialization display
-            targetWordDisplay.innerText = gameMode === "SPELLING" ? targetWord : mathEquationText;
             
             setTimeout(() => {
                 targetWordDisplay.innerText = "*****";
@@ -636,11 +690,11 @@
                     }
                 } else if (gameMode === "MATH") {
                     if (Math.random() < 0.35) {
-                        letterBadge.innerText = targetWord; // Spawn correct answer
+                        letterBadge.innerText = targetWord; 
                     } else {
-                        letterBadge.innerText = Math.floor(Math.random() * 144) + 1; // Random wrong answer
+                        letterBadge.innerText = Math.floor(Math.random() * 144) + 1; 
+                        if (letterBadge.innerText === targetWord) letterBadge.innerText = "0"; // Prevent accidental correct answers
                     }
-                    // Scale text down if it's 2 or 3 digits
                     if (letterBadge.innerText.length > 1) {
                         letterBadge.classList.add('small-text');
                     }
@@ -648,7 +702,6 @@
             }
 
             duck.appendChild(letterBadge);
-
             if (currentWordIndex === 2 || currentWordIndex === 4) { duck.classList.add('rotating'); }
 
             const shelfNum = Math.floor(Math.random() * 3) + 1;
@@ -721,22 +774,37 @@
                     if (targetObj.decoy) {
                         triggerDecoyPenalty();
                     } else {
+                        let isCorrect = false;
+
                         if (gameMode === "SPELLING") {
-                            const expectedLetter = targetWord[currentSpelled.length];
-                            if (targetObj.letter === expectedLetter) {
+                            if (targetObj.letter === targetWord[currentSpelled.length]) isCorrect = true;
+                        } else if (gameMode === "MATH") {
+                            if (targetObj.letter === targetWord) isCorrect = true;
+                        }
+
+                        if (isCorrect) {
+                            if (gameMode === "SPELLING") {
                                 currentSpelled += targetObj.letter;
                                 updateSpelledTracker();
                                 if (currentSpelled === targetWord) advanceGame();
+                            } else if (gameMode === "MATH") {
+                                mathSolvedCount++;
+                                ammoRemaining += 1; // Bonus ammo for correct math shot
+                                if (mathSolvedCount >= 10) {
+                                    advanceGame();
+                                } else {
+                                    generateMathQuestion();
+                                }
                             }
-                        } else if (gameMode === "MATH") {
-                            if (targetObj.letter === targetWord) {
-                                advanceGame();
-                            }
+                            hitDuck.remove();
+                            ducks.splice(duckIndex, 1);
+                        } else {
+                            // WRONG TARGET CLICKED -> Drop animation
+                            hitDuck.classList.add('falling');
+                            ducks.splice(duckIndex, 1); // Stop horizontal movement immediately
+                            setTimeout(() => { if(hitDuck.parentNode) hitDuck.remove(); }, 600);
                         }
                     }
-
-                    hitDuck.remove();
-                    ducks.splice(duckIndex, 1);
                 }
             }
 
@@ -792,7 +860,7 @@
             modeScreen.classList.remove('hidden');
             targetWordDisplay.innerText = "SYSTEM_READY";
             spelledTracker.innerText = "INITIALIZE";
-            stageIndicator.innerText = "STAGE 1/5";
+            stageIndicator.innerHTML = `STANDBY <button id="exit-btn" class="hidden" onclick="abortGame()">ABORT</button>`;
             modifierTag.innerText = "STANDBY";
             modifierTag.style.background = "#0ff";
             modifierTag.style.color = "#000";
