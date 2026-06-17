@@ -33,6 +33,7 @@
             border: 2px solid #0ff;
             width: 950px;
             transform-origin: center center;
+            background-color: #020205;
         }
 
         /* Futuristic Header */
@@ -144,6 +145,7 @@
             cursor: pointer; border-radius: 3px; transition: 0.2s;
         }
         #exit-btn:hover { background: #ff0055; color: #000; box-shadow: 0 0 10px #ff0055; }
+        #exit-btn.hidden { display: none; }
 
         /* Cyberpunk Grid Background */
         #booth {
@@ -157,6 +159,8 @@
             position: relative;
             cursor: none;
             overflow: hidden;
+            /* Prevents long-press text selection on iOS */
+            -webkit-touch-callout: none;
         }
 
         /* Neon Shelves */
@@ -173,7 +177,7 @@
         #shelf-2 { top: 300px; }
         #shelf-3 { top: 460px; }
 
-        /* CYBER DUCKS - Slightly increased size */
+        /* CYBER DUCKS */
         .duck {
             position: absolute;
             bottom: 10px;
@@ -194,7 +198,7 @@
             z-index: 5;
         }
 
-        /* NEON LETTERS - Perfect in-between size */
+        /* NEON LETTERS */
         .duck-letter {
             position: absolute;
             background: #000;
@@ -414,6 +418,12 @@
                 </div>
             </div>
 
+            <div id="pause-screen" class="overlay hidden">
+                <h1 style="color:#0ff; text-shadow: 0 0 15px #0ff; margin-bottom: 10px;">SYSTEM PAUSED</h1>
+                <p style="color:#fff; font-size: 24px;">AWAITING OPERATOR INPUT</p>
+                <p style="font-size: 16px; color: #aaa; margin-top: 20px;">(Touch screen to resume)</p>
+            </div>
+
             <div id="intermission-screen" class="overlay hidden">
                 <h1 style="color:#0f0; text-shadow: 0 0 15px #0f0;">TARGET SECURED</h1>
                 <p id="intermission-msg"></p>
@@ -461,6 +471,10 @@
         let ammoRemaining = 0;
         let isPlaying = false;
         
+        // Touch Variables
+        let lastTouchEndTime = 0;
+        let touchPauseTimeout = null;
+        let isPausedForTouch = false;
         let mouseX = -1000;
         let mouseY = -1000;
         
@@ -489,10 +503,11 @@
         const gameOverScreen = document.getElementById('game-over-screen');
         const endTitle = document.getElementById('end-title');
         const endMessage = document.getElementById('end-message');
+        const pauseScreen = document.getElementById('pause-screen');
 
-        // Crosshair Mapping
+        // Crosshair Mapping (Mouse)
         booth.addEventListener('mousemove', (e) => {
-            if (!isPlaying) { crosshair.style.display = 'none'; return; }
+            if (!isPlaying || isPausedForTouch) return;
             crosshair.style.display = 'block';
             const rect = booth.getBoundingClientRect();
             crosshair.style.left = `${e.clientX - rect.left}px`;
@@ -505,13 +520,79 @@
             mouseX = -1000; mouseY = -1000;
         });
 
+        // --- IPAD / TOUCHSCREEN CONTROLS ---
+        booth.addEventListener('touchstart', (e) => {
+            if (!isPlaying) return;
+            e.preventDefault(); 
+
+            if (isPausedForTouch) {
+                isPausedForTouch = false;
+                pauseScreen.classList.add('hidden');
+                lastTouchEndTime = 0; 
+                return;
+            }
+
+            const touch = e.touches[0];
+            const rect = booth.getBoundingClientRect();
+            crosshair.style.display = 'block';
+            crosshair.style.left = `${touch.clientX - rect.left}px`;
+            crosshair.style.top = `${touch.clientY - rect.top}px`;
+            mouseX = touch.clientX;
+            mouseY = touch.clientY;
+
+            clearTimeout(touchPauseTimeout);
+
+            const now = Date.now();
+            if (lastTouchEndTime > 0 && (now - lastTouchEndTime) <= 1000) {
+                // Fired! (Lifting finger and putting it down within 1s)
+                const hitElement = document.elementFromPoint(touch.clientX, touch.clientY);
+                const hitDuck = hitElement ? hitElement.closest('.duck') : null;
+                fireAtTarget(hitDuck);
+                lastTouchEndTime = 0; // Require another lift to shoot again
+            } else {
+                lastTouchEndTime = 0; // Just starting a drag
+            }
+        }, {passive: false});
+
+        booth.addEventListener('touchmove', (e) => {
+            if (!isPlaying || isPausedForTouch) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = booth.getBoundingClientRect();
+            crosshair.style.left = `${touch.clientX - rect.left}px`;
+            crosshair.style.top = `${touch.clientY - rect.top}px`;
+            mouseX = touch.clientX;
+            mouseY = touch.clientY;
+        }, {passive: false});
+
+        booth.addEventListener('touchend', (e) => {
+            if (!isPlaying) return;
+            e.preventDefault();
+            lastTouchEndTime = Date.now();
+            
+            // Move ghost cursor off screen so decoy doesn't hit it while finger is lifted
+            mouseX = -1000;
+            mouseY = -1000;
+            crosshair.style.display = 'none';
+
+            // If no touch for 2 seconds, enter pause state
+            clearTimeout(touchPauseTimeout);
+            touchPauseTimeout = setTimeout(() => {
+                if (isPlaying && !isPausedForTouch) {
+                    isPausedForTouch = true;
+                    pauseScreen.classList.remove('hidden');
+                }
+            }, 2000);
+        }, {passive: false});
+
+
         // Scan Target Mechanic
         revealBtn.addEventListener('click', () => {
-            if (!isPlaying || ammoRemaining <= 0) return;
+            if (!isPlaying || isPausedForTouch || ammoRemaining <= 0) return;
             ammoRemaining--;
             updateUI();
             targetWordDisplay.innerText = targetWord;
-            setTimeout(() => { if (isPlaying) targetWordDisplay.innerText = "*****"; }, 1000);
+            setTimeout(() => { if (isPlaying && !isPausedForTouch) targetWordDisplay.innerText = "*****"; }, 1000);
         });
 
         // --- Menu Routing ---
@@ -580,6 +661,8 @@
         // --- Abort Engine ---
         function abortGame() {
             isPlaying = false;
+            isPausedForTouch = false;
+            clearTimeout(touchPauseTimeout);
             clearInterval(gameTimer);
             clearInterval(spawnInterval);
             crosshair.style.display = 'none';
@@ -589,6 +672,7 @@
             ducks = [];
             
             exitBtn.classList.add('hidden');
+            pauseScreen.classList.add('hidden');
             intermissionScreen.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
             startScreen.classList.add('hidden');
@@ -596,7 +680,7 @@
 
             targetWordDisplay.innerText = "SYSTEM_READY";
             spelledTracker.innerText = "INITIALIZE";
-            stageIndicator.innerHTML = `STANDBY <button id="exit-btn" class="hidden" onclick="abortGame()">ABORT</button>`;
+            stageIndicator.innerHTML = `STANDBY`;
             timerDisplay.innerText = "--";
             ammoDisplay.innerText = "--";
         }
@@ -604,6 +688,7 @@
         // --- Stage Setup ---
         function setupStage() {
             currentSpelled = "";
+            isPausedForTouch = false;
             booth.classList.remove('shake-active');
             dangerLight.classList.remove('flash-active');
             crosshair.style.display = 'none';
@@ -647,6 +732,7 @@
 
         function startGameTimers() {
             gameTimer = setInterval(() => {
+                if (isPausedForTouch) return; // Skip if iPad user paused
                 timeRemaining--;
                 updateUI();
 
@@ -659,7 +745,11 @@
             }, 1000);
 
             let spawnRate = currentWordIndex === 4 ? 600 : 850;
-            spawnInterval = setInterval(spawnDuck, spawnRate);
+            spawnInterval = setInterval(() => {
+                if (isPausedForTouch) return;
+                spawnDuck();
+            }, spawnRate);
+            
             requestAnimationFrame(moveDucks);
         }
 
@@ -731,32 +821,34 @@
         function moveDucks() {
             if (!isPlaying) return;
 
-            for (let i = ducks.length - 1; i >= 0; i--) {
-                let d = ducks[i];
-                d.x += d.speed;
-                d.element.style.left = `${d.x}px`;
+            if (!isPausedForTouch) {
+                for (let i = ducks.length - 1; i >= 0; i--) {
+                    let d = ducks[i];
+                    d.x += d.speed;
+                    d.element.style.left = `${d.x}px`;
 
-                // Pink Decoy Collision Logic (Hover Check)
-                if (d.decoy) {
-                    const rect = d.element.getBoundingClientRect();
-                    const hitBuffer = 15; 
-                    if (mouseX > rect.left + hitBuffer && mouseX < rect.right - hitBuffer &&
-                        mouseY > rect.top + hitBuffer && mouseY < rect.bottom - hitBuffer) {
-                        triggerDecoyPenalty();
-                        break; 
+                    // Pink Decoy Collision Logic (Hover Check)
+                    if (d.decoy) {
+                        const rect = d.element.getBoundingClientRect();
+                        const hitBuffer = 15; 
+                        if (mouseX > rect.left + hitBuffer && mouseX < rect.right - hitBuffer &&
+                            mouseY > rect.top + hitBuffer && mouseY < rect.bottom - hitBuffer) {
+                            triggerDecoyPenalty();
+                            break; 
+                        }
                     }
-                }
 
-                if (d.x > 1100 || d.x < -160) {
-                    d.element.remove();
-                    ducks.splice(i, 1);
+                    if (d.x > 1100 || d.x < -160) {
+                        d.element.remove();
+                        ducks.splice(i, 1);
+                    }
                 }
             }
             requestAnimationFrame(moveDucks);
         }
 
-        // --- Shooting Mechanics ---
-        booth.addEventListener('mousedown', (e) => {
+        // --- Core Shooting Logic (Shared by Mouse & Touch) ---
+        function fireAtTarget(hitDuck) {
             if (!isPlaying || timeRemaining <= 0 || ammoRemaining <= 0) return;
 
             flash.style.opacity = '1';
@@ -765,7 +857,6 @@
             ammoRemaining--;
             updateUI();
 
-            const hitDuck = e.target.closest('.duck');
             if (hitDuck) {
                 const duckIndex = ducks.findIndex(d => d.element === hitDuck);
                 if (duckIndex > -1) {
@@ -811,6 +902,12 @@
             if (ammoRemaining <= 0 && currentSpelled !== targetWord && isPlaying) {
                 endGame(false, "OUT OF ENERGY AMMUNITION");
             }
+        }
+
+        // Mousedown handler for PC players
+        booth.addEventListener('mousedown', (e) => {
+            if (isPausedForTouch) return;
+            fireAtTarget(e.target.closest('.duck'));
         });
 
         // --- Progression Handlers ---
@@ -831,6 +928,8 @@
 
         function endGame(isWin, msg) {
             isPlaying = false;
+            isPausedForTouch = false;
+            clearTimeout(touchPauseTimeout);
             clearInterval(gameTimer);
             clearInterval(spawnInterval);
             crosshair.style.display = 'none';
