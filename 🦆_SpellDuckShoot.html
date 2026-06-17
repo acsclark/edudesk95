@@ -184,14 +184,8 @@
 
         /* UPGRADED BIG SPARKS PARTICLE SYSTEM */
         .spark {
-            position: absolute; 
-            width: 6px; /* Bigger sparks */
-            height: 6px; /* Bigger sparks */
-            background: #fff; 
-            border-radius: 50%;
-            pointer-events: none; 
-            z-index: 150; 
-            box-shadow: 0 0 15px #0ff, 0 0 8px #0ff; /* Massive neon glow */
+            position: absolute; width: 6px; height: 6px; background: #fff; border-radius: 50%;
+            pointer-events: none; z-index: 150; box-shadow: 0 0 15px #0ff, 0 0 8px #0ff;
         }
 
         /* EMERGENCY SHAKE & FLASH */
@@ -325,9 +319,9 @@
             </div>
 
             <div id="pause-screen" class="overlay hidden">
-                <h1 style="color:#0ff; text-shadow: 0 0 15px #0ff; margin-bottom: 10px;">SYSTEM PAUSED</h1>
-                <p style="color:#fff; font-size: 24px;">AWAITING OPERATOR INPUT</p>
-                <p style="font-size: 16px; color: #aaa; margin-top: 20px;">(Touch screen to resume)</p>
+                <h1 style="color:#0ff; text-shadow: 0 0 15px #0ff; margin-bottom: 10px;">GAME PAUSED</h1>
+                <p style="color:#fff; font-size: 24px;">NO TOUCH INPUT DETECTED</p>
+                <p style="font-size: 18px; color: #0f0; font-weight: bold; margin-top: 20px;">Please put your finger back on the screen to resume</p>
             </div>
 
             <div id="intermission-screen" class="overlay hidden">
@@ -439,18 +433,32 @@
         // --- IPAD / TOUCHSCREEN CONTROLS ---
         booth.addEventListener('touchstart', (e) => {
             if (!isPlaying) return;
-            e.preventDefault(); // Stop iOS selection/magnifier
-
-            if (isPausedForTouch) {
-                isPausedForTouch = false;
-                pauseScreen.classList.add('hidden');
-                lastTouchEndTime = 0; 
-                return;
-            }
+            e.preventDefault(); 
 
             const touch = e.touches[0];
             const now = Date.now();
             clearTimeout(touchPauseTimeout);
+
+            if (isPausedForTouch) {
+                // Instantly resume aiming exactly where they touched
+                isPausedForTouch = false;
+                pauseScreen.classList.add('hidden');
+                
+                const rect = booth.getBoundingClientRect();
+                const offsetX = 30 * window.gameScale;  
+                const offsetY = -40 * window.gameScale; 
+
+                crosshair.style.display = 'block';
+                crosshair.style.left = `${(touch.clientX + offsetX - rect.left) / window.gameScale}px`;
+                crosshair.style.top = `${(touch.clientY + offsetY - rect.top) / window.gameScale}px`;
+                
+                const cr = crosshair.getBoundingClientRect();
+                mouseX = cr.left + (cr.width / 2);
+                mouseY = cr.top + (cr.height / 2);
+
+                lastTouchEndTime = 0; 
+                return;
+            }
 
             if (lastTouchEndTime > 0 && (now - lastTouchEndTime) <= 1000) {
                 // --- FIRE AT THE EXACT SAVED CROSSHAIR POSITION ---
@@ -461,9 +469,8 @@
                 // --- START DRAGGING TO AIM ---
                 const rect = booth.getBoundingClientRect();
                 
-                // Offset Right and Up 
-                const offsetX = 30 * window.gameScale;  // Right
-                const offsetY = -40 * window.gameScale; // Up
+                const offsetX = 30 * window.gameScale; 
+                const offsetY = -40 * window.gameScale; 
 
                 crosshair.style.display = 'block';
                 crosshair.style.left = `${(touch.clientX + offsetX - rect.left) / window.gameScale}px`;
@@ -484,7 +491,6 @@
             const touch = e.touches[0];
             const rect = booth.getBoundingClientRect();
             
-            // Offset Right and Up
             const offsetX = 30 * window.gameScale;
             const offsetY = -40 * window.gameScale;
             
@@ -513,7 +519,7 @@
             mouseX = -1000;
             mouseY = -1000;
 
-            // Pause if inactive for 2 seconds
+            // Trigger Pause after 2 seconds exactly
             clearTimeout(touchPauseTimeout);
             touchPauseTimeout = setTimeout(() => {
                 if (isPlaying && !isPausedForTouch) {
@@ -781,14 +787,12 @@
             requestAnimationFrame(moveDucks);
         }
 
-        // --- UPGRADED BIG Spark Particle Generator ---
+        // --- Spark Particle Generator ---
         function createSparks(absX, absY) {
             const rect = booth.getBoundingClientRect();
-            // Convert absolute screen position to booth coordinates
             const boothX = (absX - rect.left) / window.gameScale;
             const boothY = (absY - rect.top) / window.gameScale;
 
-            // Increased particle count from 8 to 16
             for (let i = 0; i < 16; i++) {
                 const spark = document.createElement('div');
                 spark.className = 'spark';
@@ -797,7 +801,6 @@
                 booth.appendChild(spark);
 
                 const angle = Math.random() * Math.PI * 2;
-                // Increased explosion distance massively
                 const distance = Math.random() * 80 + 30; 
                 const tx = Math.cos(angle) * distance;
                 const ty = Math.sin(angle) * distance;
@@ -806,7 +809,6 @@
                     { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
                     { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0)`, opacity: 0 }
                 ], {
-                    // Increased duration slightly so it doesn't vanish too fast
                     duration: 400 + Math.random() * 300,
                     easing: 'ease-out'
                 }).onfinish = () => spark.remove();
