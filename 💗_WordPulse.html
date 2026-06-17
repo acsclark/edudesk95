@@ -36,7 +36,6 @@
             overflow-x: hidden;
         }
 
-        /* Top Bar for Classroom Timer */
         #top-bar {
             width: 100%;
             max-width: 500px;
@@ -269,9 +268,24 @@
 
         function handleKeyPress(key) {
             if (isGameOver) return;
-            if (key === '⌫') { if (currentTile > 0) { currentTile--; document.getElementById(`tile-${currentRow}-${currentTile}`).textContent = ''; } }
-            else if (key === 'ENTER') { if (currentTile === 5) checkGuess(); }
-            else if (currentTile < 5) { document.getElementById(`tile-${currentRow}-${currentTile}`).textContent = key; currentTile++; }
+            if (key === '⌫') { 
+                if (currentTile > 0) { 
+                    currentTile--; 
+                    let tile = document.getElementById(`tile-${currentRow}-${currentTile}`);
+                    tile.textContent = ''; 
+                    tile.classList.remove('filled');
+                } 
+            }
+            else if (key === 'ENTER') { 
+                if (currentTile === 5) checkGuess(); 
+                else showMessage("Not enough letters!");
+            }
+            else if (currentTile < 5) { 
+                let tile = document.getElementById(`tile-${currentRow}-${currentTile}`);
+                tile.textContent = key; 
+                tile.classList.add('filled');
+                currentTile++; 
+            }
         }
 
         function checkGuess() {
@@ -296,6 +310,22 @@
             initBoard();
             initKeyboard();
         }
+
+        // --- Physical Keyboard Support ---
+        document.addEventListener("keydown", (e) => {
+            // Ignore if using modifier keys (like Ctrl+R to refresh)
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+            let key = e.key.toUpperCase();
+            
+            if (key === 'ENTER') {
+                handleKeyPress('ENTER');
+            } else if (key === 'BACKSPACE') {
+                handleKeyPress('⌫');
+            } else if (/^[A-Z]$/.test(key)) { // Only accept letters A-Z
+                handleKeyPress(key);
+            }
+        });
 
         initBoard(); initKeyboard();
     </script>
