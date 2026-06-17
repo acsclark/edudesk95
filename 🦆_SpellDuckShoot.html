@@ -14,20 +14,24 @@
             color: #0ff;
             font-family: 'Rajdhani', sans-serif;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
+            width: 100vw;
             user-select: none;
-            overflow: hidden;
+            overflow: hidden; /* Prevents scrollbars in the iframe */
         }
 
+        /* The wrapper now uses transform scaling to fit any iframe */
         #game-wrapper {
             position: relative;
             box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
             border-radius: 10px;
             overflow: hidden;
             border: 2px solid #0ff;
+            width: 950px; 
+            background-color: #020205;
+            transform-origin: center center;
         }
 
         #marquee {
@@ -39,22 +43,6 @@
             align-items: center;
             position: relative;
         }
-
-        #marquee::before, #marquee::after {
-            content: '////////////////////////////////////////////////////////////////';
-            position: absolute;
-            color: #0ff;
-            font-size: 14px;
-            letter-spacing: 5px;
-            opacity: 0.3;
-            top: 5px;
-            left: 15px;
-            white-space: nowrap;
-            overflow: hidden;
-            width: 100%;
-            font-family: 'Orbitron', sans-serif;
-        }
-        #marquee::after { top: auto; bottom: 5px; }
 
         .stat-box {
             background: #000;
@@ -87,23 +75,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            min-width: 280px;
+            min-width: 320px;
             text-shadow: 0 0 10px #0f0;
         }
-
-        #reveal-btn {
-            background: rgba(0, 255, 255, 0.1);
-            border: 1px solid #0ff;
-            color: #0ff;
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 16px;
-            font-weight: bold;
-            padding: 5px 15px;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.1s;
-        }
-        #reveal-btn:active { background: #0ff; color: #000; }
 
         #tracker-bar {
             background: #050510;
@@ -115,13 +89,14 @@
             border-bottom: 2px solid #0ff;
             height: 50px;
         }
+        
         #stage-indicator { font-size: 18px; color: #0ff; font-family: 'Orbitron', sans-serif; }
         #spelled-tracker { font-size: 36px; letter-spacing: 8px; font-family: 'Orbitron', monospace; text-shadow: 0 0 10px #fff; }
         #modifier-tag { font-size: 14px; color: #000; background: #0ff; padding: 2px 10px; border-radius: 2px; font-weight: bold; box-shadow: 0 0 8px #0ff;}
 
         #booth {
-            width: 950px;
-            height: 550px;
+            width: 100%;
+            height: 500px;
             background:
                 linear-gradient(transparent 48%, rgba(0, 255, 255, 0.15) 50%, transparent 52%),
                 linear-gradient(90deg, transparent 48%, rgba(0, 255, 255, 0.15) 50%, transparent 52%);
@@ -133,49 +108,26 @@
         }
 
         .shelf {
-            position: absolute;
-            width: 100%;
-            height: 15px;
-            background: #000;
-            border-top: 2px solid #0ff;
-            border-bottom: 1px solid #005555;
+            position: absolute; width: 100%; height: 15px; background: #000;
+            border-top: 2px solid #0ff; border-bottom: 1px solid #005555;
             box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3);
         }
-        #shelf-1 { top: 140px; }
-        #shelf-2 { top: 300px; }
-        #shelf-3 { top: 460px; }
+        #shelf-1 { top: 120px; }
+        #shelf-2 { top: 280px; }
+        #shelf-3 { top: 440px; }
 
         .duck {
-            position: absolute;
-            bottom: 10px;
-            width: 95px;
-            height: 95px;
-            font-size: 85px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: none;
+            position: absolute; bottom: 10px; width: 95px; height: 95px; font-size: 85px;
+            display: flex; justify-content: center; align-items: center; cursor: none;
             filter: drop-shadow(0 0 10px #0ff) hue-rotate(120deg) saturate(150%);
         }
 
         .duck-letter {
-            position: absolute;
-            background: #000;
-            color: #0ff;
-            border: 3px solid #0ff;
-            border-radius: 50%;
-            width: 65px;         /* Much larger badge */
-            height: 65px;        /* Much larger badge */
-            font-size: 38px;     /* Much larger text */
-            font-weight: bold;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            top: 10px;           /* Adjusted to stay centered on duck body */
-            left: 12px;          /* Adjusted to stay centered on duck body */
-            font-family: 'Orbitron', sans-serif;
-            box-shadow: inset 0 0 10px #0ff, 0 0 10px #0ff;
-            pointer-events: none;
+            position: absolute; background: #000; color: #0ff; border: 3px solid #0ff;
+            border-radius: 50%; width: 65px; height: 65px; font-size: 38px; font-weight: bold;
+            display: flex; justify-content: center; align-items: center;
+            top: 10px; left: 12px; font-family: 'Orbitron', sans-serif;
+            box-shadow: inset 0 0 10px #0ff, 0 0 10px #0ff; pointer-events: none;
         }
 
         #crosshair {
@@ -193,11 +145,17 @@
             z-index: 200; text-align: center; padding: 20px; border: 1px solid #0ff;
         }
         .overlay h1 { font-family: 'Orbitron'; font-size: 50px; color: #0ff; margin-bottom: 30px; }
-        .level-btn { background: rgba(0, 255, 255, 0.1); color: #0ff; border: 1px solid #0ff; padding: 15px 30px; font-family: 'Orbitron'; cursor: pointer; margin: 10px; font-size: 18px; transition: 0.2s; }
-        .level-btn:hover { background: #0ff; color: #000; }
+        
+        .level-btn { 
+            background: rgba(0, 255, 255, 0.1); color: #0ff; border: 1px solid #0ff; 
+            padding: 15px 30px; font-family: 'Orbitron'; cursor: pointer; margin: 10px; 
+            font-size: 18px; transition: 0.2s; 
+        }
+        .level-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 15px #0ff; }
+        
         .hidden { display: none !important; }
         #flash { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #0ff; opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.05s; }
-    </script>
+    </style>
 </head>
 <body>
 
@@ -232,8 +190,30 @@
     </div>
 
     <script>
+        // --- Auto-Scaler for Iframes ---
+        function resizeGame() {
+            const wrapper = document.getElementById('game-wrapper');
+            const targetWidth = 960; 
+            const targetHeight = 650;
+            
+            // Calculate how much to shrink the game to fit the current window/iframe
+            let scaleX = window.innerWidth / targetWidth;
+            let scaleY = window.innerHeight / targetHeight;
+            let scale = Math.min(scaleX, scaleY);
+            
+            // Only scale down, don't stretch it huge on big screens
+            if (scale > 1) scale = 1;
+            
+            wrapper.style.transform = `scale(${scale})`;
+        }
+        
+        window.addEventListener('resize', resizeGame);
+        resizeGame(); // Call immediately on load
+
+        // --- Game Logic ---
         let gameMode = "";
         let isPlaying = false;
+        let isPausedForMessage = false;
         let ducks = [];
         let mathSolvedCount = 0;
         let currentMathAnswer = 0;
@@ -248,18 +228,15 @@
         const crosshair = document.getElementById('crosshair');
         const flash = document.getElementById('flash');
 
-        // Crosshair movement
         booth.addEventListener('mousemove', (e) => {
-            if(!isPlaying) return;
+            if(!isPlaying || isPausedForMessage) return;
             crosshair.style.display = 'block';
             const rect = booth.getBoundingClientRect();
             crosshair.style.left = (e.clientX - rect.left) + 'px';
             crosshair.style.top = (e.clientY - rect.top) + 'px';
         });
 
-        booth.addEventListener('mouseleave', () => {
-            crosshair.style.display = 'none';
-        });
+        booth.addEventListener('mouseleave', () => { crosshair.style.display = 'none'; });
 
         function startSpelling() {
             gameMode = "SPELLING";
@@ -267,6 +244,7 @@
             document.getElementById('modifier-tag').innerText = "ACTIVE";
             spellingTarget = words[Math.floor(Math.random() * words.length)];
             document.getElementById('target-word-display').innerText = spellingTarget;
+            document.getElementById('target-word-display').style.color = "#0f0";
             spellingCurrent = "";
             document.getElementById('spelled-tracker').innerText = "_ ".repeat(spellingTarget.length).trim();
             startGame();
@@ -277,6 +255,7 @@
             document.getElementById('mode-display').innerText = "MTH";
             document.getElementById('modifier-tag').innerText = "ACTIVE";
             document.getElementById('target-word-display').innerText = "SOLVE EQUATION";
+            document.getElementById('target-word-display').style.color = "#0f0";
             mathSolvedCount = 0;
             nextMathQuestion();
             startGame();
@@ -292,10 +271,10 @@
         function startGame() {
             document.getElementById('mode-screen').classList.add('hidden');
             isPlaying = true;
+            isPausedForMessage = false;
             totalHits = 0;
             document.getElementById('hits-display').innerText = totalHits;
             
-            // Clear existing ducks
             ducks.forEach(d => d.el.remove());
             ducks = [];
             
@@ -304,7 +283,7 @@
         }
 
         function spawnDuck() {
-            if (!isPlaying) return;
+            if (!isPlaying || isPausedForMessage) return;
             
             const duck = document.createElement('div');
             duck.className = 'duck';
@@ -314,14 +293,12 @@
 
             let val = "";
             if (gameMode === "MATH") {
-                // 30% chance to spawn the correct answer, otherwise random up to 144
                 val = (Math.random() < 0.3) ? currentMathAnswer : Math.floor(Math.random() * 144) + 1;
             } else {
-                // Spelling mode logic: 40% chance to spawn the next needed letter
                 if (Math.random() < 0.4 && spellingCurrent.length < spellingTarget.length) {
                     val = spellingTarget[spellingCurrent.length];
                 } else {
-                    val = String.fromCharCode(65 + Math.floor(Math.random() * 26)); // Random A-Z
+                    val = String.fromCharCode(65 + Math.floor(Math.random() * 26)); 
                 }
             }
             
@@ -341,34 +318,45 @@
             
             let deltaTime = currentTime - lastTime;
             lastTime = currentTime;
-            duckTimer += deltaTime;
 
-            // Spawn rate
-            if (duckTimer > 800) {
-                spawnDuck();
-                duckTimer = 0;
-            }
+            if(!isPausedForMessage) {
+                duckTimer += deltaTime;
+                if (duckTimer > 800) {
+                    spawnDuck();
+                    duckTimer = 0;
+                }
 
-            // Move ducks
-            for (let i = ducks.length - 1; i >= 0; i--) {
-                let d = ducks[i];
-                d.x += d.speed * (deltaTime / 16); // Normalize speed across refresh rates
-                d.el.style.left = d.x + 'px';
-                
-                // Remove if off screen
-                if (d.x > 950) { 
-                    d.el.remove(); 
-                    ducks.splice(i, 1); 
+                for (let i = ducks.length - 1; i >= 0; i--) {
+                    let d = ducks[i];
+                    d.x += d.speed * (deltaTime / 16); 
+                    d.el.style.left = d.x + 'px';
+                    
+                    if (d.x > 950) { 
+                        d.el.remove(); 
+                        ducks.splice(i, 1); 
+                    }
                 }
             }
             requestAnimationFrame(gameLoop);
         }
 
-        // Shooting mechanism
-        booth.onmousedown = (e) => {
-            if (!isPlaying) return;
+        // --- Custom Success Message (Bypasses Iframe Restrictions) ---
+        function triggerSuccess(msg) {
+            isPausedForMessage = true;
+            crosshair.style.display = 'none';
             
-            // Screen flash
+            let display = document.getElementById('target-word-display');
+            display.innerText = msg;
+            display.style.color = "#ff00ff"; // Pink success flash
+            
+            setTimeout(() => {
+                endGame();
+            }, 2500); // Wait 2.5 seconds then return to menu
+        }
+
+        booth.onmousedown = (e) => {
+            if (!isPlaying || isPausedForMessage) return;
+            
             flash.style.opacity = 0.8;
             setTimeout(() => flash.style.opacity = 0, 50);
 
@@ -385,10 +373,7 @@
                             document.getElementById('hits-display').innerText = totalHits;
                             
                             if (mathSolvedCount >= 10) { 
-                                setTimeout(() => {
-                                    alert("STAGE CLEAR! 10 Equations Solved."); 
-                                    endGame();
-                                }, 100);
+                                triggerSuccess("STAGE CLEARED!");
                             } else {
                                 nextMathQuestion();
                             }
@@ -396,23 +381,17 @@
                     } else if (gameMode === "SPELLING") {
                         if (d.val === spellingTarget[spellingCurrent.length]) {
                             spellingCurrent += d.val;
-                            
-                            // Create the display string with found letters and underscores
                             let displayStr = spellingCurrent.split('').join(' ') + ' ' + "_ ".repeat(spellingTarget.length - spellingCurrent.length).trim();
                             document.getElementById('spelled-tracker').innerText = displayStr;
                             totalHits++;
                             document.getElementById('hits-display').innerText = totalHits;
 
                             if (spellingCurrent === spellingTarget) {
-                                setTimeout(() => {
-                                    alert("WORD COMPLETE!");
-                                    endGame();
-                                }, 100);
+                                triggerSuccess("WORD COMPLETE!");
                             }
                         }
                     }
                     
-                    // Remove the duck that was shot
                     target.remove();
                     ducks.splice(dIndex, 1);
                 }
@@ -421,11 +400,17 @@
 
         function endGame() {
             isPlaying = false;
+            isPausedForMessage = false;
             document.getElementById('mode-screen').classList.remove('hidden');
             document.getElementById('target-word-display').innerText = "SYSTEM READY";
+            document.getElementById('target-word-display').style.color = "#0f0";
             document.getElementById('spelled-tracker').innerText = "AWAITING INPUT";
             document.getElementById('modifier-tag').innerText = "STANDBY";
             crosshair.style.display = 'none';
+            
+            // Clean up remaining ducks
+            ducks.forEach(d => d.el.remove());
+            ducks = [];
         }
     </script>
 </body>
