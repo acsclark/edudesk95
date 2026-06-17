@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Spelling Grid :: Escape Protocol</title>
     <style>
         :root {
@@ -34,6 +34,9 @@
             min-height: 100vh;
             overflow: hidden;
             user-select: none;
+            /* CRITICAL IPAD FIX: Prevents native pinch-to-zoom and rubber-banding */
+            touch-action: none; 
+            -webkit-user-select: none;
         }
 
         /* --- SETUP SCREEN --- */
@@ -89,14 +92,13 @@
         }
         #battery-fill {
             height: 100%; width: 100%; background-color: var(--success);
-            /* This repeating gradient chops the solid color into 10 distinct blocks */
             background-image: repeating-linear-gradient(90deg, transparent, transparent calc(10% - 3px), #161b22 calc(10% - 3px), #161b22 10%);
             transition: width 0.3s linear, background-color 0.5s ease;
         }
         #battery-text {
             position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
             color: #fff; font-weight: 900; font-size: 1.1rem; letter-spacing: 2px;
-            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; /* Strong outline for readability */
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
         }
 
         /* --- THE DARK GRID ROOM --- */
@@ -163,7 +165,7 @@
         /* --- MATH HAZARD SPECIFIC --- */
         #math-equation { font-size: 2.5rem; color: #fff; margin: 20px 0; font-weight: 900; letter-spacing: 2px; }
         #math-timer-display { font-size: 1.5rem; color: var(--accent-laser); font-weight: bold; animation: spider-jitter 0.5s infinite; }
-        #math-options { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+        #math-options { display: flex; justify-content: center; flex-wrap: wrap; gap: 15px; margin-top: 20px; }
         .math-btn { 
             background: #161b22; border: 2px solid #57606a; color: #fff; padding: 15px 25px; 
             font-size: 1.5rem; cursor: pointer; font-family: inherit; font-weight: bold; transition: 0.2s;
@@ -242,12 +244,68 @@
     </div>
 
     <script>
+        // MASSIVELY EXPANDED WORD BANK (10 words per level)
         const wordBank = {
-            4: [{ correct: "because", wrong: ["becos", "becoz"] }, { correct: "beautiful", wrong: ["beautifull", "beutiful"] }, { correct: "caught", wrong: ["cought", "caurt"] }, { correct: "friend", wrong: ["freind", "frend"] }],
-            5: [{ correct: "different", wrong: ["diffrent", "diferent"] }, { correct: "believe", wrong: ["beleive", "belive"] }, { correct: "tomorrow", wrong: ["tommorow", "tomorroww"] }, { correct: "hospital", wrong: ["hospitle", "hosptial"] }],
-            6: [{ correct: "favourite", wrong: ["favrit", "favorite"] }, { correct: "experience", wrong: ["experiance", "expirience"] }, { correct: "separate", wrong: ["seperate", "seperit"] }, { correct: "embarrass", wrong: ["embaras", "embarass"] }],
-            7: [{ correct: "environment", wrong: ["enviroment", "envirnment"] }, { correct: "definitely", wrong: ["definately", "definitly"] }, { correct: "disappear", wrong: ["dissappear", "disapear"] }, { correct: "necessary", wrong: ["neccessary", "necesary"] }],
-            8: [{ correct: "accommodation", wrong: ["accomodation", "acommodation"] }, { correct: "rhythm", wrong: ["rythm", "rhythum"] }, { correct: "conscience", wrong: ["conscense", "concience"] }, { correct: "liaison", wrong: ["liason", "liaisonne"] }]
+            4: [
+                { correct: "because", wrong: ["becos", "becoz"] },
+                { correct: "beautiful", wrong: ["beautifull", "beutiful"] },
+                { correct: "caught", wrong: ["cought", "caurt"] },
+                { correct: "friend", wrong: ["freind", "frend"] },
+                { correct: "people", wrong: ["peeple", "peaple"] },
+                { correct: "thought", wrong: ["thort", "thout"] },
+                { correct: "enough", wrong: ["enuff", "enoughe"] },
+                { correct: "suddenly", wrong: ["sudenly", "sudenley"] },
+                { correct: "swimming", wrong: ["swimmin", "swiming"] },
+                { correct: "animals", wrong: ["animels", "anamals"] }
+            ],
+            5: [
+                { correct: "different", wrong: ["diffrent", "diferent"] },
+                { correct: "believe", wrong: ["beleive", "belive"] },
+                { correct: "tomorrow", wrong: ["tommorow", "tomorroww"] },
+                { correct: "hospital", wrong: ["hospitle", "hosptial"] },
+                { correct: "library", wrong: ["libary", "librery"] },
+                { correct: "remember", wrong: ["rember", "remmember"] },
+                { correct: "carefully", wrong: ["carefuly", "carfully"] },
+                { correct: "usually", wrong: ["usally", "usualy"] },
+                { correct: "question", wrong: ["qwestion", "quesion"] },
+                { correct: "building", wrong: ["bilding", "buiding"] }
+            ],
+            6: [
+                { correct: "favourite", wrong: ["favrit", "faverite"] },
+                { correct: "experience", wrong: ["experiance", "expirience"] },
+                { correct: "separate", wrong: ["seperate", "seperit"] },
+                { correct: "embarrass", wrong: ["embaras", "embarass"] },
+                { correct: "successful", wrong: ["succesful", "successfull"] },
+                { correct: "immediately", wrong: ["imediately", "immediatly"] },
+                { correct: "accidentally", wrong: ["accidently", "acidentally"] },
+                { correct: "beginning", wrong: ["begining", "beggining"] },
+                { correct: "restaurant", wrong: ["restarant", "restaraunt"] },
+                { correct: "temperature", wrong: ["temprature", "tempertaure"] }
+            ],
+            7: [
+                { correct: "environment", wrong: ["enviroment", "envirnment"] },
+                { correct: "definitely", wrong: ["definately", "definitly"] },
+                { correct: "disappear", wrong: ["dissappear", "disapear"] },
+                { correct: "necessary", wrong: ["neccessary", "necesary"] },
+                { correct: "government", wrong: ["goverment", "govrnment"] },
+                { correct: "knowledge", wrong: ["nowledge", "knowlege"] },
+                { correct: "independent", wrong: ["independant", "independint"] },
+                { correct: "disappoint", wrong: ["dissapoint", "disapoint"] },
+                { correct: "occasionally", wrong: ["occassionally", "ocasionaly"] },
+                { correct: "unfortunately", wrong: ["unfortunatly", "unfortunatley"] }
+            ],
+            8: [
+                { correct: "accommodation", wrong: ["accomodation", "acommodation"] },
+                { correct: "rhythm", wrong: ["rythm", "rhythum"] },
+                { correct: "conscience", wrong: ["conscense", "concience"] },
+                { correct: "liaison", wrong: ["liason", "liaisonne"] },
+                { correct: "privilege", wrong: ["priviledge", "privelege"] },
+                { correct: "occurrence", wrong: ["occurance", "occurence"] },
+                { correct: "maintenance", wrong: ["maintainance", "maintenence"] },
+                { correct: "fascinating", wrong: ["facinating", "fassinating"] },
+                { correct: "accessible", wrong: ["accessable", "accesible"] },
+                { correct: "amateur", wrong: ["amature", "ametuer"] }
+            ]
         };
 
         let currentYear = 4, score = 0, gameLevel = 1, battery = 100, levelProgress = 0, gameState = "WORDS"; 
@@ -256,7 +314,6 @@
         let targets = [], anomaly = null, wordPool = [];
         let loopId, batteryId, flickerId;
         
-        // Math Hazard variables
         let mathTimerId, mathTimeLeft = 8, correctMathAnswer = 0;
 
         const setupScreen = document.getElementById('setup-screen');
@@ -275,10 +332,18 @@
         const batteryFill = document.getElementById('battery-fill');
         const batteryText = document.getElementById('battery-text');
 
+        // IPAD TOUCH FIX: Uses touch coordinates properly and ignores viewport offsets
         function trackInput(e) {
             const rect = darkRoom.getBoundingClientRect();
-            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            let clientX, clientY;
+            
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
             
             mouseX = clientX - rect.left;
             mouseY = clientY - rect.top;
@@ -290,8 +355,10 @@
             heldKeyCursor.style.top = `${mouseY + 15}px`;
         }
 
+        // Attach to both standard mouse and touch events
         darkRoom.addEventListener('mousemove', trackInput);
-        darkRoom.addEventListener('touchmove', trackInput);
+        darkRoom.addEventListener('touchmove', trackInput, {passive: true});
+        darkRoom.addEventListener('touchstart', trackInput, {passive: true});
 
         function startGame() {
             currentYear = document.getElementById('year-select').value;
@@ -398,7 +465,7 @@
         }
 
         function gameLoop() {
-            if (!gameActive || blackoutActive) return requestAnimationFrame(gameLoop); // Keep loop alive but paused
+            if (!gameActive || blackoutActive) return requestAnimationFrame(gameLoop);
 
             const cw = darkRoom.clientWidth, ch = darkRoom.clientHeight;
 
@@ -449,16 +516,15 @@
         }
 
         function drainBattery() {
-            if (!gameActive || blackoutActive) return; // Pause drain during math puzzle
+            if (!gameActive || blackoutActive) return; 
             battery -= 0.5 + (gameLevel * 0.1);
             if (battery <= 0) { battery = 0; endGame(); }
             updateBatteryUI();
         }
 
-        /* --- MATH HAZARD LOGIC --- */
         function triggerMathHazard() {
-            blackoutActive = true; // Pauses interactions and drain
-            document.body.style.cursor = 'default'; // Bring cursor back for UI
+            blackoutActive = true; 
+            document.body.style.cursor = 'default'; 
             
             let num1 = Math.floor(Math.random() * 12) + 1;
             let num2 = Math.floor(Math.random() * 12) + 1;
@@ -466,14 +532,13 @@
             
             document.getElementById('math-equation').innerText = `${num1} x ${num2} = ?`;
             
-            // Generate wrong options safely
             let options = [correctMathAnswer];
             while(options.length < 3) {
                 let offset = (Math.floor(Math.random() * 5) + 1) * (Math.random() < 0.5 ? 1 : -1);
                 let wrong = correctMathAnswer + offset;
                 if(wrong > 0 && !options.includes(wrong)) options.push(wrong);
             }
-            options.sort(() => Math.random() - 0.5); // Shuffle
+            options.sort(() => Math.random() - 0.5); 
             
             const optionsContainer = document.getElementById('math-options');
             optionsContainer.innerHTML = '';
@@ -499,7 +564,7 @@
         function resolveMathHazard(isCorrect) {
             clearInterval(mathTimerId);
             mathHazardModal.style.display = 'none';
-            document.body.style.cursor = 'none'; // Hide cursor again
+            document.body.style.cursor = 'none'; 
 
             if (isCorrect) {
                 showFeedback("OVERRIDE SUCCESS", "msg-correct");
@@ -510,12 +575,8 @@
                 if (battery <= 0) { endGame(); return; }
             }
 
-            // Move anomaly away so it doesn't instantly re-trigger
-            if (anomaly) {
-                anomaly.x = 20; anomaly.y = 20;
-            }
+            if (anomaly) { anomaly.x = 20; anomaly.y = 20; }
 
-            // Small delay before unpausing to let player adjust
             setTimeout(() => { blackoutActive = false; }, 500);
         }
 
