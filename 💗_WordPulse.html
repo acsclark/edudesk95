@@ -17,6 +17,7 @@
             --color-text: #FFFFFF;
             --color-key: #2a3b4c;
             --color-key-shadow: #111820;
+            --color-action: #E0245E; /* Vibrant Pink for actions */
         }
 
         body {
@@ -35,9 +36,77 @@
             overflow-x: hidden;
         }
 
+        /* Top Bar for Classroom Timer */
+        #top-bar {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 15px;
+            border-radius: 12px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .timer-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #timer-input {
+            width: 50px;
+            height: 35px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--color-tile-border);
+            border-radius: 6px;
+            color: white;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        #timer-input:focus {
+            outline: none;
+            border-color: var(--color-correct);
+        }
+
+        .action-btn {
+            background-color: var(--color-action);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0 15px;
+            height: 35px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 800;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 3px 0 #90163b;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .action-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 0 0 transparent;
+        }
+
+        #timer-display {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--color-correct);
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+            font-variant-numeric: tabular-nums;
+        }
+
         /* Cool Gradient Heading */
         h1 {
-            margin: 10px 0 15px 0;
+            margin: 5px 0 15px 0;
             font-size: 2.5rem;
             letter-spacing: 2px;
             text-transform: uppercase;
@@ -77,7 +146,7 @@
             grid-gap: 8px;
             padding: 15px;
             box-sizing: border-box;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             background: rgba(255, 255, 255, 0.03);
             border-radius: 15px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -141,6 +210,7 @@
             width: 100%;
             max-width: 500px;
             gap: 8px;
+            margin-bottom: 20px;
         }
 
         .key-row {
@@ -149,7 +219,7 @@
             gap: 6px;
         }
 
-        button {
+        .key-btn {
             font-family: 'Poppins', sans-serif;
             font-weight: 600;
             border: none;
@@ -171,38 +241,48 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        button.wide {
+        .key-btn.wide {
             flex: 1.5;
             font-size: 1rem;
         }
 
-        button.correct { 
+        .key-btn.correct { 
             background-color: var(--color-correct); 
             color: #0B132B;
             box-shadow: 0 4px 0 #008fa3;
         }
-        button.present { 
+        .key-btn.present { 
             background-color: var(--color-present); 
             color: #0B132B;
             box-shadow: 0 4px 0 #b36600;
         }
-        button.absent { 
+        .key-btn.absent { 
             background-color: var(--color-absent); 
             color: #5A7184;
             box-shadow: 0 4px 0 #0c1218;
         }
 
-        button:active {
+        .key-btn:active {
             transform: translateY(4px);
             box-shadow: 0 0 0 transparent;
         }
 
+        #play-again-btn {
+            display: none; /* Hidden until game over */
+            width: 100%;
+            max-width: 300px;
+            height: 50px;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+
         @media (max-width: 450px) {
             .tile { width: 45px; height: 45px; font-size: 1.8rem; }
-            button { height: 45px; font-size: 1rem; border-radius: 6px; }
+            .key-btn { height: 45px; font-size: 1rem; border-radius: 6px; }
             #board { padding: 10px; grid-gap: 6px; }
             .row { grid-gap: 6px; }
-            h1 { font-size: 2rem; margin-top: 5px; }
+            h1 { font-size: 2rem; }
+            #timer-display { font-size: 1.5rem; }
         }
 
         /* Simple Confetti Canvas */
@@ -214,6 +294,7 @@
             height: 100vh;
             pointer-events: none;
             z-index: 100;
+            display: none;
         }
     </style>
 </head>
@@ -221,13 +302,49 @@
 
     <canvas id="confetti-canvas"></canvas>
 
+    <!-- Top Timer Bar -->
+    <div id="top-bar">
+        <div class="timer-controls">
+            <input type="number" id="timer-input" placeholder="Min" min="1" max="60">
+            <button class="action-btn" onclick="startTimer()">Start</button>
+        </div>
+        <div id="timer-display">00:00</div>
+    </div>
+
     <h1>WORD PULSE</h1>
     <div id="message"></div>
     <div id="board"></div>
     <div id="keyboard"></div>
+    
+    <button id="play-again-btn" class="action-btn" onclick="resetGame()">PLAY AGAIN</button>
 
     <script>
-        // 100 Kid-friendly 5-letter words
+        // --- Timer Logic ---
+        let timerInterval;
+        function startTimer() {
+            clearInterval(timerInterval);
+            let mins = parseInt(document.getElementById('timer-input').value);
+            if (isNaN(mins) || mins <= 0) mins = 5; // Default to 5 minutes if invalid
+            
+            let secs = mins * 60;
+            updateTimerDisplay(secs);
+            
+            timerInterval = setInterval(() => {
+                secs--;
+                updateTimerDisplay(secs);
+                if (secs <= 0) {
+                    clearInterval(timerInterval);
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay(secs) {
+            let m = Math.floor(secs / 60).toString().padStart(2, '0');
+            let s = (secs % 60).toString().padStart(2, '0');
+            document.getElementById('timer-display').textContent = `${m}:${s}`;
+        }
+
+        // --- Game Logic ---
         const WORDS = [
             "APPLE", "BEACH", "CHAIR", "DANCE", "EAGLE", "FROST", "GRAPE", "HOUSE", "IGLOO", "JUICE",
             "KNIFE", "LEMON", "MOUSE", "NIGHT", "OCEAN", "PIZZA", "QUEEN", "RIVER", "SNAKE", "TRAIN",
@@ -241,7 +358,6 @@
             "SPOON", "TABLE", "UPSET", "VOCAL", "WORLD", "YEARS", "ANGLE", "BRAIN", "CRASH", "HAPPY"
         ];
 
-        // Game State
         let secretWord = WORDS[Math.floor(Math.random() * WORDS.length)];
         let currentRow = 0;
         let currentTile = 0;
@@ -250,6 +366,7 @@
         const board = document.getElementById("board");
         const keyboard = document.getElementById("keyboard");
         const messageDisplay = document.getElementById("message");
+        const playAgainBtn = document.getElementById("play-again-btn");
 
         const keys = [
             ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
@@ -257,8 +374,8 @@
             ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '⌫']
         ];
 
-        // Initialize Board
         function initBoard() {
+            board.innerHTML = "";
             for (let r = 0; r < 6; r++) {
                 let row = document.createElement("div");
                 row.classList.add("row");
@@ -273,8 +390,8 @@
             }
         }
 
-        // Initialize Keyboard
         function initKeyboard() {
+            keyboard.innerHTML = "";
             keys.forEach(row => {
                 let rowDiv = document.createElement("div");
                 rowDiv.classList.add("key-row");
@@ -282,6 +399,7 @@
                     let button = document.createElement("button");
                     button.textContent = key;
                     button.id = `key-${key}`;
+                    button.classList.add("key-btn");
                     if (key === 'ENTER' || key === '⌫') {
                         button.classList.add("wide");
                     }
@@ -293,13 +411,15 @@
         }
 
         let messageTimeout;
-        function showMessage(msg) {
+        function showMessage(msg, persistent = false) {
             messageDisplay.textContent = msg;
             messageDisplay.classList.add("show");
             clearTimeout(messageTimeout);
-            messageTimeout = setTimeout(() => { 
-                if (!isGameOver) messageDisplay.classList.remove("show"); 
-            }, 2500);
+            if (!persistent) {
+                messageTimeout = setTimeout(() => { 
+                    if (!isGameOver) messageDisplay.classList.remove("show"); 
+                }, 2500);
+            }
         }
 
         function handleKeyPress(key) {
@@ -330,7 +450,6 @@
                 tile.textContent = upperKey;
                 tile.classList.add('filled');
                 
-                // Pop animation reset
                 tile.style.transform = 'scale(1.1)';
                 setTimeout(() => { tile.style.transform = 'scale(1)'; }, 100);
                 
@@ -351,7 +470,6 @@
             let guessArray = guess.split("");
             let tileClasses = Array(5).fill("absent");
 
-            // First pass: Perfect matches
             for (let i = 0; i < 5; i++) {
                 if (guessArray[i] === secretArray[i]) {
                     tileClasses[i] = "correct";
@@ -360,7 +478,6 @@
                 }
             }
 
-            // Second pass: Wrong position
             for (let i = 0; i < 5; i++) {
                 if (guessArray[i] !== null && secretArray.includes(guessArray[i])) {
                     tileClasses[i] = "present";
@@ -368,19 +485,18 @@
                 }
             }
 
-            // Apply classes with a slight delay for cool cascade effect
             for (let i = 0; i < 5; i++) {
                 setTimeout(() => {
                     rowTiles[i].classList.add(tileClasses[i]);
                     updateKeyboardColor(guess[i], tileClasses[i]);
-                }, i * 200); // 200ms delay per tile
+                }, i * 200);
             }
 
             setTimeout(() => {
                 if (guess === secretWord) {
-                    showMessage("EPIC WIN!");
+                    showMessage("EPIC WIN!", true);
                     fireConfetti();
-                    isGameOver = true;
+                    endGame();
                     return;
                 }
 
@@ -388,8 +504,8 @@
                 currentTile = 0;
 
                 if (currentRow === 6) {
-                    showMessage(`Game over! Word was ${secretWord}`);
-                    isGameOver = true;
+                    showMessage(`Game over! Word was ${secretWord}`, true);
+                    endGame();
                 }
             }, 5 * 200 + 100);
         }
@@ -405,22 +521,40 @@
             keyBtn.classList.add(colorClass);
         }
 
-        // Listen for physical keyboard
+        function endGame() {
+            isGameOver = true;
+            playAgainBtn.style.display = 'block';
+        }
+
+        function resetGame() {
+            isGameOver = false;
+            currentRow = 0;
+            currentTile = 0;
+            secretWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+            
+            playAgainBtn.style.display = 'none';
+            messageDisplay.classList.remove('show');
+            document.getElementById('confetti-canvas').style.display = 'none';
+            
+            initBoard();
+            initKeyboard();
+        }
+
         document.addEventListener("keydown", (e) => {
-            // Ignore if modifier keys are pressed
             if (e.ctrlKey || e.altKey || e.metaKey) return;
+            if (document.activeElement.id === 'timer-input') return; // Ignore if typing in timer
             handleKeyPress(e.key);
         });
 
-        // Basic Confetti logic for win
         function fireConfetti() {
             const canvas = document.getElementById('confetti-canvas');
             const ctx = canvas.getContext('2d');
+            canvas.style.display = 'block';
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             
             let particles = [];
-            let colors = ['#00E5FF', '#FF9100', '#FFFFFF', '#5BC0BE'];
+            let colors = ['#00E5FF', '#FF9100', '#FFFFFF', '#E0245E'];
             
             for(let i=0; i<100; i++) {
                 particles.push({
@@ -434,6 +568,7 @@
             }
 
             function animate() {
+                if(!isGameOver) return; // Stop animation if game resets early
                 requestAnimationFrame(animate);
                 ctx.clearRect(0,0,canvas.width,canvas.height);
                 particles.forEach(p => {
@@ -443,11 +578,10 @@
                     ctx.fill();
                     p.x += p.dx;
                     p.y += p.dy;
-                    p.dy += 0.2; // gravity
+                    p.dy += 0.2;
                 });
             }
             animate();
-            setTimeout(() => { canvas.style.display = 'none'; }, 4000);
         }
 
         // Start
