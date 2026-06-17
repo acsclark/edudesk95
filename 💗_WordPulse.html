@@ -8,16 +8,16 @@
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;800&display=swap');
 
         :root {
-            --color-correct: #00E5FF; /* Electric Teal */
-            --color-present: #FF9100; /* Neon Orange */
-            --color-absent: #1E2A38;  /* Dark Blue-Grey */
+            --color-correct: #00E5FF;
+            --color-present: #FF9100;
+            --color-absent: #1E2A38;
             --color-tile-border: #3A506B;
-            --color-bg-start: #0B132B; /* Deep Space Blue */
-            --color-bg-end: #1C2541;   
+            --color-bg-start: #0B132B;
+            --color-bg-end: #1C2541;
             --color-text: #FFFFFF;
             --color-key: #2a3b4c;
             --color-key-shadow: #111820;
-            --color-action: #E0245E; /* Vibrant Pink for actions */
+            --color-action: #E0245E;
         }
 
         body {
@@ -51,30 +51,6 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .timer-controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        #timer-input {
-            width: 60px;
-            height: 35px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--color-tile-border);
-            border-radius: 6px;
-            color: white;
-            font-family: 'Poppins', sans-serif;
-            font-weight: 600;
-            text-align: center;
-            font-size: 1rem;
-        }
-
-        #timer-input:focus {
-            outline: none;
-            border-color: var(--color-correct);
-        }
-
         .action-btn {
             background-color: var(--color-action);
             color: white;
@@ -104,7 +80,6 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* Cool Gradient Heading */
         h1 {
             margin: 5px 0 15px 0;
             font-size: 2.5rem;
@@ -136,9 +111,7 @@
             backdrop-filter: blur(4px);
         }
 
-        #message.show {
-            opacity: 1;
-        }
+        #message.show { opacity: 1; }
 
         #board {
             display: grid;
@@ -153,11 +126,7 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .row {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            grid-gap: 8px;
-        }
+        .row { display: grid; grid-template-columns: repeat(5, 1fr); grid-gap: 8px; }
 
         .tile {
             width: 55px;
@@ -175,49 +144,13 @@
             transition: transform 0.15s, background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
         }
 
-        .tile.filled {
-            border-color: rgba(0, 229, 255, 0.5);
-            transform: scale(1.05);
-        }
+        .tile.filled { border-color: rgba(0, 229, 255, 0.5); transform: scale(1.05); }
+        .tile.correct { background-color: var(--color-correct); border-color: var(--color-correct); color: #0B132B; box-shadow: 0 0 20px rgba(0, 229, 255, 0.5); }
+        .tile.present { background-color: var(--color-present); border-color: var(--color-present); color: #0B132B; box-shadow: 0 0 20px rgba(255, 145, 0, 0.5); }
+        .tile.absent { background-color: var(--color-absent); border-color: var(--color-absent); color: #5A7184; box-shadow: inset 0 4px 6px rgba(0,0,0,0.5); }
 
-        .tile.correct {
-            background-color: var(--color-correct);
-            border-color: var(--color-correct);
-            color: #0B132B;
-            box-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
-            transform: scale(1);
-        }
-
-        .tile.present {
-            background-color: var(--color-present);
-            border-color: var(--color-present);
-            color: #0B132B;
-            box-shadow: 0 0 20px rgba(255, 145, 0, 0.5);
-            transform: scale(1);
-        }
-
-        .tile.absent {
-            background-color: var(--color-absent);
-            border-color: var(--color-absent);
-            color: #5A7184;
-            box-shadow: inset 0 4px 6px rgba(0,0,0,0.5);
-            transform: scale(1);
-        }
-
-        #keyboard {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            max-width: 500px;
-            gap: 8px;
-            margin-bottom: 20px;
-        }
-
-        .key-row {
-            display: flex;
-            justify-content: center;
-            gap: 6px;
-        }
+        #keyboard { display: flex; flex-direction: column; width: 100%; max-width: 500px; gap: 8px; margin-bottom: 20px; }
+        .key-row { display: flex; justify-content: center; gap: 6px; }
 
         .key-btn {
             font-family: 'Poppins', sans-serif;
@@ -238,77 +171,23 @@
             box-shadow: 0 4px 0 var(--color-key-shadow);
             transition: transform 0.1s, box-shadow 0.1s, background-color 0.3s;
             user-select: none;
-            -webkit-tap-highlight-color: transparent;
         }
 
-        .key-btn.wide {
-            flex: 1.5;
-            font-size: 1rem;
-        }
+        .key-btn.wide { flex: 1.5; font-size: 1rem; }
+        .key-btn.correct { background-color: var(--color-correct); color: #0B132B; }
+        .key-btn.present { background-color: var(--color-present); color: #0B132B; }
+        .key-btn.absent { background-color: var(--color-absent); color: #5A7184; }
 
-        .key-btn.correct { 
-            background-color: var(--color-correct); 
-            color: #0B132B;
-            box-shadow: 0 4px 0 #008fa3;
-        }
-        .key-btn.present { 
-            background-color: var(--color-present); 
-            color: #0B132B;
-            box-shadow: 0 4px 0 #b36600;
-        }
-        .key-btn.absent { 
-            background-color: var(--color-absent); 
-            color: #5A7184;
-            box-shadow: 0 4px 0 #0c1218;
-        }
+        .key-btn:active { transform: translateY(4px); box-shadow: 0 0 0 transparent; }
 
-        .key-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 transparent;
-        }
-
-        #play-again-btn {
-            display: none; /* Hidden until game over */
-            width: 100%;
-            max-width: 300px;
-            height: 50px;
-            font-size: 1.2rem;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 450px) {
-            .tile { width: 45px; height: 45px; font-size: 1.8rem; }
-            .key-btn { height: 45px; font-size: 1rem; border-radius: 6px; }
-            #board { padding: 10px; grid-gap: 6px; }
-            .row { grid-gap: 6px; }
-            h1 { font-size: 2rem; }
-            #timer-display { font-size: 1.5rem; }
-        }
-
-        /* Simple Confetti Canvas */
-        #confetti-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            pointer-events: none;
-            z-index: 100;
-            display: none;
-        }
+        #play-again-btn { display: none; width: 100%; max-width: 300px; height: 50px; font-size: 1.2rem; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
-    <canvas id="confetti-canvas"></canvas>
-
-    <!-- Top Timer Bar -->
     <div id="top-bar">
-        <div class="timer-controls">
-            <input type="number" id="timer-input" placeholder="Sec" min="1" max="600">
-            <button class="action-btn" onclick="startTimer()">Start</button>
-        </div>
-        <div id="timer-display">00:00</div>
+        <button class="action-btn" onclick="startTimer()">START TIMER</button>
+        <div id="timer-display">30s</div>
     </div>
 
     <h1>WORD PULSE</h1>
@@ -321,43 +200,28 @@
     <script>
         // --- Timer Logic ---
         let timerInterval;
+        let timeLeft = 30;
+
         function startTimer() {
             clearInterval(timerInterval);
-            let totalSeconds = parseInt(document.getElementById('timer-input').value);
-            if (isNaN(totalSeconds) || totalSeconds <= 0) totalSeconds = 30; // Default to 30 seconds
-            
-            let secs = totalSeconds;
-            updateTimerDisplay(secs);
+            timeLeft = 30;
+            updateTimerDisplay(timeLeft);
             
             timerInterval = setInterval(() => {
-                secs--;
-                updateTimerDisplay(secs);
-                if (secs <= 0) {
+                timeLeft--;
+                updateTimerDisplay(timeLeft);
+                if (timeLeft <= 0) {
                     clearInterval(timerInterval);
                 }
             }, 1000);
         }
 
         function updateTimerDisplay(secs) {
-            let m = Math.floor(secs / 60).toString().padStart(2, '0');
-            let s = (secs % 60).toString().padStart(2, '0');
-            document.getElementById('timer-display').textContent = `${m}:${s}`;
+            document.getElementById('timer-display').textContent = secs + "s";
         }
 
         // --- Game Logic ---
-        const WORDS = [
-            "APPLE", "BEACH", "CHAIR", "DANCE", "EAGLE", "FROST", "GRAPE", "HOUSE", "IGLOO", "JUICE",
-            "KNIFE", "LEMON", "MOUSE", "NIGHT", "OCEAN", "PIZZA", "QUEEN", "RIVER", "SNAKE", "TRAIN",
-            "UNCLE", "VOICE", "WATER", "YACHT", "ZEBRA", "ALIEN", "BREAD", "CLOUD", "DREAM", "EARTH",
-            "FLAME", "GHOST", "HEART", "INDEX", "JELLY", "KITES", "LIGHT", "MONEY", "NURSE", "ONION",
-            "PLANT", "QUILT", "ROBOT", "SHEEP", "TIGER", "UNDER", "VIDEO", "WHEEL", "YOUTH", "ACORN",
-            "BRUSH", "CANDY", "DRINK", "EIGHT", "FAIRY", "GOOSE", "HORSE", "JUMBO", "KOALA", "LUNCH",
-            "MAGIC", "NOISE", "OVEN", "PAINT", "QUICK", "RADIO", "SMILE", "TOOTH", "UNITY", "VIRUS",
-            "WATCH", "YOUNG", "ALARM", "BLOCK", "CLOCK", "DRUMS", "EMPTY", "FRUIT", "GIANT", "HONEY",
-            "INPUT", "JEWEL", "KNEEL", "LAUGH", "MELON", "NINJA", "ORGAN", "PANDA", "QUIET", "ROUND",
-            "SPOON", "TABLE", "UPSET", "VOCAL", "WORLD", "YEARS", "ANGLE", "BRAIN", "CRASH", "HAPPY"
-        ];
-
+        const WORDS = ["APPLE", "BEACH", "CHAIR", "DANCE", "EAGLE", "FROST", "GRAPE", "HOUSE", "IGLOO", "JUICE"];
         let secretWord = WORDS[Math.floor(Math.random() * WORDS.length)];
         let currentRow = 0;
         let currentTile = 0;
@@ -377,13 +241,9 @@
         function initBoard() {
             board.innerHTML = "";
             for (let r = 0; r < 6; r++) {
-                let row = document.createElement("div");
-                row.classList.add("row");
-                row.id = `row-${r}`;
+                let row = document.createElement("div"); row.classList.add("row");
                 for (let c = 0; c < 5; c++) {
-                    let tile = document.createElement("div");
-                    tile.classList.add("tile");
-                    tile.id = `tile-${r}-${c}`;
+                    let tile = document.createElement("div"); tile.classList.add("tile"); tile.id = `tile-${r}-${c}`;
                     row.appendChild(tile);
                 }
                 board.appendChild(row);
@@ -393,16 +253,11 @@
         function initKeyboard() {
             keyboard.innerHTML = "";
             keys.forEach(row => {
-                let rowDiv = document.createElement("div");
-                rowDiv.classList.add("key-row");
+                let rowDiv = document.createElement("div"); rowDiv.classList.add("key-row");
                 row.forEach(key => {
                     let button = document.createElement("button");
-                    button.textContent = key;
-                    button.id = `key-${key}`;
-                    button.classList.add("key-btn");
-                    if (key === 'ENTER' || key === '⌫') {
-                        button.classList.add("wide");
-                    }
+                    button.textContent = key; button.id = `key-${key}`; button.classList.add("key-btn");
+                    if (key === 'ENTER' || key === '⌫') button.classList.add("wide");
                     button.addEventListener("click", () => handleKeyPress(key));
                     rowDiv.appendChild(button);
                 });
@@ -410,183 +265,39 @@
             });
         }
 
-        let messageTimeout;
-        function showMessage(msg, persistent = false) {
-            messageDisplay.textContent = msg;
-            messageDisplay.classList.add("show");
-            clearTimeout(messageTimeout);
-            if (!persistent) {
-                messageTimeout = setTimeout(() => { 
-                    if (!isGameOver) messageDisplay.classList.remove("show"); 
-                }, 2500);
-            }
-        }
+        function showMessage(msg) { messageDisplay.textContent = msg; messageDisplay.classList.add("show"); setTimeout(() => messageDisplay.classList.remove("show"), 2000); }
 
         function handleKeyPress(key) {
             if (isGameOver) return;
-
-            if (key === '⌫' || key === 'Backspace') {
-                if (currentTile > 0) {
-                    currentTile--;
-                    let tile = document.getElementById(`tile-${currentRow}-${currentTile}`);
-                    tile.textContent = '';
-                    tile.classList.remove('filled');
-                }
-                return;
-            }
-
-            if (key === 'ENTER' || key === 'Enter') {
-                if (currentTile < 5) {
-                    showMessage("Not enough letters!");
-                    return;
-                }
-                checkGuess();
-                return;
-            }
-
-            if (currentTile < 5 && /^[A-Z]$/i.test(key) && key.length === 1) {
-                let upperKey = key.toUpperCase();
-                let tile = document.getElementById(`tile-${currentRow}-${currentTile}`);
-                tile.textContent = upperKey;
-                tile.classList.add('filled');
-                
-                tile.style.transform = 'scale(1.1)';
-                setTimeout(() => { tile.style.transform = 'scale(1)'; }, 100);
-                
-                currentTile++;
-            }
+            if (key === '⌫') { if (currentTile > 0) { currentTile--; document.getElementById(`tile-${currentRow}-${currentTile}`).textContent = ''; } }
+            else if (key === 'ENTER') { if (currentTile === 5) checkGuess(); }
+            else if (currentTile < 5) { document.getElementById(`tile-${currentRow}-${currentTile}`).textContent = key; currentTile++; }
         }
 
         function checkGuess() {
             let guess = "";
-            let rowTiles = [];
+            for (let i = 0; i < 5; i++) guess += document.getElementById(`tile-${currentRow}-${i}`).textContent;
+            
             for (let i = 0; i < 5; i++) {
                 let tile = document.getElementById(`tile-${currentRow}-${i}`);
-                guess += tile.textContent;
-                rowTiles.push(tile);
+                if (guess[i] === secretWord[i]) tile.classList.add("correct");
+                else if (secretWord.includes(guess[i])) tile.classList.add("present");
+                else tile.classList.add("absent");
             }
-
-            let secretArray = secretWord.split("");
-            let guessArray = guess.split("");
-            let tileClasses = Array(5).fill("absent");
-
-            for (let i = 0; i < 5; i++) {
-                if (guessArray[i] === secretArray[i]) {
-                    tileClasses[i] = "correct";
-                    secretArray[i] = null; 
-                    guessArray[i] = null;
-                }
-            }
-
-            for (let i = 0; i < 5; i++) {
-                if (guessArray[i] !== null && secretArray.includes(guessArray[i])) {
-                    tileClasses[i] = "present";
-                    secretArray[secretArray.indexOf(guessArray[i])] = null; 
-                }
-            }
-
-            for (let i = 0; i < 5; i++) {
-                setTimeout(() => {
-                    rowTiles[i].classList.add(tileClasses[i]);
-                    updateKeyboardColor(guess[i], tileClasses[i]);
-                }, i * 200);
-            }
-
-            setTimeout(() => {
-                if (guess === secretWord) {
-                    showMessage("EPIC WIN!", true);
-                    fireConfetti();
-                    endGame();
-                    return;
-                }
-
-                currentRow++;
-                currentTile = 0;
-
-                if (currentRow === 6) {
-                    showMessage(`Game over! Word was ${secretWord}`, true);
-                    endGame();
-                }
-            }, 5 * 200 + 100);
+            if (guess === secretWord) { showMessage("YOU WIN!"); endGame(); }
+            else { currentRow++; currentTile = 0; if (currentRow === 6) { showMessage("GAME OVER!"); endGame(); } }
         }
 
-        function updateKeyboardColor(letter, colorClass) {
-            let keyBtn = document.getElementById(`key-${letter}`);
-            if (!keyBtn) return;
-            
-            if (keyBtn.classList.contains("correct")) return;
-            if (keyBtn.classList.contains("present") && colorClass === "absent") return;
-
-            keyBtn.classList.remove("present", "absent", "correct");
-            keyBtn.classList.add(colorClass);
-        }
-
-        function endGame() {
-            isGameOver = true;
-            playAgainBtn.style.display = 'block';
-        }
-
+        function endGame() { isGameOver = true; playAgainBtn.style.display = 'block'; }
         function resetGame() {
-            isGameOver = false;
-            currentRow = 0;
-            currentTile = 0;
+            isGameOver = false; currentRow = 0; currentTile = 0;
             secretWord = WORDS[Math.floor(Math.random() * WORDS.length)];
-            
             playAgainBtn.style.display = 'none';
-            messageDisplay.classList.remove('show');
-            document.getElementById('confetti-canvas').style.display = 'none';
-            
             initBoard();
             initKeyboard();
         }
 
-        document.addEventListener("keydown", (e) => {
-            if (e.ctrlKey || e.altKey || e.metaKey) return;
-            if (document.activeElement.id === 'timer-input') return; // Ignore if typing in timer
-            handleKeyPress(e.key);
-        });
-
-        function fireConfetti() {
-            const canvas = document.getElementById('confetti-canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.style.display = 'block';
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            
-            let particles = [];
-            let colors = ['#00E5FF', '#FF9100', '#FFFFFF', '#E0245E'];
-            
-            for(let i=0; i<100; i++) {
-                particles.push({
-                    x: canvas.width / 2,
-                    y: canvas.height / 2 + 100,
-                    r: Math.random() * 6 + 2,
-                    dx: Math.random() * 10 - 5,
-                    dy: Math.random() * -10 - 5,
-                    color: colors[Math.floor(Math.random() * colors.length)]
-                });
-            }
-
-            function animate() {
-                if(!isGameOver) return; // Stop animation if game resets early
-                requestAnimationFrame(animate);
-                ctx.clearRect(0,0,canvas.width,canvas.height);
-                particles.forEach(p => {
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                    ctx.fillStyle = p.color;
-                    ctx.fill();
-                    p.x += p.dx;
-                    p.y += p.dy;
-                    p.dy += 0.2;
-                });
-            }
-            animate();
-        }
-
-        // Start
-        initBoard();
-        initKeyboard();
+        initBoard(); initKeyboard();
     </script>
 </body>
 </html>
