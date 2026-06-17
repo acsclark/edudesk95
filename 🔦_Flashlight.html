@@ -316,7 +316,7 @@
         const mathHazardModal = document.getElementById('math-hazard-modal');
         const heldKeyCursor = document.getElementById('held-key-cursor');
         const jumpscareOverlay = document.getElementById('jumpscare-overlay');
-        const scareSpider = document.querySelector('.scare-spider'); // Target specifically for JS animation control
+        const scareSpider = document.querySelector('.scare-spider'); 
         
         const scoreUI = document.getElementById('score-display');
         const progressUI = document.getElementById('progress-display');
@@ -356,7 +356,7 @@
             gameOverModal.style.display = 'none';
             mathHazardModal.style.display = 'none';
             jumpscareOverlay.style.display = 'none';
-            scareSpider.style.animation = 'none'; // Ensure reset
+            scareSpider.style.animation = 'none'; 
             scareSpider.style.webkitAnimation = 'none';
             
             setupScreen.style.display = 'none';
@@ -473,7 +473,18 @@
 
         function drainBattery() {
             if (!gameActive || blackoutActive) return; 
-            battery -= 0.5 + (gameLevel * 0.1);
+            
+            // Standard drain scaling
+            let drainRate = 0.5 + (gameLevel * 0.1);
+            
+            // Aggressive scaling starting at level 5
+            if (gameLevel >= 5) {
+                let penalty = (gameLevel - 4) * 0.25; 
+                drainRate += penalty;
+            }
+            
+            battery -= drainRate;
+            
             if (battery <= 0) { battery = 0; endGame(); }
             updateBatteryUI();
         }
