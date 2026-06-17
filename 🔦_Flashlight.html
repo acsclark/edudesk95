@@ -2,63 +2,565 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Word Hunter - Optimized</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spelling Grid :: Escape Protocol</title>
     <style>
-        /* Optimized for GPU Performance */
-        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
-        body { font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; background: #0a0a12; }
-
-        #game-container { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
-
-        /* Use transform instead of top/left for performance */
-        .word-container { 
-            position: absolute; 
-            will-change: transform; 
-            transition: transform 0.05s linear; 
+        :root {
+            --bg-color: #050608;
+            --panel-bg: #0d1117;
+            --accent-laser: #ff003c;  
+            --text-main: #dae1ec;
+            --success: #22c55e;
+            --warning: #e1b341;
+            
+            /* Dynamic coords */
+            --flashlight-x: -500px;
+            --flashlight-y: -500px;
         }
 
-        /* Simplified Neon Pulse - using opacity instead of shadow-blur on text */
-        .pulsing-word .word-text { animation: neonPulse 1.5s ease-in-out infinite; }
-        @keyframes neonPulse { 
-            0%, 100% { opacity: 0.6; } 
-            50% { opacity: 1; } 
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
         }
 
-        /* Flashlight performance fix */
-        .flashlight-overlay {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            pointer-events: none;
-            background: radial-gradient(circle 120px at var(--x, 50%) var(--y, 50%), transparent 0%, rgba(0,0,0,0.95) 60%);
-            z-index: 100;
+        /* --- SETUP SCREEN --- */
+        #setup-screen {
+            text-align: center; background: var(--panel-bg); padding: 40px; border: 2px solid #212631;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.9); max-width: 480px; width: 90%; z-index: 100;
         }
+        h1 { font-size: 2rem; margin-top: 0; color: #fff; letter-spacing: -1px; margin-bottom: 5px; text-transform: uppercase; }
+        .subtitle { color: #57606a; margin-bottom: 30px; font-size: 0.9rem; }
+        label { display: block; text-align: left; margin-bottom: 8px; color: #8b949e; text-transform: uppercase; font-size: 0.85rem; }
+
+        select {
+            width: 100%; padding: 12px; background: #161b22; border: 2px solid #30363d;
+            color: #fff; font-family: inherit; font-size: 1rem; font-weight: bold; margin-bottom: 25px; cursor: pointer; outline: none;
+        }
+        select:focus { border-color: var(--text-main); }
+        .start-btn {
+            width: 100%; padding: 16px; background: transparent; border: 2px solid var(--text-main);
+            color: #fff; font-family: inherit; font-size: 1.1rem; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
+        }
+        .start-btn:hover { background: var(--text-main); color: #000; }
+
+        /* --- GAME SCREEN & UI --- */
+        #game-screen { display: none; flex-direction: column; width: 100%; height: 100vh; max-width: 1200px; }
+
+        #ui-bar {
+            display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+            padding: 15px 25px; background: var(--panel-bg); z-index: 60; border-bottom: 2px solid #212631;
+        }
+
+        .ui-group { display: flex; align-items: center; gap: 20px; }
+        .ui-center { justify-content: center; font-size: 1.2rem; color: #fff; text-transform: uppercase; }
+        .ui-right { justify-content: flex-end; }
+        .stat-label { color: #57606a; font-size: 0.8rem; text-transform: uppercase; }
+        .stat-value { color: #fff; font-size: 1.1rem; }
+        .quit-btn { background: #161b22; border: 1px solid #30363d; color: #8b949e; padding: 6px 12px; cursor: pointer; font-family: inherit; }
+        .quit-btn:hover { background: var(--accent-laser); color: #fff; border-color: var(--accent-laser); }
+
+        /* --- SEGMENTED BATTERY HUD --- */
+        #battery-header {
+            display: flex; align-items: center; justify-content: center; width: 100%;
+            background: #000; padding: 15px 25px; z-index: 60; border-bottom: 1px solid #212631;
+        }
+        #physical-battery {
+            display: flex; align-items: center; width: 100%; max-width: 800px; height: 35px;
+        }
+        #battery-body {
+            flex-grow: 1; height: 100%; border: 3px solid #57606a; border-radius: 4px;
+            background: #161b22; padding: 3px; position: relative;
+        }
+        #battery-cap {
+            width: 14px; height: 18px; background: #57606a; border-radius: 0 4px 4px 0; border-left: none;
+        }
+        #battery-fill {
+            height: 100%; width: 100%; background-color: var(--success);
+            /* This repeating gradient chops the solid color into 10 distinct blocks */
+            background-image: repeating-linear-gradient(90deg, transparent, transparent calc(10% - 3px), #161b22 calc(10% - 3px), #161b22 10%);
+            transition: width 0.3s linear, background-color 0.5s ease;
+        }
+        #battery-text {
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            color: #fff; font-weight: 900; font-size: 1.1rem; letter-spacing: 2px;
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; /* Strong outline for readability */
+        }
+
+        /* --- THE DARK GRID ROOM --- */
+        #dark-room {
+            flex-grow: 1; position: relative; background-color: #020304; 
+            background-image: linear-gradient(rgba(45, 55, 72, 0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(45, 55, 72, 0.4) 1px, transparent 1px);
+            background-size: 50px 50px; overflow: hidden; cursor: none;
+        }
+
+        #flashlight-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50;
+            background: radial-gradient(circle 200px at var(--flashlight-x) var(--flashlight-y), rgba(255, 255, 255, 0.12) 0%, rgba(200, 210, 230, 0.03) 50%, rgba(2, 3, 4, 0.97) 75%, #020304 100%);
+        }
+        #flashlight-overlay.ambient-flash { background: radial-gradient(circle 250px at var(--flashlight-x) var(--flashlight-y), rgba(255, 255, 255, 0.3) 0%, rgba(2, 3, 4, 0.6) 100%) !important; }
+
+        /* --- CURSOR ELEMENTS --- */
+        #laser-dot {
+            position: absolute; width: 8px; height: 8px; background-color: var(--accent-laser); border-radius: 50%;
+            top: var(--flashlight-y); left: var(--flashlight-x); transform: translate(-50%, -50%); z-index: 55; pointer-events: none;
+            box-shadow: 0 0 8px var(--accent-laser), 0 0 15px var(--accent-laser);
+        }
+        #held-key-cursor { display: none; position: absolute; font-size: 2.5rem; z-index: 56; pointer-events: none; filter: drop-shadow(0 0 8px var(--warning)); }
+
+        /* --- ENTITIES & ANIMATIONS --- */
+        @keyframes spider-jitter {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            20% { transform: translate(-3px, 2px) rotate(-4deg); }
+            40% { transform: translate(2px, -3px) rotate(4deg); }
+            60% { transform: translate(-2px, -2px) rotate(-2deg); }
+            80% { transform: translate(3px, 1px) rotate(2deg); }
+        }
+
+        .target-entity {
+            position: absolute; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 40; background: transparent; border: none;
+        }
+        .target-entity * { pointer-events: none; }
+        .spider-entity { animation: spider-jitter 0.4s infinite alternate; }
+        .spider-entity:hover { animation-duration: 0.1s; transform: scale(1.1); }
+        .spider-icon { font-size: 5rem; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.8)); }
+        
+        .word-text {
+            position: absolute; font-size: 1.2rem; font-weight: 900; color: #fff;
+            text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 0 10px var(--accent-laser);
+            margin-top: -10px;
+        }
+
+        .shadow-anomaly {
+            position: absolute; width: 50px; height: 50px; z-index: 35; display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem; filter: drop-shadow(0 0 15px var(--accent-laser)); animation: spider-jitter 0.2s infinite;
+        }
+
+        /* --- OVERLAYS & MODALS --- */
+        .modal-box {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #0d1117; border: 2px solid var(--accent-laser); padding: 40px; text-align: center;
+            z-index: 200; box-shadow: 0 0 50px rgba(0,0,0,0.9); max-width: 450px; width: 90%;
+        }
+        .modal-box h2 { color: var(--accent-laser); margin-top: 0; font-size: 1.8rem; letter-spacing: 2px; }
+        .modal-box p { margin: 15px 0; color: #8b949e; font-size: 1.1rem; }
+        .btn-outline { background: transparent; border: 1px solid var(--accent-laser); color: var(--accent-laser); padding: 12px 24px; cursor: pointer; font-family: inherit; margin-top: 15px; text-transform: uppercase; font-weight: bold; transition: 0.2s;}
+        .btn-outline:hover { background: var(--accent-laser); color: #fff; }
+
+        /* --- MATH HAZARD SPECIFIC --- */
+        #math-equation { font-size: 2.5rem; color: #fff; margin: 20px 0; font-weight: 900; letter-spacing: 2px; }
+        #math-timer-display { font-size: 1.5rem; color: var(--accent-laser); font-weight: bold; animation: spider-jitter 0.5s infinite; }
+        #math-options { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+        .math-btn { 
+            background: #161b22; border: 2px solid #57606a; color: #fff; padding: 15px 25px; 
+            font-size: 1.5rem; cursor: pointer; font-family: inherit; font-weight: bold; transition: 0.2s;
+        }
+        .math-btn:hover { border-color: #fff; transform: scale(1.1); }
+
+        #msg-overlay {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 70; font-size: 1.2rem; font-weight: bold;
+            padding: 10px 20px; pointer-events: none; opacity: 0; transition: opacity 0.2s; background: #0d1117; border: 1px solid #30363d;
+        }
+        .msg-correct { color: var(--success); } .msg-wrong { color: var(--accent-laser); } .msg-system { color: var(--warning); }
+
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <div class="flashlight-overlay" id="flashlight"></div>
-        <div id="words-area"></div>
+
+    <div id="setup-screen">
+        <h1>GRID ESCAPE PROTOCOL</h1>
+        <p class="subtitle">NZ Curriculum Lexical Database</p>
+        
+        <label for="year-select">Select Dataset Tier</label>
+        <select id="year-select">
+            <option value="4">NZ Year Level 4</option>
+            <option value="5">NZ Year Level 5</option>
+            <option value="6">NZ Year Level 6</option>
+            <option value="7">NZ Year Level 7</option>
+            <option value="8">NZ Year Level 8</option>
+        </select>
+        
+        <button class="start-btn" onclick="startGame()">Connect Device</button>
+    </div>
+
+    <div id="game-screen">
+        <div id="battery-header">
+            <div id="physical-battery">
+                <div id="battery-body">
+                    <div id="battery-fill"></div>
+                    <div id="battery-text">POWER: 100%</div>
+                </div>
+                <div id="battery-cap"></div>
+            </div>
+        </div>
+        
+        <div id="ui-bar">
+            <div class="ui-group">
+                <div><span class="stat-label">LOGGED:</span> <span class="stat-value" id="score-display">0</span></div>
+                <div><span class="stat-label">PROGRESS:</span> <span class="stat-value" id="progress-display">0/3</span></div>
+            </div>
+            <div class="ui-center" id="level-display">TIER 1</div>
+            <div class="ui-group ui-right">
+                <button class="quit-btn" onclick="quitGame()">Abort Protocol</button>
+            </div>
+        </div>
+        
+        <div id="dark-room">
+            <div id="flashlight-overlay"></div>
+            <div id="laser-dot"></div>
+            <div id="held-key-cursor">🔑</div>
+            <div id="room-content"></div>
+            <div id="msg-overlay"></div>
+            
+            <div id="game-over-modal" class="modal-box">
+                <h2>-- LINK CRITICAL --</h2>
+                <p>Flashlight battery depleted. You have been consumed by the grid.</p>
+                <p>FINAL SCORE: <span id="modal-score">0</span></p>
+                <button class="btn-outline" onclick="closeModalAndQuit()">Return to Menu</button>
+            </div>
+
+            <div id="math-hazard-modal" class="modal-box">
+                <h2>GLITCH DETECTED</h2>
+                <p>System override required. Time remaining: <span id="math-timer-display">8</span>s</p>
+                <div id="math-equation">? x ? =</div>
+                <div id="math-options"></div>
+            </div>
+        </div>
     </div>
 
     <script>
-        // Optimization: Use requestAnimationFrame for smooth movement
-        let flashlight = { x: 50, y: 50 };
-        const overlay = document.getElementById('flashlight');
+        const wordBank = {
+            4: [{ correct: "because", wrong: ["becos", "becoz"] }, { correct: "beautiful", wrong: ["beautifull", "beutiful"] }, { correct: "caught", wrong: ["cought", "caurt"] }, { correct: "friend", wrong: ["freind", "frend"] }],
+            5: [{ correct: "different", wrong: ["diffrent", "diferent"] }, { correct: "believe", wrong: ["beleive", "belive"] }, { correct: "tomorrow", wrong: ["tommorow", "tomorroww"] }, { correct: "hospital", wrong: ["hospitle", "hosptial"] }],
+            6: [{ correct: "favourite", wrong: ["favrit", "favorite"] }, { correct: "experience", wrong: ["experiance", "expirience"] }, { correct: "separate", wrong: ["seperate", "seperit"] }, { correct: "embarrass", wrong: ["embaras", "embarass"] }],
+            7: [{ correct: "environment", wrong: ["enviroment", "envirnment"] }, { correct: "definitely", wrong: ["definately", "definitly"] }, { correct: "disappear", wrong: ["dissappear", "disapear"] }, { correct: "necessary", wrong: ["neccessary", "necesary"] }],
+            8: [{ correct: "accommodation", wrong: ["accomodation", "acommodation"] }, { correct: "rhythm", wrong: ["rythm", "rhythum"] }, { correct: "conscience", wrong: ["conscense", "concience"] }, { correct: "liaison", wrong: ["liason", "liaisonne"] }]
+        };
 
-        function updateFlashlight(e) {
-            // Calculate percentage
-            flashlight.x = (e.clientX / window.innerWidth) * 100;
-            flashlight.y = (e.clientY / window.innerHeight) * 100;
+        let currentYear = 4, score = 0, gameLevel = 1, battery = 100, levelProgress = 0, gameState = "WORDS"; 
+        let gameActive = false, blackoutActive = false;
+        let mouseX = -1000, mouseY = -1000;
+        let targets = [], anomaly = null, wordPool = [];
+        let loopId, batteryId, flickerId;
+        
+        // Math Hazard variables
+        let mathTimerId, mathTimeLeft = 8, correctMathAnswer = 0;
+
+        const setupScreen = document.getElementById('setup-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const darkRoom = document.getElementById('dark-room');
+        const roomContent = document.getElementById('room-content');
+        const overlay = document.getElementById('flashlight-overlay');
+        const msgOverlay = document.getElementById('msg-overlay');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const mathHazardModal = document.getElementById('math-hazard-modal');
+        const heldKeyCursor = document.getElementById('held-key-cursor');
+        
+        const scoreUI = document.getElementById('score-display');
+        const progressUI = document.getElementById('progress-display');
+        const levelUI = document.getElementById('level-display');
+        const batteryFill = document.getElementById('battery-fill');
+        const batteryText = document.getElementById('battery-text');
+
+        function trackInput(e) {
+            const rect = darkRoom.getBoundingClientRect();
+            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
             
-            requestAnimationFrame(() => {
-                overlay.style.setProperty('--x', flashlight.x + '%');
-                overlay.style.setProperty('--y', flashlight.y + '%');
-            });
+            mouseX = clientX - rect.left;
+            mouseY = clientY - rect.top;
+            
+            document.documentElement.style.setProperty('--flashlight-x', `${mouseX}px`);
+            document.documentElement.style.setProperty('--flashlight-y', `${mouseY}px`);
+
+            heldKeyCursor.style.left = `${mouseX + 15}px`;
+            heldKeyCursor.style.top = `${mouseY + 15}px`;
         }
 
-        window.addEventListener('mousemove', updateFlashlight);
-        
-        // ... rest of your game logic (maintaining existing game flow) ...
+        darkRoom.addEventListener('mousemove', trackInput);
+        darkRoom.addEventListener('touchmove', trackInput);
+
+        function startGame() {
+            currentYear = document.getElementById('year-select').value;
+            score = 0; gameLevel = 1; battery = 100; levelProgress = 0; gameState = "WORDS";
+            gameActive = true; blackoutActive = false; targets = []; anomaly = null;
+            heldKeyCursor.style.display = 'none'; 
+            
+            roomContent.innerHTML = '';
+            gameOverModal.style.display = 'none';
+            mathHazardModal.style.display = 'none';
+            setupScreen.style.display = 'none';
+            gameScreen.style.display = 'flex';
+            
+            updateUI();
+            wordPool = [...wordBank[currentYear]];
+            spawnRound();
+
+            loopId = requestAnimationFrame(gameLoop);
+            batteryId = setInterval(drainBattery, 250); 
+            flickerId = setInterval(triggerFlickerHelper, 6000); 
+        }
+
+        function spawnRound() {
+            roomContent.innerHTML = '';
+            targets = [];
+
+            if (gameState === "WORDS") {
+                progressUI.innerText = `${levelProgress}/3`;
+                if (wordPool.length === 0) wordPool = [...wordBank[currentYear]];
+                const randIdx = Math.floor(Math.random() * wordPool.length);
+                const wordData = wordPool.splice(randIdx, 1)[0];
+
+                let rawList = [{ text: wordData.correct, isCorrect: true }, ...wordData.wrong.map(w => ({ text: w, isCorrect: false }))];
+                rawList.sort(() => Math.random() - 0.5);
+
+                const speedMultiplier = 1 + (gameLevel * 0.15);
+
+                rawList.forEach((wordObj) => {
+                    const el = document.createElement('div');
+                    el.classList.add('target-entity', 'spider-entity');
+                    el.innerHTML = `<div class="spider-icon">🕷️</div><div class="word-text">${wordObj.text}</div>`;
+                    roomContent.appendChild(el);
+
+                    const w = 80, h = 80; 
+                    const angle = Math.random() * Math.PI * 2;
+                    const baseSpeed = 0.8 + Math.random() * 0.6;
+
+                    const spiderData = {
+                        el: el,
+                        x: Math.random() * (darkRoom.clientWidth - w - 40) + 20,
+                        y: Math.random() * (darkRoom.clientHeight - h - 40) + 20,
+                        vx: Math.cos(angle) * baseSpeed * speedMultiplier,
+                        vy: Math.sin(angle) * baseSpeed * speedMultiplier,
+                        w: w, h: h, type: "WORD", isCorrect: wordObj.isCorrect
+                    };
+                    targets.push(spiderData);
+                    el.addEventListener('click', () => handleEntityInteraction(spiderData));
+                });
+            } 
+            else if (gameState === "KEY") {
+                progressUI.innerText = "FIND KEY";
+                showFeedback("WORD LIMIT MET: SCAN FOR KEY", "msg-system");
+
+                const el = document.createElement('div');
+                el.classList.add('target-entity'); 
+                el.innerHTML = `<div style="font-size: 4rem; filter: drop-shadow(0 0 15px var(--warning));">🔑</div>`;
+                roomContent.appendChild(el);
+
+                const keyData = {
+                    el: el, x: Math.random() * (darkRoom.clientWidth - 100) + 20, y: Math.random() * (darkRoom.clientHeight - 100) + 20,
+                    vx: (Math.random() - 0.5) * 1.5, vy: (Math.random() - 0.5) * 1.5, w: 60, h: 60, type: "KEY"
+                };
+                targets.push(keyData);
+                el.addEventListener('click', () => handleEntityInteraction(keyData));
+            } 
+            else if (gameState === "DOOR") {
+                progressUI.innerText = "UNLOCK EXIT";
+                showFeedback("KEY SECURED: UNLOCK EXIT DOOR", "msg-system");
+
+                const el = document.createElement('div');
+                el.classList.add('target-entity'); 
+                el.innerHTML = `<div style="font-size: 5rem; filter: drop-shadow(0 0 15px var(--success));">🚪</div>`;
+                roomContent.appendChild(el);
+
+                const doorData = {
+                    el: el, x: Math.random() * (darkRoom.clientWidth - 100) + 20, y: Math.random() * (darkRoom.clientHeight - 100) + 20,
+                    vx: 0, vy: 0, w: 80, h: 80, type: "DOOR"
+                };
+                targets.push(doorData);
+                el.addEventListener('click', () => handleEntityInteraction(doorData));
+            }
+
+            if (gameLevel >= 3) {
+                const anoEl = document.createElement('div');
+                anoEl.classList.add('shadow-anomaly');
+                anoEl.innerText = '💀'; 
+                roomContent.appendChild(anoEl);
+                
+                const anoAngle = Math.random() * Math.PI * 2;
+                const anoSpeed = 1.5 + (gameLevel * 0.2);
+                
+                anomaly = { el: anoEl, x: Math.random() * (darkRoom.clientWidth - 60), y: Math.random() * (darkRoom.clientHeight - 60), vx: Math.cos(anoAngle) * anoSpeed, vy: Math.sin(anoAngle) * anoSpeed, size: 50 };
+            } else { anomaly = null; }
+        }
+
+        function gameLoop() {
+            if (!gameActive || blackoutActive) return requestAnimationFrame(gameLoop); // Keep loop alive but paused
+
+            const cw = darkRoom.clientWidth, ch = darkRoom.clientHeight;
+
+            targets.forEach(t => {
+                t.x += t.vx; t.y += t.vy;
+                if (t.x <= 0 || t.x >= cw - t.w) t.vx *= -1;
+                if (t.y <= 0 || t.y >= ch - t.h) t.vy *= -1;
+                t.el.style.left = `${t.x}px`; t.el.style.top = `${t.y}px`;
+            });
+
+            if (anomaly) {
+                anomaly.x += anomaly.vx; anomaly.y += anomaly.vy;
+                if (anomaly.x <= 0 || anomaly.x >= cw - anomaly.size) anomaly.vx *= -1;
+                if (anomaly.y <= 0 || anomaly.y >= ch - anomaly.size) anomaly.vy *= -1;
+                anomaly.el.style.left = `${anomaly.x}px`; anomaly.el.style.top = `${anomaly.y}px`;
+
+                const anoCenterX = anomaly.x + (anomaly.size/2), anoCenterY = anomaly.y + (anomaly.size/2);
+                const dist = Math.sqrt(Math.pow(mouseX - anoCenterX, 2) + Math.pow(mouseY - anoCenterY, 2));
+
+                if (dist < 80) { triggerMathHazard(); }
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function handleEntityInteraction(targetItem) {
+            if (blackoutActive || !gameActive) return;
+
+            if (targetItem.type === "WORD") {
+                if (targetItem.isCorrect) {
+                    score += 10; levelProgress++; battery = Math.min(100, battery + 15);
+                    showFeedback("DATA CORRECT", "msg-correct");
+                    if (levelProgress >= 3) gameState = "KEY";
+                    updateUI(); spawnRound();
+                } else {
+                    battery = Math.max(0, battery - 20);
+                    showFeedback("INVALID SYNTAX", "msg-wrong");
+                    updateUI();
+                }
+            } 
+            else if (targetItem.type === "KEY") {
+                battery = Math.min(100, battery + 20); gameState = "DOOR";
+                heldKeyCursor.style.display = 'block'; spawnRound();
+            } 
+            else if (targetItem.type === "DOOR") {
+                heldKeyCursor.style.display = 'none'; gameLevel++; levelProgress = 0; gameState = "WORDS"; battery = 100; 
+                showFeedback(`TRANSITING TO SECTOR TIER ${gameLevel}`, "msg-correct"); updateUI(); spawnRound();
+            }
+        }
+
+        function drainBattery() {
+            if (!gameActive || blackoutActive) return; // Pause drain during math puzzle
+            battery -= 0.5 + (gameLevel * 0.1);
+            if (battery <= 0) { battery = 0; endGame(); }
+            updateBatteryUI();
+        }
+
+        /* --- MATH HAZARD LOGIC --- */
+        function triggerMathHazard() {
+            blackoutActive = true; // Pauses interactions and drain
+            document.body.style.cursor = 'default'; // Bring cursor back for UI
+            
+            let num1 = Math.floor(Math.random() * 12) + 1;
+            let num2 = Math.floor(Math.random() * 12) + 1;
+            correctMathAnswer = num1 * num2;
+            
+            document.getElementById('math-equation').innerText = `${num1} x ${num2} = ?`;
+            
+            // Generate wrong options safely
+            let options = [correctMathAnswer];
+            while(options.length < 3) {
+                let offset = (Math.floor(Math.random() * 5) + 1) * (Math.random() < 0.5 ? 1 : -1);
+                let wrong = correctMathAnswer + offset;
+                if(wrong > 0 && !options.includes(wrong)) options.push(wrong);
+            }
+            options.sort(() => Math.random() - 0.5); // Shuffle
+            
+            const optionsContainer = document.getElementById('math-options');
+            optionsContainer.innerHTML = '';
+            options.forEach(opt => {
+                let btn = document.createElement('button');
+                btn.className = 'math-btn';
+                btn.innerText = opt;
+                btn.onclick = () => resolveMathHazard(opt === correctMathAnswer);
+                optionsContainer.appendChild(btn);
+            });
+
+            mathTimeLeft = 8;
+            document.getElementById('math-timer-display').innerText = mathTimeLeft;
+            mathHazardModal.style.display = 'block';
+            
+            mathTimerId = setInterval(() => {
+                mathTimeLeft--;
+                document.getElementById('math-timer-display').innerText = mathTimeLeft;
+                if(mathTimeLeft <= 0) resolveMathHazard(false);
+            }, 1000);
+        }
+
+        function resolveMathHazard(isCorrect) {
+            clearInterval(mathTimerId);
+            mathHazardModal.style.display = 'none';
+            document.body.style.cursor = 'none'; // Hide cursor again
+
+            if (isCorrect) {
+                showFeedback("OVERRIDE SUCCESS", "msg-correct");
+            } else {
+                battery = Math.max(0, battery - 30);
+                updateBatteryUI();
+                showFeedback("CRITICAL FAILURE: -30 POWER", "msg-wrong");
+                if (battery <= 0) { endGame(); return; }
+            }
+
+            // Move anomaly away so it doesn't instantly re-trigger
+            if (anomaly) {
+                anomaly.x = 20; anomaly.y = 20;
+            }
+
+            // Small delay before unpausing to let player adjust
+            setTimeout(() => { blackoutActive = false; }, 500);
+        }
+
+        function triggerFlickerHelper() {
+            if (!gameActive || blackoutActive) return;
+            overlay.classList.add('ambient-flash'); setTimeout(() => overlay.classList.remove('ambient-flash'), 80);
+        }
+
+        function updateUI() {
+            scoreUI.innerText = score; levelUI.innerText = `TIER ${gameLevel}`;
+            if (gameState === "WORDS") progressUI.innerText = `${levelProgress}/3`;
+            updateBatteryUI();
+        }
+
+        function updateBatteryUI() {
+            const perc = Math.round(battery);
+            batteryFill.style.width = `${perc}%`;
+            batteryText.innerText = `POWER: ${perc}%`;
+            
+            if (perc > 60) { batteryFill.style.backgroundColor = 'var(--success)'; } 
+            else if (perc > 30) { batteryFill.style.backgroundColor = 'var(--warning)'; } 
+            else { batteryFill.style.backgroundColor = 'var(--accent-laser)'; }
+        }
+
+        function showFeedback(text, className) {
+            msgOverlay.innerText = text; msgOverlay.className = className; msgOverlay.style.opacity = '1';
+            clearTimeout(msgOverlay.timeoutId); msgOverlay.timeoutId = setTimeout(() => { msgOverlay.style.opacity = '0'; }, 2000);
+        }
+
+        function endGame() {
+            gameActive = false; heldKeyCursor.style.display = 'none'; 
+            cancelAnimationFrame(loopId); clearInterval(batteryId); clearInterval(flickerId); clearInterval(mathTimerId);
+            document.body.style.cursor = 'default';
+            document.getElementById('modal-score').innerText = score;
+            gameOverModal.style.display = 'block';
+        }
+
+        function closeModalAndQuit() { gameOverModal.style.display = 'none'; quitGame(); }
+
+        function quitGame() {
+            gameActive = false; heldKeyCursor.style.display = 'none'; blackoutActive = false;
+            cancelAnimationFrame(loopId); clearInterval(batteryId); clearInterval(flickerId); clearInterval(mathTimerId);
+            document.body.style.cursor = 'default';
+            gameScreen.style.display = 'none'; setupScreen.style.display = 'block';
+        }
     </script>
 </body>
 </html>
