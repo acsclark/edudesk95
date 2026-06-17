@@ -19,10 +19,9 @@
             height: 100vh;
             width: 100vw;
             user-select: none;
-            overflow: hidden; /* Prevents scrollbars in the iframe */
+            overflow: hidden;
         }
 
-        /* The wrapper now uses transform scaling to fit any iframe */
         #game-wrapper {
             position: relative;
             box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
@@ -117,16 +116,25 @@
         #shelf-3 { top: 440px; }
 
         .duck {
-            position: absolute; bottom: 10px; width: 95px; height: 95px; font-size: 85px;
+            position: absolute; bottom: 10px; 
+            width: 120px; /* Increased size */
+            height: 120px; /* Increased size */
+            font-size: 110px; /* Increased duck emoji size */
             display: flex; justify-content: center; align-items: center; cursor: none;
             filter: drop-shadow(0 0 10px #0ff) hue-rotate(120deg) saturate(150%);
         }
 
         .duck-letter {
             position: absolute; background: #000; color: #0ff; border: 3px solid #0ff;
-            border-radius: 50%; width: 65px; height: 65px; font-size: 38px; font-weight: bold;
+            border-radius: 50%; 
+            width: 54px; /* Dialed back to an in-between size */
+            height: 54px; 
+            font-size: 28px; /* Adjusted to fit the new badge */
+            font-weight: bold;
             display: flex; justify-content: center; align-items: center;
-            top: 10px; left: 12px; font-family: 'Orbitron', sans-serif;
+            top: 38px; /* Re-centered for the larger duck body */
+            left: 33px; 
+            font-family: 'Orbitron', sans-serif;
             box-shadow: inset 0 0 10px #0ff, 0 0 10px #0ff; pointer-events: none;
         }
 
@@ -190,27 +198,22 @@
     </div>
 
     <script>
-        // --- Auto-Scaler for Iframes ---
         function resizeGame() {
             const wrapper = document.getElementById('game-wrapper');
             const targetWidth = 960; 
             const targetHeight = 650;
             
-            // Calculate how much to shrink the game to fit the current window/iframe
             let scaleX = window.innerWidth / targetWidth;
             let scaleY = window.innerHeight / targetHeight;
             let scale = Math.min(scaleX, scaleY);
             
-            // Only scale down, don't stretch it huge on big screens
             if (scale > 1) scale = 1;
-            
             wrapper.style.transform = `scale(${scale})`;
         }
         
         window.addEventListener('resize', resizeGame);
-        resizeGame(); // Call immediately on load
+        resizeGame();
 
-        // --- Game Logic ---
         let gameMode = "";
         let isPlaying = false;
         let isPausedForMessage = false;
@@ -340,18 +343,17 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // --- Custom Success Message (Bypasses Iframe Restrictions) ---
         function triggerSuccess(msg) {
             isPausedForMessage = true;
             crosshair.style.display = 'none';
             
             let display = document.getElementById('target-word-display');
             display.innerText = msg;
-            display.style.color = "#ff00ff"; // Pink success flash
+            display.style.color = "#ff00ff"; 
             
             setTimeout(() => {
                 endGame();
-            }, 2500); // Wait 2.5 seconds then return to menu
+            }, 2500); 
         }
 
         booth.onmousedown = (e) => {
@@ -408,7 +410,6 @@
             document.getElementById('modifier-tag').innerText = "STANDBY";
             crosshair.style.display = 'none';
             
-            // Clean up remaining ducks
             ducks.forEach(d => d.el.remove());
             ducks = [];
         }
