@@ -2,582 +2,272 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Word Hunter - Shadow Challenge</title>
+    <title>Word Hunter</title>
     <style>
-        /* Reset & Base */
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; position: relative; height: 100vh; width: 100vw; touch-action: none; background: #000; }
-
-        /* Game Container - The main interactive area */
-        #game-container {
-            background: linear-gradient(135deg, #0a0a12 0%, #1a1a2e 50%, #0f0f1a 100%);
-            min-height: 100vh; width: 100vw; display: flex; justify-content: center; align-items: center; 
-            position: relative; cursor: crosshair; z-index: 1;
-        }
-
-        /* --- MENU SCREEN --- */
-        #level-screen {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-            z-index: 300; display: flex; flex-direction: column; justify-content: center; align-items: center;
-            animation: bgFlow 15s ease infinite;
-        }
-        @keyframes bgFlow { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-        .menu-glow { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 20% 80%, rgba(0, 255, 100, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 100, 255, 0.15) 0%, transparent 50%); pointer-events: none; }
-        .menu-content { position: relative; z-index: 10; text-align: center; padding: 20px; max-width: 90vw; }
-        .menu-title { font-size: 48px; margin-bottom: 10px; color: #fff; text-shadow: 0 0 30px rgba(0, 255, 150, 0.8); animation: titlePulse 3s ease-in-out infinite; }
-        @keyframes titlePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-        .menu-subtitle { font-size: 18px; margin-bottom: 40px; color: rgba(255, 255, 255, 0.9); letter-spacing: 2px; }
-        .level-buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 500px; margin: 0 auto; }
-        .level-btn { padding: 25px 30px; border: none; border-radius: 16px; font-size: 20px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 2px; position: relative; overflow: hidden; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); }
-        .level-btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent); transition: left 0.5s; }
-        .level-btn:hover::before { left: 100%; }
-        .level-btn:hover { transform: translateY(-5px) scale(1.05); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); }
-        .level-easy { background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); color: #000; }
-        .level-medium { background: linear-gradient(135deg, #fb923c 0%, #f97316 100%); color: #fff; }
-        .level-hard { background: linear-gradient(135deg, #f87171 0%, #ef4444 100%); color: #fff; }
-        .level-crazy { background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: #fff; animation: pulseBorder 2s ease-in-out infinite; }
-        @keyframes pulseBorder { 0%, 100% { box-shadow: 0 10px 30px rgba(168, 85, 247, 0.4); } 50% { box-shadow: 0 10px 40px rgba(168, 85, 247, 0.8); } }
-        .level-description { display: block; font-size: 13px; font-weight: normal; opacity: 0.95; margin-top: 8px; }
-        .level-icon { font-size: 36px; display: block; margin-bottom: 5px; }
-        .stats-info { margin-top: 30px; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
-        .stat-badge { background: rgba(255, 255, 255, 0.15); padding: 8px 16px; border-radius: 20px; color: #fff; font-size: 12px; border: 1px solid rgba(255, 255, 255, 0.3); }
-
-        /* --- WORD ELEMENTS --- */
-        .word-container { position: absolute; pointer-events: auto; transition: transform 0.1s ease; z-index: 50; }
-        .float-anim { animation: float 8s ease-in-out infinite; }
-        @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 25% { transform: translateY(-15px) rotate(2deg); } 50% { transform: translateY(-5px) rotate(-2deg); } 75% { transform: translateY(10px) rotate(1deg); } }
+        /* Ultra-minimal CSS to avoid conflicts */
+        body { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: sans-serif; user-select: none; -webkit-user-select: none; }
+        #game-container { position: relative; width: 100vw; height: 100vh; background: linear-gradient(135deg, #1a1a2e, #16213e); overflow: hidden; cursor: crosshair; }
         
-        .shape-card { position: relative; display: flex; justify-content: center; align-items: center; width: 160px; height: 60px; backdrop-filter: blur(4px); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); transition: all 0.3s ease; }
-        .shape-circle { border-radius: 30px; border: 3px solid rgba(100, 200, 255, 0.6); background: rgba(255, 255, 255, 0.08); }
-        .shape-diamond { border: 3px solid rgba(255, 200, 100, 0.6); background: rgba(255, 255, 255, 0.08); clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); width: 140px; height: 140px; }
-        .shape-star { background: rgba(255, 255, 255, 0.08); border: 3px solid rgba(255, 100, 200, 0.6); border-radius: 10px; position: relative; }
-        .shape-star::before { content: '★'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 20px; color: rgba(255, 100, 200, 0.8); background: #1a1a2e; padding: 0 5px; border-radius: 50%; }
-        .shape-square { border: 3px solid rgba(100, 255, 150, 0.6); background: rgba(255, 255, 255, 0.08); border-radius: 0px; }
-        .shape-hexagon { background: rgba(255, 255, 255, 0.08); border: 3px solid rgba(150, 150, 255, 0.6); width: 150px; height: 50px; clip-path: polygon(10% 0, 90% 0, 100% 50%, 90% 100%, 10% 100%, 0% 50%); display: flex; justify-content: center; align-items: center; }
-        .shape-hexagon .word-text { padding: 0 10px; }
+        /* Menus */
+        #menu { position: absolute; top:0; left:0; width:100%; height:100%; background: #2c3e50; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; color: white; text-align: center; }
+        .btn { padding: 15px 30px; margin: 10px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; transition: transform 0.2s; }
+        .btn:active { transform: scale(0.95); }
+        .easy { background: #27ae60; }
+        .med { background: #f39c12; }
+        .hard { background: #c0392b; }
+        .crazy { background: #8e44ad; }
 
-        .word-text { color: rgba(255, 255, 255, 0.6); font-size: 18px; font-weight: bold; letter-spacing: 1px; text-shadow: 0 0 5px rgba(255, 255, 255, 0.2); white-space: nowrap; pointer-events: auto; transition: all 0.3s ease; z-index: 2; }
-
-        .pulsing-word .word-text { animation: neonPulse 0.8s ease-in-out infinite alternate; }
-        @keyframes neonPulse { 0% { color: #00ffea; text-shadow: 0 0 5px #00ffea, 0 0 10px #00ffea; opacity: 0.7; } 100% { color: #ffffff; text-shadow: 0 0 10px #00ffea, 0 0 20px #00ffea, 0 0 30px #00ffea; opacity: 1; } }
-
-        .spinning-word .word-text { animation: spinText 2s linear infinite; }
-        @keyframes spinText { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        .word-container:hover .word-text { color: rgba(255, 255, 255, 1); }
-        .correct .word-text { color: #fff !important; text-shadow: 0 0 20px rgba(0, 255, 100, 0.9); font-size: 20px; }
-        .wrong .word-text { color: #ff4444 !important; text-shadow: 0 0 15px rgba(255, 0, 0, 0.7); animation: shake 0.5s; }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 50% { transform: translateX(8px); } 75% { transform: translateX(-8px); } }
-
-        /* --- FLASHLIGHT & EFFECTS --- */
-        .flashlight-overlay {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            pointer-events: none;
-            background: radial-gradient(circle 140px at var(--x, 50%) var(--y, 50%), transparent 0%, rgba(0, 0, 0, 0.4) 30%, rgba(0, 0, 0, 0.8) 60%, rgba(0, 0, 0, 0.98) 85%, rgba(0, 0, 0, 1) 100%);
-            z-index: 100; transition: opacity 0.1s;
-        }
-
-        .flickering .flashlight-overlay { animation: rapidFlicker 0.1s infinite alternate; }
-        @keyframes rapidFlicker { 0% { opacity: 1; } 25% { opacity: 0.4; } 50% { opacity: 1; } 75% { opacity: 0.4; } 100% { opacity: 1; } }
-
-        .flashlight-dot {
-            position: absolute; top: 0; left: 0; width: 10px; height: 10px;
-            background: radial-gradient(circle, #ff0000 0%, rgba(255, 0, 0, 0) 70%);
-            border-radius: 50%; transform: translate(-50%, -50%);
-            pointer-events: none; z-index: 101; box-shadow: 0 0 10px #ff0000;
-            animation: pulse-dot 1s infinite alternate;
-        }
-        @keyframes pulse-dot { from { opacity: 0.8; transform: translate(-50%, -50%) scale(1); } to { opacity: 1; transform: translate(-50%, -50%) scale(1.2); } }
-
-        .dead-light .flashlight-overlay { opacity: 0 !important; }
-        .dead-light .flashlight-dot { display: none; }
-
-        /* --- SHADOW ENTITY --- */
-        #shadow-entity {
-            position: absolute; width: 40px; height: 40px;
-            background: radial-gradient(circle, #000 0%, #444 80%);
-            border: 2px solid #ff0000; border-radius: 50%;
-            box-shadow: 0 0 20px #ff0000, inset 0 0 10px #ff0000;
-            z-index: 49; pointer-events: none; display: none;
-            animation: shadowMove 4s ease-in-out infinite;
-        }
-        #shadow-entity::after { content: ''; position: absolute; top: 10px; left: 10px; width: 6px; height: 6px; background: red; border-radius: 50%; box-shadow: 20px 0 0 red; animation: eyesBlink 1s infinite; }
-        @keyframes shadowMove { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, -30px); } }
-        @keyframes eyesBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-
-        /* --- HUD & UI --- */
-        #hud { position: fixed; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.85); padding: 12px 25px; border-radius: 10px; z-index: 150; color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); min-width: 300px; max-width: 95vw; display: none; }
-        .hud-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .hud-row:last-child { margin-bottom: 0; }
-        #score { font-size: 18px; color: #ffd700; }
-        #round-info { font-size: 16px; color: rgba(255, 255, 255, 0.8); }
-        #level-indicator { font-size: 14px; color: #9c27b0; font-weight: bold; }
-
-        #battery-container { position: fixed; top: 15px; right: 15px; z-index: 150; background: rgba(0, 0, 0, 0.85); padding: 12px 15px; border-radius: 10px; border: 2px solid rgba(255, 255, 255, 0.2); display: none; }
-        #battery-label { font-size: 12px; color: rgba(255, 255, 255, 0.7); margin-bottom: 5px; text-transform: uppercase; }
-        .battery-frame { width: 80px; height: 30px; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 4px; padding: 2px; position: relative; }
-        .battery-frame::after { content: ''; position: absolute; right: -6px; top: 50%; transform: translateY(-50%); width: 4px; height: 14px; background: rgba(255, 255, 255, 0.3); border-radius: 0 2px 2px 0; }
-        .battery-level { height: 100%; background: linear-gradient(90deg, #00ff64 0%, #ffff00 50%, #ff4444 100%); border-radius: 2px; transition: width 0.3s ease; position: relative; overflow: hidden; }
-        .battery-level.critical { animation: lowBattery 0.5s ease-in-out infinite; }
-        @keyframes lowBattery { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .time-text { font-size: 14px; color: #fff; text-align: center; margin-top: 5px; font-weight: bold; }
+        /* Game Elements */
+        .word-box { position: absolute; padding: 10px 20px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; color: rgba(255,255,255,0.6); font-weight: bold; font-size: 18px; cursor: pointer; transition: all 0.3s; }
+        .word-box:hover { background: rgba(255,255,255,0.2); color: white; }
+        .correct { color: #2ecc71 !important; text-shadow: 0 0 10px #2ecc71; border-color: #2ecc71; }
+        .wrong { color: #e74c3c !important; animation: shake 0.4s; }
         
-        #penalty-indicator { font-size: 14px; color: #ff4444; font-weight: bold; display: none; animation: shakeWarning 0.5s; }
-        @keyframes shakeWarning { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 
-        #touch-controls { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 150; display: none; gap: 8px; flex-wrap: wrap; justify-content: center; }
-        .control-btn { background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.4); color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 20px; cursor: pointer; touch-action: manipulation; min-width: 55px; backdrop-filter: blur(5px); }
-        .control-btn:active { background: rgba(255, 255, 255, 0.4); }
-        #fire-btn { background: rgba(255, 100, 100, 0.3); border-color: rgba(255, 100, 100, 0.8); font-size: 24px; min-width: 60px; }
+        /* Flashlight & Effects */
+        .flashlight { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; mix-blend-mode: multiply; background: radial-gradient(circle 140px at var(--x, 50%) var(--y, 50%), transparent 0%, rgba(0,0,0,0.95) 80%, black 100%); transition: opacity 0.1s; }
+        .flickering { animation: flickerAnim 0.1s infinite; }
+        @keyframes flickerAnim { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
 
-        #message-screen { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.95); padding: 50px 80px; border-radius: 20px; z-index: 200; text-align: center; color: #fff; display: none; border: 2px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); }
-        #message-screen h2 { font-size: 36px; margin-bottom: 15px; }
-        #message-screen.success h2 { color: #00ff64; text-shadow: 0 0 20px rgba(0, 255, 100, 0.5); }
-        #message-screen.failure h2 { color: #ff4444; text-shadow: 0 0 20px rgba(255, 68, 68, 0.5); }
-        #message-screen p { font-size: 18px; margin-bottom: 25px; color: rgba(255, 255, 255, 0.8); }
-        #action-btn { background: linear-gradient(135deg, #00ff64 0%, #00cc50 100%); border: none; padding: 15px 40px; border-radius: 10px; color: #000; font-weight: bold; cursor: pointer; font-size: 18px; text-transform: uppercase; letter-spacing: 1px; transition: transform 0.2s; }
-        #action-btn:hover { transform: scale(1.05); }
+        .dot { position: absolute; width: 8px; height: 8px; background: red; border-radius: 50%; transform: translate(-50%, -50%); z-index: 11; box-shadow: 0 0 5px red; pointer-events: none; }
 
-        #penalty-flash, #timeout-flash { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 68, 68, 0.3); z-index: 98; display: none; pointer-events: none; animation: fadeOutPenalty 0.3s forwards; }
-        @keyframes fadeOutPenalty { from { opacity: 1; } to { opacity: 0; } }
-        #timeout-flash { background: rgba(255, 0, 0, 0.5); z-index: 99; animation: fadeOut 0.5s forwards; }
-        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-
-        @media (hover: none) and (pointer: coarse) { #touch-controls { display: flex; } .word-text { font-size: 16px; } }
+        /* HUD */
+        #hud { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 8px; color: white; display: none; z-index: 20; font-size: 16px; }
+        #battery { position: absolute; top: 20px; right: 20px; width: 100px; height: 20px; border: 2px solid white; border-radius: 4px; overflow: hidden; display: none; z-index: 20; }
+        #battery-fill { height: 100%; width: 100%; background: lime; transition: width 0.2s; }
+        
+        #msg-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); padding: 30px; border-radius: 10px; text-align: center; color: white; display: none; z-index: 50; }
     </style>
 </head>
 <body>
-    <!-- Menu Screen -->
-    <div id="level-screen">
-        <div class="menu-glow"></div>
-        <div class="menu-content">
-            <h1 class="menu-title">⚡ WORD HUNTER ⚡</h1>
-            <p class="menu-subtitle">SHADOW SPELLING CHALLENGE</p>
-            <div class="level-buttons">
-                <button class="level-btn level-easy" onclick="startGame('easy')">
-                    <span class="level-icon">🌱</span> Easy<br><span class="level-description">Age 7-9</span>
-                </button>
-                <button class="level-btn level-medium" onclick="startGame('medium')">
-                    <span class="level-icon">⭐</span> Medium<br><span class="level-description">Age 10-12</span>
-                </button>
-                <button class="level-btn level-hard" onclick="startGame('hard')">
-                    <span class="level-icon">🔥</span> Hard<br><span class="level-description">Age 13+</span>
-                </button>
-                <button class="level-btn level-crazy" onclick="startGame('crazy')">
-                    <span class="level-icon">💀</span> Crazy<br><span class="level-description">Expert</span>
-                </button>
-            </div>
-            <div class="stats-info">
-                <div class="stat-badge">✨ 5 Words to Win!</div>
-                <div class="stat-badge">💡 Flickers Every 5s</div>
-                <div class="stat-badge">❌ Wrong = -2 sec</div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Game Container -->
-    <div id="game-container">
-        <div class="flashlight-overlay"></div>
-        <div class="flashlight-dot" id="aiming-dot"></div>
-        <div id="shadow-entity"></div>
-        <div id="penalty-flash"></div>
-        <div id="timeout-flash"></div>
-        <div id="words-area"></div>
-        
-        <div id="hud">
-            <div class="hud-row"><span id="score">Score: 0</span><span id="round-info">Found: 0 / 5</span></div>
-            <div class="hud-row" style="justify-content: space-between;"><span id="level-indicator">Level: Easy</span><span id="penalty-indicator">-2 sec!</span></div>
-            <div class="hud-row" style="justify-content: center;"><span style="font-size: 14px; color: rgba(255,255,255,0.7);" id="round-hint">Find the correct word!</span></div>
-        </div>
-        
-        <div id="battery-container">
-            <div id="battery-label">BATTERY</div>
-            <div class="battery-frame"><div class="battery-level" id="battery-level"></div></div>
-            <div class="time-text" id="time-text">35s</div>
-        </div>
-        
-        <div id="touch-controls">
-            <button class="control-btn" onmousedown="handleBtnInput('left')" onmouseup="handleBtnUp()" ontouchstart="handleBtnInput('left')" ontouchend="handleBtnUp()">←</button>
-            <button class="control-btn" onmousedown="handleBtnInput('up')" onmouseup="handleBtnUp()" ontouchstart="handleBtnInput('up')" ontouchend="handleBtnUp()">↑</button>
-            <button class="control-btn" onmousedown="handleBtnInput('down')" onmouseup="handleBtnUp()" ontouchstart="handleBtnInput('down')" ontouchend="handleBtnUp()">↓</button>
-            <button class="control-btn" onmousedown="handleBtnInput('right')" onmouseup="handleBtnUp()" ontouchstart="handleBtnInput('right')" ontouchend="handleBtnUp()">→</button>
-            <button class="control-btn" id="fire-btn" onclick="selectWord()">🔦</button>
-        </div>
-        
-        <div id="message-screen">
-            <h2 id="message-title">Excellent!</h2>
-            <p id="message-text">You found the correct spelling!</p>
-            <button id="action-btn" onclick="restartGame()">Play Again</button>
-        </div>
-    </div>
+<!-- MENU -->
+<div id="menu">
+    <h1 style="font-size: 40px; margin-bottom: 30px;">WORD HUNTER</h1>
+    <button class="btn easy" onclick="startGame('easy')">Easy</button>
+    <button class="btn med" onclick="startGame('medium')">Medium</button>
+    <button class="btn hard" onclick="startGame('hard')">Hard</button>
+    <button class="btn crazy" onclick="startGame('crazy')">Crazy</button>
+</div>
 
-    <script>
-        // Data
-        const wordDatabases = {
-            easy: [{target:"friends", misspellings:["freinds","frinds"]},{target:"because", misspellings:["becuase","becasue"]},{target:"said", misspellings:["sed","sayed"]},{target:"would", misspellings:["woudl","woold"]},{target:"could", misspellings:["coudl","coolld"]}],
-            medium: [{target:"beautiful", misspellings:["beautifull","beatiful"]},{target:"necessary", misspellings:["neccessary","necesary"]},{target:"separate", misspellings:["seperate","seperat"]},{target:"definitely", misspellings:["definately","definitly"]},{target:"receive", misspellings:["recieve","receve"]}],
-            hard: [{target:"accommodate", misspellings:["acommodate","accomodate"]},{target:"environment", misspellings:["enviroment","environement"]},{target:"maintenance", misspellings:["maintainance","maintanance"]},{target:"pronunciation", misspellings:["pronounciation","pronuniciation"]},{target:"calendar", misspellings:["calender","callendar"]}],
-            crazy: [{target:"conscience", misspellings:["conciense","consience"]},{target:"liaison", misspellings:["liason","lisaison"]},{target:"millennium", misspellings:["milennium","millenium"]},{target:"phenomenon", misspellings:["phenomena","phenonmenon"]},{target:"privilege", misspellings:["priviledge","privilage"]}]
+<!-- GAME CONTAINER -->
+<div id="game-container">
+    <div id="words-area"></div>
+    <div class="flashlight" id="flashlight"></div>
+    <div class="dot" id="dot"></div>
+    
+    <div id="hud">
+        <span id="score">Score: 0</span> | 
+        <span id="found">Found: 0/5</span> | 
+        <span id="hint">Find the word!</span>
+    </div>
+    
+    <div id="battery"><div id="battery-fill"></div></div>
+    
+    <div id="msg-overlay">
+        <h2 id="msg-title">You Win!</h2>
+        <p id="msg-text">Final Score: 0</p>
+        <button class="btn easy" onclick="resetGame()">Play Again</button>
+    </div>
+</div>
+
+<script>
+    // Data
+    const words = {
+        easy: [{t:"friends", w:["freinds","frinds"]}, {t:"because", w:["becuase","becasue"]}, {t:"said", w:["sed","sayed"]}, {t:"would", w:["woudl","woold"]}, {t:"could", w:["coudl","coolld"]}],
+        medium: [{t:"beautiful", w:["beautifull","beatiful"]}, {t:"necessary", w:["neccessary","necesary"]}, {t:"separate", w:["seperate","seperat"]}, {t:"definitely", w:["definately","definitly"]}, {t:"receive", w:["recieve","receve"]}],
+        hard: [{t:"accommodate", w:["acommodate","accomodate"]}, {t:"environment", w:["enviroment","environement"]}, {t:"maintenance", w:["maintainance","maintanance"]}, {t:"pronunciation", w:["pronounciation","pronuniciation"]}, {t:"calendar", w:["calender","callendar"]}],
+        crazy: [{t:"conscience", w:["conciense","consience"]}, {t:"liaison", w:["liason","lisaison"]}, {t:"millennium", w:["milennium","millenium"]}, {t:"phenomenon", w:["phenomena","phenonmenon"]}, {t:"privilege", w:["priviledge","privilage"]}]
+    };
+
+    let state = { level: 'easy', found: 0, score: 0, time: 35, active: false, x: 50, y: 50, dead: false };
+    let timerId = null;
+    let flickerId = null;
+    let shadowId = null;
+    let currentTarget = "";
+
+    const container = document.getElementById('game-container');
+    const flashEl = document.getElementById('flashlight');
+    const dotEl = document.getElementById('dot');
+    const hud = document.getElementById('hud');
+    const battery = document.getElementById('battery');
+    const batteryFill = document.getElementById('battery-fill');
+    const wordsArea = document.getElementById('words-area');
+    const msgOverlay = document.getElementById('msg-overlay');
+
+    function startGame(level) {
+        state.level = level;
+        state.found = 0;
+        state.score = 0;
+        state.time = 35;
+        state.active = true;
+        state.dead = false;
+        
+        document.getElementById('menu').style.display = 'none';
+        hud.style.display = 'block';
+        battery.style.display = 'block';
+        msgOverlay.style.display = 'none';
+        
+        loadLevel();
+        startTimer();
+        startFlicker();
+        setupInput();
+    }
+
+    function cleanUp() {
+        state.active = false;
+        if (timerId) clearInterval(timerId);
+        if (flickerId) clearInterval(flickerId);
+        if (shadowId) clearInterval(shadowId);
+        flashEl.classList.remove('flickering');
+        container.removeEventListener('mousemove', handleMove);
+        container.removeEventListener('touchmove', handleMove);
+        container.removeEventListener('mousedown', handleDown);
+        window.removeEventListener('mouseup', handleUp);
+    }
+
+    function loadLevel() {
+        wordsArea.innerHTML = '';
+        const data = words[state.level][state.found % words[state.level].length]; // Loop through words safely
+        currentTarget = data.t;
+        
+        // Build word list (Correct + Misspellings)
+        let pool = [data.t, ...data.w];
+        // Shuffle
+        pool.sort(() => Math.random() - 0.5);
+        
+        // Ensure 5 items
+        while(pool.length < 5) pool.push(data.w[Math.floor(Math.random()*data.w.length)]);
+
+        // Create DOM elements
+        pool.forEach((txt, i) => {
+            const el = document.createElement('div');
+            el.className = 'word-box';
+            el.textContent = txt;
+            el.style.left = (10 + i * 20 + Math.random()*10) + '%';
+            el.style.top = (10 + Math.random()*70) + '%';
+            
+            // Difficulty modifiers
+            if (state.found >= 1) el.style.animation = 'pulse 0.8s infinite alternate'; // Glowing effect
+            if (state.found >= 2) el.style.transform = 'rotate(5deg)'; // Slight tilt
+            
+            el.onclick = () => checkWord(el, txt);
+            wordsArea.appendChild(el);
+        });
+
+        updateHUD();
+    }
+
+    function updateHUD() {
+        document.getElementById('score').textContent = `Score: ${state.score}`;
+        document.getElementById('found').textContent = `Found: ${state.found}/5`;
+        const hints = ["Normal", "Glowing!", "Spinning!", "Shadow!", "MAX!"];
+        document.getElementById('hint').textContent = hints[Math.min(state.found, 4)];
+        
+        batteryFill.style.width = (state.time / 35 * 100) + '%';
+        batteryFill.style.backgroundColor = state.time < 10 ? 'red' : 'lime';
+    }
+
+    function startTimer() {
+        if (timerId) clearInterval(timerId);
+        timerId = setInterval(() => {
+            if (!state.active) return;
+            state.time -= 0.1;
+            if (state.time <= 0) {
+                cleanUp();
+                gameOver();
+            } else {
+                updateHUD();
+            }
+        }, 100);
+    }
+
+    function startFlicker() {
+        if (flickerId) clearInterval(flickerId);
+        // Safe interval: just toggles a class
+        flickerId = setInterval(() => {
+            if (!state.active) return;
+            flashEl.classList.add('flickering');
+            setTimeout(() => { if(state.active) flashEl.classList.remove('flickering'); }, 1500);
+        }, 5000);
+    }
+
+    function setupInput() {
+        // Mouse/Touch movement - STRICTLY on container
+        const moveHandler = (e) => {
+            if (!state.active || state.dead) return;
+            e.preventDefault();
+            const rect = container.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            state.x = ((clientX - rect.left) / rect.width) * 100;
+            state.y = ((clientY - rect.top) / rect.height) * 100;
+            
+            flashEl.style.setProperty('--x', `${state.x}%`);
+            flashEl.style.setProperty('--y', `${state.y}%`);
+            dotEl.style.left = `${state.x}%`;
+            dotEl.style.top = `${state.y}%`;
         };
 
-        // State
-        let currentLevel = null;
-        let wordsFound = 0;
-        let score = 0;
-        let currentTarget = null;
-        let flashlightPosition = { x: 50, y: 50 };
-        let timerInterval = null;
-        let flickerTimer = null;
-        let shadowTimer = null;
-        let collisionInterval = null;
-        let currentBattery = 100;
-        let maxTimePerRound = 35;
-        let currentTime = 35;
-        let gameActive = false;
-        let isLightDead = false;
-        let dragging = false;
-
-        const levelConfig = { easy: 'Easy', medium: 'Medium', hard: 'Hard', crazy: 'Crazy' };
-        const shapeTypes = ['circle', 'square', 'star', 'diamond', 'hexagon'];
-
-        function startGame(level) {
-            currentLevel = level;
-            document.getElementById('level-screen').style.display = 'none';
-            document.getElementById('hud').style.display = 'block';
-            document.getElementById('battery-container').style.display = 'block';
-            document.getElementById('level-indicator').textContent = `Level: ${levelConfig[level]}`;
-            init();
-        }
-
-        function cleanUp() {
-            if (timerInterval) clearInterval(timerInterval);
-            if (flickerTimer) clearInterval(flickerTimer);
-            if (shadowTimer) clearInterval(shadowTimer);
-            if (collisionInterval) clearInterval(collisionInterval);
-            gameActive = false;
-            isLightDead = false;
-            document.getElementById('game-container').classList.remove('dead-light');
-            document.getElementById('shadow-entity').style.display = 'none';
-        }
-
-        function init() {
-            cleanUp();
-            wordsFound = 0;
-            score = 0;
-            flashlightPosition = { x: 50, y: 50 };
-            setupControls();
-            startTimer();
-            startFlickerLoop();
-            loadLevel();
-            gameActive = true;
-        }
-
-        function startFlickerLoop() {
-            if (flickerTimer) clearInterval(flickerTimer);
-            flickerTimer = setInterval(() => {
-                if (!gameActive) return;
-                const container = document.getElementById('game-container');
-                container.classList.add('flickering');
-                flashMessage("LIGHT FLICKERING! LOOK!");
-                setTimeout(() => { if(gameActive) container.classList.remove('flickering'); }, 1500);
-            }, 5000);
-        }
-
-        function loadLevel() {
-            const wordsArea = document.getElementById('words-area');
-            wordsArea.innerHTML = '';
-            
-            document.getElementById('round-hint').textContent = getRoundHint(wordsFound);
-            
-            // Shadow logic
-            if (wordsFound >= 3) activateShadow();
-            else {
-                document.getElementById('shadow-entity').style.display = 'none';
-                if (shadowTimer) clearInterval(shadowTimer);
-                if (collisionInterval) clearInterval(collisionInterval);
+        container.addEventListener('mousemove', moveHandler);
+        container.addEventListener('touchmove', moveHandler, { passive: false });
+        
+        // Click handling via delegation on container
+        container.onclick = (e) => {
+            if (!state.active || state.dead) return;
+            // If clicked on a word box, select it
+            const target = e.target.closest('.word-box');
+            if (target) {
+                checkWord(target, target.textContent);
+            } else if (e.target === container) {
+                // Fallback: find closest word under mouse? (Simplified: nothing happens if miss)
             }
+        };
+    }
 
-            const wordSet = wordDatabases[currentLevel][Math.floor(Math.random() * wordDatabases[currentLevel].length)];
-            currentTarget = wordSet.target;
-
-            const allWords = [wordSet.target, ...wordSet.misspellings];
-            const shuffled = allWords.sort(() => Math.random() - 0.5);
+    function checkWord(el, txt) {
+        if (!state.active) return;
+        
+        if (txt === currentTarget) {
+            el.classList.add('correct');
+            state.score += 100 + Math.floor(state.time * 2);
+            state.found++;
             
-            // Ensure 5 words
-            while(shuffled.length < 5) shuffled.push(wordSet.misspellings[Math.floor(Math.random()*wordSet.misspellings.length)]);
-
-            const positions = generatePositions(5);
-            const roundNum = wordsFound + 1;
-
-            shuffled.slice(0, 5).forEach((word, index) => {
-                const container = document.createElement('div');
-                container.className = 'word-container';
-                container.dataset.word = word;
-                container.dataset.correct = (word === currentTarget);
-                
-                if (roundNum >= 2) container.classList.add('pulsing-word');
-                if (roundNum >= 3) container.classList.add('spinning-word');
-                
-                container.style.animationDuration = `${6 + Math.random() * 4}s`;
-                container.style.animationDelay = `-${Math.random() * 5}s`;
-                container.style.left = positions[index].x + '%';
-                container.style.top = positions[index].y + '%';
-                
-                // DIRECT EVENT ATTACHMENT (Safe for iframes)
-                container.addEventListener('click', (e) => { e.stopPropagation(); selectWord(container); });
-                
-                const shapeDiv = document.createElement('div');
-                shapeDiv.className = `shape-card shape-${shapeTypes[index % 5]}`;
-                const textSpan = document.createElement('span');
-                textSpan.className = 'word-text';
-                textSpan.textContent = word;
-                shapeDiv.appendChild(textSpan);
-                container.appendChild(shapeDiv);
-                wordsArea.appendChild(container);
-            });
-
-            updateHUD();
-        }
-
-        function getRoundHint(foundCount) {
-            if (foundCount === 0) return "Word 1: Normal";
-            if (foundCount === 1) return "Word 2: Glowing!";
-            if (foundCount === 2) return "Word 3: Spinning!";
-            if (foundCount === 3) return "Word 4: Shadow appears!";
-            if (foundCount === 4) return "Word 5: All hazards!";
-            return "";
-        }
-
-        function generatePositions(count) {
-            const pos = [];
-            for(let i=0; i<count; i++) {
-                pos.push({ x: 10 + Math.random()*70, y: 10 + Math.random()*70 });
-            }
-            return pos;
-        }
-
-        function setupControls() {
-            const container = document.getElementById('game-container');
-            
-            // Mouse/Touch on Container (Self-contained)
-            container.addEventListener('mousedown', (e) => { dragging = true; });
-            window.addEventListener('mouseup', () => { dragging = false; });
-            
-            container.addEventListener('mousemove', (e) => {
-                if (!dragging || !gameActive || isLightDead) return;
-                const rect = container.getBoundingClientRect();
-                flashlightPosition.x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-                flashlightPosition.y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-                updateFlashlight();
-            });
-
-            container.addEventListener('touchstart', (e) => {
-                if (e.target.closest('.control-btn')) return;
-                dragging = true;
-            });
-            container.addEventListener('touchend', () => { dragging = false; });
-            container.addEventListener('touchmove', (e) => {
-                if (!dragging || !gameActive || isLightDead) return;
-                e.preventDefault();
-                const rect = container.getBoundingClientRect();
-                const t = e.touches[0];
-                flashlightPosition.x = Math.max(0, Math.min(100, ((t.clientX - rect.left) / rect.width) * 100));
-                flashlightPosition.y = Math.max(0, Math.min(100, ((t.clientY - rect.top) / rect.height) * 100));
-                updateFlashlight();
-            });
-
-            // Keyboard (Global but safe)
-            document.removeEventListener('keydown', handleKey);
-            document.addEventListener('keydown', handleKey);
-        }
-
-        function handleKey(e) {
-            if (!gameActive || isLightDead) return;
-            switch(e.key) {
-                case 'ArrowLeft': moveLight('left'); break;
-                case 'ArrowRight': moveLight('right'); break;
-                case 'ArrowUp': moveLight('up'); break;
-                case 'ArrowDown': moveLight('down'); break;
-                case 'Enter': case ' ': selectWord(getClosestInBeam()); break;
-            }
-        }
-
-        function handleBtnInput(dir) {
-            if (!gameActive || isLightDead) return;
-            moveLight(dir);
-        }
-        function handleBtnUp() { } // Placeholder
-
-        function moveLight(dir) {
-            const step = 5;
-            if (dir === 'left') flashlightPosition.x = Math.max(0, flashlightPosition.x - step);
-            if (dir === 'right') flashlightPosition.x = Math.min(100, flashlightPosition.x + step);
-            if (dir === 'up') flashlightPosition.y = Math.max(0, flashlightPosition.y - step);
-            if (dir === 'down') flashlightPosition.y = Math.min(100, flashlightPosition.y + step);
-            updateFlashlight();
-        }
-
-        function updateFlashlight() {
-            const overlay = document.querySelector('.flashlight-overlay');
-            const dot = document.getElementById('aiming-dot');
-            overlay.style.setProperty('--x', `${flashlightPosition.x}%`);
-            overlay.style.setProperty('--y', `${flashlightPosition.y}%`);
-            if (!isLightDead) {
-                dot.style.left = `${flashlightPosition.x}%`;
-                dot.style.top = `${flashlightPosition.y}%`;
-            }
-        }
-
-        function activateShadow() {
-            const shadow = document.getElementById('shadow-entity');
-            shadow.style.display = 'block';
-            
-            if (shadowTimer) clearInterval(shadowTimer);
-            if (collisionInterval) clearInterval(collisionInterval);
-
-            let sx = 10, sy = 10;
-            shadowTimer = setInterval(() => {
-                if(!gameActive) return;
-                sx = 10 + Math.random()*80;
-                sy = 10 + Math.random()*80;
-                shadow.style.left = sx+'%';
-                shadow.style.top = sy+'%';
-            }, 3000);
-
-            collisionInterval = setInterval(() => {
-                if(!gameActive || isLightDead) return;
-                const dx = flashlightPosition.x - parseFloat(shadow.style.left);
-                const dy = flashlightPosition.y - parseFloat(shadow.style.top);
-                if (Math.sqrt(dx*dx + dy*dy) < 12) triggerLightDeath();
-            }, 100);
-        }
-
-        function triggerLightDeath() {
-            if(isLightDead) return;
-            isLightDead = true;
-            document.getElementById('game-container').classList.add('dead-light');
-            flashMessage("SHADOW KILLED LIGHT!");
-            setTimeout(() => {
-                isLightDead = false;
-                document.getElementById('game-container').classList.remove('dead-light');
-            }, 2000);
-        }
-
-        function getClosestInBeam() {
-            const cards = document.querySelectorAll('.word-container');
-            let best = null;
-            let minDist = 999;
-            cards.forEach(card => {
-                const rect = card.getBoundingClientRect();
-                const cx = (rect.left + rect.width/2);
-                const cy = (rect.top + rect.height/2);
-                const dist = Math.hypot(cx - (flashlightPosition.x/100 * window.innerWidth), cy - (flashlightPosition.y/100 * window.innerHeight)); // Simplified calc
-                // Better relative calc:
-                const rContainer = document.getElementById('game-container').getBoundingClientRect();
-                const relX = (cx - rContainer.left) / rContainer.width * 100;
-                const relY = (cy - rContainer.top) / rContainer.height * 100;
-                const d = Math.hypot(relX - flashlightPosition.x, relY - flashlightPosition.y);
-                
-                if(d < 15 && d < minDist) { minDist = d; best = card; }
-            });
-            return best;
-        }
-
-        function selectWord(el) {
-            if (!gameActive || isLightDead) return;
-            const card = el || getClosestInBeam();
-            if (!card) { flashMessage("Aim closer!"); return; }
-            
-            if (card.dataset.word === currentTarget) {
-                card.classList.add('correct');
-                score += 100 + Math.ceil(currentTime * 2);
-                wordsFound++;
-                
-                if (wordsFound >= 5) {
-                    cleanUp();
-                    showMessage('YOU WIN!', `Score: ${score}`, true);
-                } else {
-                    updateHUD();
-                    stopTimer();
-                    setTimeout(loadLevel, 500);
-                }
+            if (state.found >= 5) {
+                cleanUp();
+                gameWin();
             } else {
-                card.classList.add('wrong');
-                score = Math.max(0, score - 25);
-                currentTime = Math.max(0, currentTime - 2);
-                updateHUD();
-                showPenalty();
-                setTimeout(() => card.classList.remove('wrong'), 1000);
+                loadLevel();
             }
+        } else {
+            el.classList.add('wrong');
+            state.score = Math.max(0, state.score - 25);
+            state.time = Math.max(0, state.time - 2);
+            updateHUD();
+            setTimeout(() => el.classList.remove('wrong'), 500);
         }
+    }
 
-        function showPenalty() {
-            const ind = document.getElementById('penalty-indicator');
-            ind.style.display = 'block';
-            setTimeout(() => ind.style.display = 'none', 500);
-        }
+    function gameOver() {
+        document.getElementById('msg-title').textContent = "Game Over";
+        document.getElementById('msg-text').textContent = `Time ran out! Score: ${state.score}`;
+        msgOverlay.style.display = 'block';
+    }
 
-        function updateHUD() {
-            document.getElementById('score').textContent = `Score: ${score}`;
-            document.getElementById('round-info').textContent = `Found: ${wordsFound} / 5`;
-        }
+    function gameWin() {
+        document.getElementById('msg-title').textContent = "YOU WIN!";
+        document.getElementById('msg-text').textContent = `Great job! Score: ${state.score}`;
+        msgOverlay.style.display = 'block';
+    }
 
-        function startTimer() {
-            if (timerInterval) clearInterval(timerInterval);
-            maxTimePerRound = 35;
-            currentTime = 35;
-            currentBattery = 100;
-            updateBattery();
-            
-            timerInterval = setInterval(() => {
-                if (!gameActive) return;
-                currentTime -= 0.1;
-                currentBattery = (currentTime / maxTimePerRound) * 100;
-                updateBattery();
-                if (currentTime <= 0) gameOver();
-            }, 100);
-        }
-
-        function updateBattery() {
-            document.getElementById('battery-level').style.width = `${currentBattery}%`;
-            document.getElementById('time-text').textContent = `${Math.ceil(currentTime)}s`;
-            const b = document.getElementById('battery-level');
-            const t = document.getElementById('time-text');
-            if(currentBattery <= 20) { b.classList.add('critical'); t.style.color='#ff4444'; }
-            else if(currentBattery <= 50) { b.classList.remove('critical'); t.style.color='#ffff00'; }
-            else { b.classList.remove('critical'); t.style.color='#00ff64'; }
-        }
-
-        function stopTimer() { clearInterval(timerInterval); }
-
-        function gameOver() {
-            cleanUp();
-            document.getElementById('timeout-flash').style.display = 'block';
-            setTimeout(() => showMessage('Game Over', `Score: ${score}`, false), 500);
-        }
-
-        function showMessage(title, text, success) {
-            const s = document.getElementById('message-screen');
-            document.getElementById('message-title').textContent = title;
-            document.getElementById('message-text').textContent = text;
-            s.className = success ? 'success' : 'failure';
-            s.style.display = 'block';
-        }
-
-        function flashMessage(msg) {
-            const h = document.querySelector('#hud .hud-row:last-child span');
-            const orig = h.textContent;
-            h.textContent = msg;
-            h.style.color = '#ff6b6b';
-            setTimeout(() => { h.textContent = orig; h.style.color='rgba(255,255,255,0.7)'; }, 2000);
-        }
-
-        function restartGame() {
-            document.getElementById('message-screen').style.display = 'none';
-            init();
-        }
-    </script>
+    function resetGame() {
+        msgOverlay.style.display = 'none';
+        document.getElementById('menu').style.display = 'flex';
+        hud.style.display = 'none';
+        battery.style.display = 'none';
+    }
+</script>
 </body>
 </html>
