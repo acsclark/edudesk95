@@ -182,10 +182,16 @@
         #crosshair::after { left: 50%; top: -10px; bottom: -10px; width: 2px; transform: translateX(-50%); }
         #crosshair-dot { position: absolute; width: 4px; height: 4px; background: #fff; box-shadow: 0 0 5px #fff; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); }
 
-        /* SPARKS PARTICLE SYSTEM */
+        /* UPGRADED BIG SPARKS PARTICLE SYSTEM */
         .spark {
-            position: absolute; width: 4px; height: 4px; background: #fff; border-radius: 50%;
-            pointer-events: none; z-index: 150; box-shadow: 0 0 10px #0ff, 0 0 5px #0ff;
+            position: absolute; 
+            width: 6px; /* Bigger sparks */
+            height: 6px; /* Bigger sparks */
+            background: #fff; 
+            border-radius: 50%;
+            pointer-events: none; 
+            z-index: 150; 
+            box-shadow: 0 0 15px #0ff, 0 0 8px #0ff; /* Massive neon glow */
         }
 
         /* EMERGENCY SHAKE & FLASH */
@@ -775,14 +781,15 @@
             requestAnimationFrame(moveDucks);
         }
 
-        // --- Spark Particle Generator ---
+        // --- UPGRADED BIG Spark Particle Generator ---
         function createSparks(absX, absY) {
             const rect = booth.getBoundingClientRect();
             // Convert absolute screen position to booth coordinates
             const boothX = (absX - rect.left) / window.gameScale;
             const boothY = (absY - rect.top) / window.gameScale;
 
-            for (let i = 0; i < 8; i++) {
+            // Increased particle count from 8 to 16
+            for (let i = 0; i < 16; i++) {
                 const spark = document.createElement('div');
                 spark.className = 'spark';
                 spark.style.left = `${boothX}px`;
@@ -790,15 +797,17 @@
                 booth.appendChild(spark);
 
                 const angle = Math.random() * Math.PI * 2;
-                const distance = Math.random() * 40 + 20;
+                // Increased explosion distance massively
+                const distance = Math.random() * 80 + 30; 
                 const tx = Math.cos(angle) * distance;
                 const ty = Math.sin(angle) * distance;
 
                 spark.animate([
-                    { transform: 'translate(0, 0) scale(1)', opacity: 1 },
-                    { transform: `translate(${tx}px, ${ty}px) scale(0)`, opacity: 0 }
+                    { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+                    { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0)`, opacity: 0 }
                 ], {
-                    duration: 300 + Math.random() * 200,
+                    // Increased duration slightly so it doesn't vanish too fast
+                    duration: 400 + Math.random() * 300,
                     easing: 'ease-out'
                 }).onfinish = () => spark.remove();
             }
