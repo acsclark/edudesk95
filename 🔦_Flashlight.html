@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Word Hunter - Shadow Challenge</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; position: relative; height: 100vh; width: 100vw; touch-action: none; }
+
+        #game-container {
+            background: linear-gradient(135deg, #0a0a12 0%, #1a1a2e 50%, #0f0f1a 100%);
+            min-height: 100vh; width: 100vw; display: flex; justify-content: center; align-items: center; position: relative; cursor: crosshair;
+        }
+
+        /* --- MENU SCREEN STYLES --- */
+        #level-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); z-index: 300; display: flex; flex-direction: column; justify-content: center; align-items: center; animation: bgFlow 15s ease infinite; }
+        @keyframes bgFlow { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        .menu-glow { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 20% 80%, rgba(0, 255, 100, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 100, 255, 0.15) 0%, transparent 50%); pointer-events: none; z-index: 1; }
+        .menu-content { position: relative; z-index: 10; text-align: center; padding: 20px; max-width: 90vw; }
+        .menu-title { font-size: 48px; margin-bottom: 10px; color: #fff; text-shadow: 0 0 30px rgba(0, 255, 150, 0.8), 0 0 60px rgba(0, 255, 150, 0.4); letter-spacing: 3px; animation: titlePulse 3s ease-in-out infinite; }
+        @keyframes titlePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .menu-subtitle { font-size: 18px; margin-bottom: 40px; color: rgba(255, 255, 255, 0.9); letter-spacing: 2px; }
+        .level-buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 500px; margin: 0 auto; }
+        .level-btn { padding: 25px 30px; border: none; border-radius: 16px; font-size: 20px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 2px; position: relative; overflow: hidden; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); }
+        .level-btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent); transition: left 0.5s; }
+        .level-btn:hover::before { left: 100%; }
+        .level-btn:hover { transform: translateY(-5px) scale(1.05); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); }
+        .level-easy { background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); color: #000; }
+        .level-medium { background: linear-gradient(135deg, #fb923c 0%, #f97316 100%); color: #fff; }
+        .level-hard { background: linear-gradient(135deg, #f87171 0%, #ef4444 100%); color: #fff; }
+        .level-crazy { background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: #fff; animation: pulseBorder 2s ease-in-out infinite; }
+        @keyframes pulseBorder { 0%, 100% { box-shadow: 0 10px 30px rgba(168, 85, 247, 0.4); } 50% { box-shadow: 0 10px 40px rgba(168, 85, 247, 0.8); } }
+        .level-description { display: block; font-size: 13px; font-weight: normal; opacity: 0.95; margin-top: 8px; letter-spacing: 1px; }
+        .level-icon { font-size: 36px; display: block; margin-bottom: 5px; }
+        .stats-info { margin-top: 30px; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+        .stat-badge { background: rgba(255, 255, 255, 0.15); padding: 8px 16px; border-radius: 20px; color: #fff; font-size: 12px; border: 1px solid rgba(255, 255, 255, 0.3); }
+
+        /* --- WORD CONTAINER & SHAPES --- */
+        .word-container { position: absolute; pointer-events: auto; transition: transform 0.1s ease; z-index: 50; }
+        .float-anim { animation: float 8s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 25% { transform: translateY(-15px) rotate(2deg); } 50% { transform: translateY(-5px) rotate(-2deg); } 75% { transform: translateY(10px) rotate(1deg); } }
+        
+        .shape-card { position: relative; display: flex; justify-content: center; align-items: center; width: 160px; height: 60px; backdrop-filter: blur(4px); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); transition: all 0.3s ease; }
+        .shape-circle { border-radius: 30px; border: 3px solid rgba(100, 200, 255, 0.6); background: rgba(255, 255, 255, 0.08); }
+        .shape-diamond { border: 3px solid rgba(255, 200, 100, 0.6); background: rgba(255, 255, 255, 0.08); clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); width: 140px; height: 140px; }
+        .shape-star { background: rgba(255, 255, 255, 0.08); border: 3px solid rgba(255, 100, 200, 0.6); border-radius: 10px; position: relative; }
+        .shape-star::before { content: '★'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 20px; color: rgba(255, 100, 200, 0.8); background: #1a1a2e; padding: 0 5px; border-radius: 50%; }
+        .shape-square { border: 3px solid rgba(100, 255, 150, 0.6); background: rgba(255, 255, 255, 0.08); border-radius: 0px; }
+        .shape-hexagon { background: rgba(255, 255, 255, 0.08); border: 3px solid rgba(150, 150, 255, 0.6); width: 150px; height: 50px; clip-path: polygon(10% 0, 90% 0, 100% 50%, 90% 100%, 10% 100%, 0% 50%); display: flex; justify-content: center; align-items: center; }
+        .shape-hexagon .word-text { padding: 0 10px; }
+
+        .word-text { color: rgba(255, 255, 255, 0.6); font-size: 18px; font-weight: bold; letter-spacing: 1px; text-shadow: 0 0 5px rgba(255, 255, 255, 0.2); white-space: nowrap; pointer-events: auto; transition: all 0.3s ease; z-index: 2; }
+
+        /* Round 2: Glowing Neon */
+        .pulsing-word .word-text { animation: neonPulse 0.8s ease-in-out infinite alternate; }
+        @keyframes neonPulse { 0% { color: #00ffea; text-shadow: 0 0 5px #00ffea, 0 0 10px #00ffea; opacity: 0.7; } 100% { color: #ffffff; text-shadow: 0 0 10px #00ffea, 0 0 20px #00ffea, 0 0 30px #00ffea; opacity: 1; } }
+
+        /* Round 3: Spinning + Glowing */
+        .spinning-word .word-text { animation: spinText 2s linear infinite; }
+        @keyframes spinText { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .word-container:hover .word-text { color: rgba(255, 255, 255, 1); }
+        .correct .word-text { color: #fff !important; text-shadow: 0 0 20px rgba(0, 255, 100, 0.9); font-size: 20px; }
+        .wrong .word-text { color: #ff4444 !important; text-shadow: 0 0 15px rgba(255, 0, 0, 0.7); animation: shake 0.5s; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 50% { transform: translateX(8px); } 75% { transform: translateX(-8px); } }
+
+        /* --- FLASHLIGHT & FICKER MECHANICS --- */
+        .flashlight-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            background: radial-gradient(circle 140px at var(--x, 50%) var(--y, 50%), transparent 0%, rgba(0, 0, 0, 0.4) 30%, rgba(0, 0, 0, 0.8) 60%, rgba(0, 0, 0, 0.98) 85%, rgba(0, 0, 0, 1) 100%);
+            z-index: 100;
+            transition: opacity 0.1s;
+        }
+
+        /* Flicker Effect Class - applied via JS every 5s */
+        .flickering .flashlight-overlay {
+            animation: rapidFlicker 0.1s infinite alternate;
+        }
+
+        @keyframes rapidFlicker {
+            0% { opacity: 1; }
+            25% { opacity: 0.4; }
+            50% { opacity: 1; }
+            75% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        /* The Red Aiming Dot */
+        .flashlight-dot {
+            position: absolute; top: 0; left: 0; width: 10px; height: 10px;
+            background: radial-gradient(circle, #ff0000 0%, rgba(255, 0, 0, 0) 70%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 101;
+            box-shadow: 0 0 10px #ff0000;
+            animation: pulse-dot 1s infinite alternate;
+        }
+        
+        @keyframes pulse-dot { from { opacity: 0.8; transform: translate(-50%, -50%) scale(1); } to { opacity: 1; transform: translate(-50%, -50%) scale(1.2); } }
+
+        /* Dead Light Effect (Shadow Entity Hit) */
+        .dead-light .flashlight-overlay { opacity: 0 !important; }
+        .dead-light .flashlight-dot { display: none; }
+
+        /* --- SHADOW ENTITY --- */
+        #shadow-entity {
+            position: absolute; width: 40px; height: 40px;
+            background: radial-gradient(circle, #000 0%, #444 80%);
+            border: 2px solid #ff0000; border-radius: 50%;
+            box-shadow: 0 0 20px #ff0000, inset 0 0 10px #ff0000;
+            z-index: 49; pointer-events: none; display: none;
+            animation: shadowMove 4s ease-in-out infinite;
+        }
+        #shadow-entity::after { content: ''; position: absolute; top: 10px; left: 10px; width: 6px; height: 6px; background: red; border-radius: 50%; box-shadow: 20px 0 0 red; animation: eyesBlink 1s infinite; }
+        @keyframes shadowMove { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, -30px); } }
+        @keyframes eyesBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* Penalty & Time Flash */
+        #penalty-flash, #timeout-flash {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255, 68, 68, 0.3); z-index: 98; display: none; pointer-events: none; animation: fadeOutPenalty 0.3s forwards;
+        }
+        @keyframes fadeOutPenalty { from { opacity: 1; } to { opacity: 0; } }
+
+        /* --- HUD --- */
+        #hud { position: fixed; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.85); padding: 12px 25px; border-radius: 10px; z-index: 150; color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); min-width: 300px; max-width: 95vw; display: none; }
+        .hud-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .hud-row:last-child { margin-bottom: 0; }
+        #score { font-size: 18px; color: #ffd700; }
+        #round-info { font-size: 16px; color: rgba(255, 255, 255, 0.8); }
+        #level-indicator { font-size: 14px; color: #9c27b0; font-weight: bold; }
+        #battery-container { position: fixed; top: 15px; right: 15px; z-index: 150; background: rgba(0, 0, 0, 0.85); padding: 12px 15px; border-radius: 10px; border: 2px solid rgba(255, 255, 255, 0.2); display: none; }
+        #battery-label { font-size: 12px; color: rgba(255, 255, 255, 0.7); margin-bottom: 5px; text-transform: uppercase; }
+        .battery-frame { width: 80px; height: 30px; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 4px; padding: 2px; position: relative; }
+        .battery-frame::after { content: ''; position: absolute; right: -6px; top: 50%; transform: translateY(-50%); width: 4px; height: 14px; background: rgba(255, 255, 255, 0.3); border-radius: 0 2px 2px 0; }
+        .battery-level { height: 100%; background: linear-gradient(90deg, #00ff64 0%, #ffff00 50%, #ff4444 100%); border-radius: 2px; transition: width 0.3s ease; position: relative; overflow: hidden; }
+        .battery-level.critical { animation: lowBattery 0.5s ease-in-out infinite; }
+        @keyframes lowBattery { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .time-text { font-size: 14px; color: #fff; text-align: center; margin-top: 5px; font-weight: bold; }
+        #penalty-indicator { font-size: 14px; color: #ff4444; font-weight: bold; display: none; animation: shakeWarning 0.5s; }
+        @keyframes shakeWarning { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        #touch-controls { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 150; display: none; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .control-btn { background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.4); color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 20px; cursor: pointer; touch-action: manipulation; min-width: 55px; backdrop-filter: blur(5px); }
+        .control-btn:active { background: rgba(255, 255, 255, 0.4); }
+        #fire-btn { background: rgba(255, 100, 100, 0.3); border-color: rgba(255, 100, 100, 0.8); font-size: 24px; min-width: 60px; }
+        #message-screen { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.95); padding: 50px 80px; border-radius: 20px; z-index: 200; text-align: center; color: #fff; display: none; border: 2px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); }
+        #message-screen h2 { font-size: 36px; margin-bottom: 15px; }
+        #message-screen.success h2 { color: #00ff64; text-shadow: 0 0 20px rgba(0, 255, 100, 0.5); }
+        #message-screen.failure h2 { color: #ff4444; text-shadow: 0 0 20px rgba(255, 68, 68, 0.5); }
+        #message-screen p { font-size: 18px; margin-bottom: 25px; color: rgba(255, 255, 255, 0.8); }
+        #action-btn { background: linear-gradient(135deg, #00ff64 0%, #00cc50 100%); border: none; padding: 15px 40px; border-radius: 10px; color: #000; font-weight: bold; cursor: pointer; font-size: 18px; text-transform: uppercase; letter-spacing: 1px; transition: transform 0.2s; }
+        #action-btn:hover { transform: scale(1.05); }
+        @media (hover: none) and (pointer: coarse) { #touch-controls { display: flex; } .word-text { font-size: 16px; } }
+        #timeout-flash { background: rgba(255, 0, 0, 0.5); z-index: 99; animation: fadeOut 0.5s forwards; }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+    </style>
+</head>
+<body>
+    <!-- Level Selection Screen -->
+    <div id="level-screen">
+        <div class="menu-glow"></div>
+        <div class="menu-content">
+            <h1 class="menu-title">⚡ WORD HUNTER ⚡</h1>
+            <p class="menu-subtitle">SHADOW SPELLING CHALLENGE</p>
+            
+            <div class="level-buttons">
+                <button class="level-btn level-easy" onclick="selectLevel('easy')">
+                    <span class="level-icon">🌱</span> Easy<br><span class="level-description">Age 7-9 | Beginner</span>
+                </button>
+                <button class="level-btn level-medium" onclick="selectLevel('medium')">
+                    <span class="level-icon">⭐</span> Medium<br><span class="level-description">Age 10-12 | Intermediate</span>
+                </button>
+                <button class="level-btn level-hard" onclick="selectLevel('hard')">
+                    <span class="level-icon">🔥</span> Hard<br><span class="level-description">Age 13+ | Advanced</span>
+                </button>
+                <button class="level-btn level-crazy" onclick="selectLevel('crazy')">
+                    <span class="level-icon">💀</span> Crazy<br><span class="level-description">Expert | Ultimate</span>
+                </button>
+            </div>
+            
+            <div class="stats-info">
+                <div class="stat-badge">🎯 Aim with red dot</div>
+                <div class="stat-badge">✨ 5 Words to Win!</div>
+                <div class="stat-badge">💡 Light Flickers Every 5s</div>
+                <div class="stat-badge">❌ Wrong = -2 sec</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <div class="flashlight-overlay"></div>
+        <div class="flashlight-dot" id="aiming-dot"></div>
+        <div id="shadow-entity"></div>
+        <div id="penalty-flash"></div>
+        <div id="timeout-flash"></div>
+        <div id="words-area"></div>
+        
+        <div id="hud">
+            <div class="hud-row">
+                <span id="score">Score: 0</span>
+                <span id="round-info">Found: 0 / 5</span>
+            </div>
+            <div class="hud-row" style="justify-content: space-between;">
+                <span id="level-indicator">Level: Easy</span>
+                <span id="penalty-indicator">-2 sec!</span>
+            </div>
+            <div class="hud-row" style="justify-content: center;">
+                <span style="font-size: 14px; color: rgba(255,255,255,0.7);" id="round-hint">Find the correct word!</span>
+            </div>
+        </div>
+        
+        <div id="battery-container">
+            <div id="battery-label">BATTERY</div>
+            <div class="battery-frame">
+                <div class="battery-level" id="battery-level"></div>
+            </div>
+            <div class="time-text" id="time-text">35s</div>
+        </div>
+        
+        <div id="touch-controls">
+            <button class="control-btn" onclick="moveLight('left')">←</button>
+            <button class="control-btn" onclick="moveLight('up')">↑</button>
+            <button class="control-btn" onclick="moveLight('down')">↓</button>
+            <button class="control-btn" onclick="moveLight('right')">→</button>
+            <button class="control-btn" id="fire-btn" onclick="selectWord()">🔦</button>
+        </div>
+        
+        <div id="message-screen">
+            <h2 id="message-title">Excellent!</h2>
+            <p id="message-text">You found the correct spelling!</p>
+            <button id="action-btn" onclick="nextRoundOrRestart()">Next Round</button>
+        </div>
+    </div>
+
+    <script>
+        const wordDatabases = {
+            easy: [
+                { target: "friends", misspellings: ["freinds", "frinds", "friendes"] },
+                { target: "because", misspellings: ["becuase", "becasue", "becaus"] },
+                { target: "they're", misspellings: ["their", "there", "therre"] },
+                { target: "where", misspellings: ["were", "wear", "wher"] },
+                { target: "said", misspellings: ["sed", "sayed", "sade"] },
+                { target: "would", misspellings: ["woudl", "woold", "woodl"] },
+                { target: "come", misspellings: ["cum", "coome", "comne"] },
+                { target: "have", misspellings: ["hav", "haave", "heve"] },
+                { target: "these", misspellings: ["thesse", "theme", "thies"] },
+                { target: "those", misspellings: ["thoes", "thos", "thosee"] },
+                { target: "people", misspellings: ["peopel", "peopl", "peoople"] },
+                { target: "really", misspellings: ["realy", "realie", "reallly"] },
+                { target: "could", misspellings: ["coudl", "coolld", "culd"] },
+                { target: "should", misspellings: ["shoudl", "shoodl", "shuld"] },
+                { target: "between", misspellings: ["betwen", "bewteen", "betweeen"] }
+            ],
+            medium: [
+                { target: "beautiful", misspellings: ["beautifull", "beatiful", "beutiful"] },
+                { target: "necessary", misspellings: ["neccessary", "necesary", "nesessary"] },
+                { target: "separate", misspellings: ["seperate", "seperat", "seprate"] },
+                { target: "definitely", misspellings: ["definately", "definitly", "definetly"] },
+                { target: "receive", misspellings: ["recieve", "receve", "receiive"] },
+                { target: "occurred", misspellings: ["ocurred", "occured", "occurd"] },
+                { target: "government", misspellings: ["goverment", "govemment", "governmant"] },
+                { target: "embarrass", misspellings: ["embarass", "embarras", "emmabarrass"] },
+                { target: "accident", misspellings: ["acident", "accidend", "accidennt"] },
+                { target: "different", misspellings: ["diferent", "diffrent", "diffirent"] },
+                { target: "tomorrow", misspellings: ["toomorrow", "tommorow", "tomoro"] },
+                { target: "yesterday", misspellings: ["yeseterday", "yeste day", "yesturday"] },
+                { target: "remember", misspellings: ["rememer", "remeber", "remembe"] },
+                { target: "question", misspellings: ["queston", "quesiton", "quiestion"] },
+                { target: "information", misspellings: ["informacion", "inforation", "informationn"] }
+            ],
+            hard: [
+                { target: "accommodate", misspellings: ["acommodate", "accomodate", "acommadate"] },
+                { target: "environment", misspellings: ["enviroment", "environement", "environmnet"] },
+                { target: "independent", misspellings: ["indepedent", "independant", "indpendent"] },
+                { target: "maintenance", misspellings: ["maintainance", "maintanance", "maintence"] },
+                { target: "restaurant", misspellings: ["resturant", "resteraunt", "restuarant"] },
+                { target: "pronunciation", misspellings: ["pronounciation", "pronuniciation", "pronuncation"] },
+                { target: "calendar", misspellings: ["calender", "callendar", "calndar"] },
+                { target: "guarantee", misspellings: ["gurantee", "guarante", "guarentee"] },
+                { target: "harass", misspellings: ["harrass", "harress", "harres"] },
+                { target: "intelligence", misspellings: ["inteligence", "intelligance", "intellagence"] },
+                { target: "occasionally", misspellings: ["occassionally", "ocasionally", "occasionaly"] },
+                { target: "parallel", misspellings: ["paralel", "parallell", "paralllel"] },
+                { target: "perseverance", misspellings: ["perseverence", "perserverance", "perseverancce"] },
+                { target: "rhythm", misspellings: ["rythm", "ritm", "ryhtam"] },
+                { target: "supersede", misspellings: ["supercede", "superceed", "supersced"] }
+            ],
+            crazy: [
+                { target: "conscience", misspellings: ["conciense", "consience", "consiens"] },
+                { target: "liaison", misspellings: ["liason", "lisaison", "liaision"] },
+                { target: "millennium", misspellings: ["milennium", "millenium", "milenium"] },
+                { target: "phenomenon", misspellings: ["phenomena", "phenonmenon", "phenomonon"] },
+                { target: "privilege", misspellings: ["priviledge", "privilage", "privelege"] },
+                { target: "rhombus", misspellings: ["rombus", "rhombsus", "ronbus"] },
+                { target: "seizure", misspellings: ["seisure", "seasure", "seazure"] },
+                { target: "soliloquy", misspellings: ["solilougy", "soliloqui", "solilooquy"] },
+                { target: "surveillance", misspellings: ["surveillence", "surveilance", "serveillance"] },
+                { target: "vacuum", misspellings: ["vaccum", "vacum", "vaccuum"] },
+                { target: "weird", misspellings: ["wierd", "weerd", "wierd"] },
+                { target: "colloquial", misspellings: ["colloquail", "collogial", "collaquial"] },
+                { target: "mnemonic", misspellings: ["memnonic", "mnemonnic", "monemonic"] },
+                { target: "occurrence", misspellings: ["occurrance", "occurence", "occurrence"] },
+                { target: "subconscious", misspellings: ["subconcious", "subconsious", "subcoscious"] }
+            ]
+        };
+
+        const shapeTypes = ['circle', 'square', 'star', 'diamond', 'hexagon'];
+
+        let currentLevel = null;
+        let wordsFound = 0; // Track progress towards 5
+        let score = 0;
+        let currentTarget = null;
+        let flashlightPosition = { x: 50, y: 50 };
+        let timerInterval = null;
+        let currentBattery = 100;
+        let maxTimePerRound = 35; 
+        let currentTime = 35;
+        let gameActive = false;
+        let activeWords = [];
+        let shadowTimer = null;
+        let isLightDead = false;
+        let flickerTimer = null;
+
+        const levelConfig = {
+            easy: { label: 'Easy' },
+            medium: { label: 'Medium' },
+            hard: { label: 'Hard' },
+            crazy: { label: 'Crazy' }
+        };
+
+        function selectLevel(level) {
+            currentLevel = level;
+            document.getElementById('level-screen').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+            document.getElementById('battery-container').style.display = 'block';
+            document.getElementById('level-indicator').textContent = `Level: ${levelConfig[level].label}`;
+            init();
+        }
+
+        function init() {
+            wordsFound = 0;
+            loadLevel();
+            setupControls();
+            startTimer();
+            startFlickerLoop(); // Start the 5-second flicker loop
+            gameActive = true;
+        }
+
+        function startFlickerLoop() {
+            if (flickerTimer) clearInterval(flickerTimer);
+            // Trigger flicker every 5 seconds
+            flickerTimer = setInterval(() => {
+                if (!gameActive) return;
+                triggerLightFlicker();
+            }, 5000);
+        }
+
+        function triggerLightFlicker() {
+            const container = document.getElementById('game-container');
+            // Add flicker class
+            container.classList.add('flickering');
+            flashMessage("LIGHT FLICKERING! LOOK!");
+            
+            // Remove flicker class after 1.5 seconds
+            setTimeout(() => {
+                container.classList.remove('flickering');
+            }, 1500);
+        }
+
+        function loadLevel() {
+            const wordsArea = document.getElementById('words-area');
+            wordsArea.innerHTML = '';
+            activeWords = [];
+            document.getElementById('round-hint').textContent = getRoundHint(wordsFound);
+            
+            document.getElementById('game-container').classList.remove('dead-light', 'total-blackout');
+            isLightDead = false;
+            
+            // Activate Shadow in Round 4 (which is the 4th word)
+            if (wordsFound >= 3) activateShadow();
+            else document.getElementById('shadow-entity').style.display = 'none';
+
+            // Pick a new word set
+            const wordSet = wordDatabases[currentLevel][Math.floor(Math.random() * wordDatabases[currentLevel].length)];
+            currentTarget = wordSet.target;
+
+            const allWords = [wordSet.target, ...wordSet.misspellings];
+            const shuffled = shuffleArray(allWords);
+            const numWords = 5; // Always show 5 words
+            
+            // Ensure we have enough words (pad with duplicates if needed, though list usually has enough)
+            while(shuffled.length < 5) {
+                shuffled.push(wordSet.misspellings[Math.floor(Math.random() * wordSet.misspellings.length)]);
+            }
+
+            const positions = generatePositions(numWords, wordsArea);
+
+            shuffled.slice(0, numWords).forEach((word, index) => {
+                const shapeType = shapeTypes[index % shapeTypes.length];
+                const container = document.createElement('div');
+                container.className = 'word-container';
+                container.dataset.word = word;
+                container.dataset.correct = (word === currentTarget);
+                
+                // Apply difficulty modifiers based on global wordsFound count?
+                // Let's base it on the word count within the level session
+                const roundNum = wordsFound + 1;
+                if (roundNum >= 2) container.classList.add('pulsing-word');
+                if (roundNum >= 3) container.classList.add('spinning-word');
+                
+                container.style.animationDuration = `${6 + Math.random() * 4}s`;
+                container.style.animationDelay = `-${Math.random() * 5}s`;
+                container.style.left = positions[index].x + '%';
+                container.style.top = positions[index].y + '%';
+                
+                container.addEventListener('click', (e) => { e.stopPropagation(); selectWord(container); });
+                
+                const shapeDiv = document.createElement('div');
+                shapeDiv.className = `shape-card shape-${shapeType}`;
+                const textSpan = document.createElement('span');
+                textSpan.className = 'word-text';
+                textSpan.textContent = word;
+                shapeDiv.appendChild(textSpan);
+                container.appendChild(shapeDiv);
+                wordsArea.appendChild(container);
+                activeWords.push(container);
+            });
+
+            document.getElementById('score').textContent = `Score: ${score}`;
+            document.getElementById('round-info').textContent = `Found: ${wordsFound} / 5`;
+        }
+
+        function getRoundHint(foundCount) {
+            if (foundCount === 0) return "Word 1: Normal";
+            if (foundCount === 1) return "Word 2: Glowing!";
+            if (foundCount === 2) return "Word 3: Spinning!";
+            if (foundCount === 3) return "Word 4: Shadow appears!";
+            if (foundCount === 4) return "Word 5: All hazards active!";
+            return "Ready?";
+        }
+
+        function generatePositions(count, container) {
+            const positions = [];
+            const padding = 10;
+            const maxLeft = 85;
+            const maxTop = 70;
+            for (let i = 0; i < count; i++) {
+                let pos, attempts = 0;
+                do {
+                    pos = {
+                        x: padding + Math.random() * (maxLeft - padding * 2),
+                        y: padding + Math.random() * (maxTop - padding * 2)
+                    };
+                    attempts++;
+                } while (positions.some(p => dist(p.x, p.y, pos.x, pos.y) < 20) && attempts < 50);
+                positions.push(pos);
+            }
+            return positions;
+        }
+
+        function dist(x1, y1, x2, y2) { return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2); }
+        function shuffleArray(array) { return [...array].sort(() => Math.random() - 0.5); }
+
+        function moveLight(direction) {
+            if (!gameActive || isLightDead) return;
+            const step = 5;
+            switch(direction) {
+                case 'left': flashlightPosition.x = Math.max(0, flashlightPosition.x - step); break;
+                case 'right': flashlightPosition.x = Math.min(100, flashlightPosition.x + step); break;
+                case 'up': flashlightPosition.y = Math.max(0, flashlightPosition.y - step); break;
+                case 'down': flashlightPosition.y = Math.min(100, flashlightPosition.y + step); break;
+            }
+            updateFlashlight();
+        }
+
+        function updateFlashlight() {
+            const overlay = document.querySelector('.flashlight-overlay');
+            const dot = document.getElementById('aiming-dot');
+            overlay.style.setProperty('--x', `${flashlightPosition.x}%`);
+            overlay.style.setProperty('--y', `${flashlightPosition.y}%`);
+            if (!isLightDead) {
+                dot.style.left = `${flashlightPosition.x}%`;
+                dot.style.top = `${flashlightPosition.y}%`;
+            }
+        }
+
+        function activateShadow() {
+            const shadow = document.getElementById('shadow-entity');
+            shadow.style.display = 'block';
+            let shadowPos = { x: 10, y: 10 };
+            if (shadowTimer) clearInterval(shadowTimer);
+            shadowTimer = setInterval(() => {
+                if(!gameActive) return;
+                shadowPos.x = Math.random() * 80 + 10;
+                shadowPos.y = Math.random() * 80 + 10;
+                shadow.style.left = shadowPos.x + '%';
+                shadow.style.top = shadowPos.y + '%';
+                checkShadowCollision();
+            }, 3000);
+        }
+
+        function checkShadowCollision() {
+            if (isLightDead) return;
+            const dx = flashlightPosition.x - parseFloat(document.getElementById('shadow-entity').style.left);
+            const dy = flashlightPosition.y - parseFloat(document.getElementById('shadow-entity').style.top);
+            const distance = Math.sqrt(dx*dx + dy*dy);
+            if (distance < 12) triggerLightDeath();
+        }
+
+        function triggerLightDeath() {
+            if (isLightDead) return;
+            isLightDead = true;
+            document.getElementById('game-container').classList.add('dead-light');
+            flashMessage("THE SHADOW KILLED YOUR LIGHT!");
+            setTimeout(() => {
+                isLightDead = false;
+                document.getElementById('game-container').classList.remove('dead-light');
+            }, 2000);
+        }
+
+        function setupControls() {
+            document.addEventListener('keydown', (e) => {
+                if (!gameActive || isLightDead) return;
+                switch(e.key) {
+                    case 'ArrowLeft': moveLight('left'); break;
+                    case 'ArrowRight': moveLight('right'); break;
+                    case 'ArrowUp': moveLight('up'); break;
+                    case 'ArrowDown': moveLight('down'); break;
+                    case 'Enter': 
+                    case ' ': selectWord(getClosestInBeam()); break;
+                }
+            });
+
+            let dragging = false;
+            const container = document.getElementById('game-container');
+            container.addEventListener('mousedown', () => dragging = true);
+            container.addEventListener('mouseup', () => dragging = false);
+            container.addEventListener('mouseleave', () => dragging = false);
+            
+            container.addEventListener('mousemove', (e) => {
+                if (!dragging || !gameActive || isLightDead) return;
+                const rect = container.getBoundingClientRect();
+                flashlightPosition.x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+                flashlightPosition.y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+                updateFlashlight();
+            });
+            
+            container.addEventListener('touchstart', (e) => {
+                if (e.target.closest('.control-btn')) return;
+                dragging = true;
+            });
+            container.addEventListener('touchend', () => dragging = false);
+            container.addEventListener('touchmove', (e) => {
+                if (!dragging || !gameActive || isLightDead) return;
+                e.preventDefault();
+                const rect = container.getBoundingClientRect();
+                const touch = e.touches[0];
+                flashlightPosition.x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
+                flashlightPosition.y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
+                updateFlashlight();
+            });
+            
+            if (wordsFound >= 3) {
+                shadowTimer = setInterval(() => { if (!gameActive) return; checkShadowCollision(); }, 100);
+            }
+        }
+
+        function getClosestInBeam() {
+            const cards = Array.from(document.querySelectorAll('.word-container'));
+            const inBeam = cards.filter(card => {
+                const rect = card.getBoundingClientRect();
+                const containerRect = document.getElementById('game-container').getBoundingClientRect();
+                const cardCenterX = (rect.left - containerRect.left + rect.width/2) / containerRect.width * 100;
+                const cardCenterY = (rect.top - containerRect.top + rect.height/2) / containerRect.height * 100;
+                const distance = Math.sqrt(Math.pow(cardCenterX - flashlightPosition.x, 2) + Math.pow(cardCenterY - flashlightPosition.y, 2));
+                return distance < 15;
+            });
+            return inBeam.length > 0 ? inBeam[0] : null;
+        }
+
+        function selectWord(element) {
+            if (!gameActive || isLightDead) return;
+            const clickedCard = element || event.target.closest('.word-container') || getClosestInBeam();
+            if (!clickedCard) {
+                flashMessage("Aim the red dot closer to a word!");
+                return;
+            }
+            const selectedWord = clickedCard.dataset.word;
+            if (selectedWord === currentTarget) {
+                clickedCard.classList.add('correct');
+                score += 100 + Math.ceil(currentTime * 2);
+                wordsFound++;
+                document.getElementById('score').textContent = `Score: ${score}`;
+                document.getElementById('round-info').textContent = `Found: ${wordsFound} / 5`;
+                
+                // Check Win Condition
+                if (wordsFound >= 5) {
+                    stopTimer();
+                    gameActive = false;
+                    clearTimeout(flickerTimer);
+                    clearInterval(shadowTimer);
+                    showMessage('YOU WIN!', `Congratulations! You found all 5 words! Final Score: ${score}`, true);
+                    return;
+                }
+
+                stopTimer();
+                gameActive = false;
+                setTimeout(() => loadLevel(), 500); // Load next word immediately
+            } else {
+                clickedCard.classList.add('wrong');
+                score = Math.max(0, score - 25);
+                currentTime = Math.max(0, currentTime - 2);
+                currentBattery = (currentTime / maxTimePerRound) * 100;
+                updateBatteryDisplay();
+                showPenaltyFeedback();
+                document.getElementById('score').textContent = `Score: ${score}`;
+                setTimeout(() => clickedCard.classList.remove('wrong'), 1000);
+            }
+        }
+
+        function showPenaltyFeedback() {
+            const flash = document.getElementById('penalty-flash');
+            const penaltyInd = document.getElementById('penalty-indicator');
+            flash.style.display = 'block';
+            penaltyInd.style.display = 'block';
+            setTimeout(() => { flash.style.display = 'none'; penaltyInd.style.display = 'none'; }, 500);
+        }
+
+        function startTimer() {
+            maxTimePerRound = 35;
+            currentTime = 35;
+            currentBattery = 100;
+            updateBatteryDisplay();
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (!gameActive) return;
+                currentTime -= 0.1;
+                currentBattery = (currentTime / maxTimePerRound) * 100;
+                updateBatteryDisplay();
+                if (currentTime <= 0) gameOver();
+            }, 100);
+        }
+
+        function updateBatteryDisplay() {
+            const batteryElement = document.getElementById('battery-level');
+            const timeElement = document.getElementById('time-text');
+            batteryElement.style.width = `${currentBattery}%`;
+            timeElement.textContent = `${Math.ceil(currentTime)}s`;
+            if (currentBattery <= 20) {
+                batteryElement.classList.add('critical');
+                timeElement.style.color = '#ff4444';
+            } else if (currentBattery <= 50) {
+                batteryElement.classList.remove('critical');
+                timeElement.style.color = '#ffff00';
+            } else {
+                batteryElement.classList.remove('critical');
+                timeElement.style.color = '#00ff64';
+            }
+        }
+
+        function stopTimer() { clearInterval(timerInterval); }
+
+        function gameOver() {
+            stopTimer();
+            gameActive = false;
+            clearTimeout(flickerTimer);
+            clearInterval(shadowTimer);
+            const flash = document.getElementById('timeout-flash');
+            flash.style.display = 'block';
+            setTimeout(() => showMessage('Game Over!', `Battery died! Final Score: ${score}`, false), 500);
+        }
+
+        function showMessage(title, text, success) {
+            const screen = document.getElementById('message-screen');
+            const titleEl = document.getElementById('message-title');
+            const textEl = document.getElementById('message-text');
+            const btn = document.getElementById('action-btn');
+            screen.className = success ? 'success' : 'failure';
+            titleEl.textContent = title;
+            textEl.textContent = text;
+            btn.textContent = success ? 'Next Level' : 'Try Again';
+            btn.onclick = success ? restartGame : restartGame; // Restart or go back to menu logic could be added here
+            screen.style.display = 'block';
+        }
+
+        function flashMessage(msg) {
+            const hud = document.querySelector('#hud .hud-row:last-child span');
+            const original = hud.textContent;
+            hud.textContent = msg;
+            hud.style.color = '#ff6b6b';
+            setTimeout(() => {
+                hud.textContent = getRoundHint(wordsFound);
+                hud.style.color = 'rgba(255, 255, 255, 0.7)';
+            }, 2000);
+        }
+
+        function restartGame() {
+            hideMessage();
+            // If success, we could reset level or go to menu. For now, just reset this level.
+            wordsFound = 0;
+            score = 0;
+            flashlightPosition = { x: 50, y: 50 };
+            updateFlashlight();
+            loadLevel();
+            gameActive = true;
+            startTimer();
+            startFlickerLoop();
+        }
+
+        function nextRoundOrRestart() {
+            if (document.getElementById('message-screen').classList.contains('failure')) {
+                restartGame();
+            } else {
+                restartGame(); // On win, just restart the level or go to menu. Currently restarting.
+            }
+        }
+
+        function hideMessage() {
+            document.getElementById('message-screen').style.display = 'none';
+        }
+
+        window.addEventListener('load', function() {});
+    </script>
+</body>
+</html>
