@@ -12,7 +12,6 @@
         body {
             margin: 0;
             overflow: hidden; 
-            /* Fix: Force body to take up the full screen so it catches all touches */
             width: 100vw;
             height: 100vh;
             
@@ -20,7 +19,6 @@
             background-image: var(--world-map);
             background-size: 8000px 8000px;
             background-position: 0px 0px;
-            /* Prevents pull-to-refresh and pinch-zoom on iPad */
             touch-action: none; 
             user-select: none;
             -webkit-user-select: none;
@@ -61,9 +59,18 @@
             resize: vertical;
         }
         
-        .menu-box .slider-container { margin-bottom: 25px; }
+        .menu-box .slider-container { margin-bottom: 20px; }
         .menu-box input[type=range] { width: 100%; }
         
+        #difficulty-select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #ccc;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
         #start-btn {
             background: #2E7D32;
             color: white;
@@ -74,6 +81,8 @@
             border-radius: 8px;
             cursor: pointer;
             transition: background 0.2s;
+            margin-top: 10px;
+            width: 100%;
         }
         #start-btn:hover { background: #1B5E20; }
 
@@ -89,7 +98,6 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
             z-index: 100; 
             color: #1a1a1a;
-            /* Re-enable interactions for UI elements */
             touch-action: auto; 
         }
 
@@ -136,7 +144,7 @@
             border: 3px solid rgba(255, 255, 255, 0.5);
             border-radius: 50%;
             transform: translate(-50%, -50%);
-            pointer-events: none; /* Let touches pass through to document */
+            pointer-events: none; 
             display: none;
             z-index: 1000;
             backdrop-filter: blur(4px);
@@ -239,7 +247,7 @@
             transform: translate(-50%, -50%) rotate(90deg);
             transform-origin: center center; 
             z-index: 20;
-            pointer-events: none; /* Fix: prevents the plane from intercepting touches */
+            pointer-events: none; 
             filter: drop-shadow(0 10px 10px rgba(0,0,0,0.3));
         }
 
@@ -259,7 +267,7 @@
             position: absolute;
             width: 0; height: 0;
             z-index: 10;
-            pointer-events: none; /* Fix: prevents AI planes from intercepting touches */
+            pointer-events: none; 
         }
         .plane-sprite {
             position: absolute;
@@ -319,7 +327,16 @@
             <textarea id="word-input" rows="5">Apple, Banana, Cherry, Dog, Elephant, Falcon, Giraffe</textarea>
             
             <div class="slider-container">
-                <p>Capture Radius: <span id="radius-val">3</span>cm</p>
+                <p style="margin: 0 0 5px 0;">Difficulty:</p>
+                <select id="difficulty-select">
+                    <option value="easy">Easy (Slow Planes)</option>
+                    <option value="medium">Medium (Moderate Speed)</option>
+                    <option value="hard" selected>Hard (Fast Planes)</option>
+                </select>
+            </div>
+
+            <div class="slider-container">
+                <p style="margin: 0 0 5px 0;">Capture Radius: <span id="radius-val">3</span>cm</p>
                 <input type="range" id="radius-input" min="1" max="5" step="0.5" value="3">
             </div>
 
@@ -373,6 +390,7 @@
         let wordsList = [];
         let currentTargetWord = "";
         let captureRadiusPx = 100; 
+        let aiSpeedMultiplier = 1.0; // Adjusted based on difficulty
 
         // Joystick specific variables
         let isJoystickActive = false;
@@ -393,6 +411,7 @@
         const targetDisplay = document.getElementById('target-word-display');
         const compassContainer = document.getElementById('compass-container');
         const compassArrow = document.getElementById('compass-arrow');
+        const difficultySelect = document.getElementById('difficulty-select');
         
         const joystickBase = document.getElementById('joystick-base');
         const joystickKnob = document.getElementById('joystick-knob');
@@ -400,17 +419,13 @@
         let currentSpeed = parseFloat(throttleSlider.value);
 
         // --- VIRTUAL JOYSTICK LOGIC (TOUCH CONTROLS) ---
-        // Fix: Changed from document.body to document to guarantee we capture all touches
         document.addEventListener('touchstart', (e) => {
-            // Ignore if the touch is on any UI panel (like the throttle, minimap, or start menu)
             if (e.target.closest && (e.target.closest('.ui-panel') || e.target.closest('#start-menu') || e.target.closest('#minimap-container'))) {
                 return;
             }
 
-            // Prevent browser scroll/pan behavior
             e.preventDefault();
 
-            // If we already have an active joystick, don't start a second one
             if (isJoystickActive) return;
 
             const touch = e.changedTouches[0];
@@ -421,7 +436,6 @@
             joystickOriginY = touch.clientY;
             joystickTurnValue = 0;
 
-            // Show joystick at touch location
             joystickBase.style.left = `${joystickOriginX}px`;
             joystickBase.style.top = `${joystickOriginY}px`;
             joystickKnob.style.left = `${joystickOriginX}px`;
@@ -443,7 +457,6 @@
                     let deltaX = touch.clientX - joystickOriginX;
                     let deltaY = touch.clientY - joystickOriginY;
                     
-                    // Constrain visual knob within the base circle
                     const distance = Math.hypot(deltaX, deltaY);
                     if (distance > joystickMaxRadius) {
                         const angle = Math.atan2(deltaY, deltaX);
@@ -451,11 +464,9 @@
                         deltaY = Math.sin(angle) * joystickMaxRadius;
                     }
 
-                    // Move visual knob
                     joystickKnob.style.left = `${joystickOriginX + deltaX}px`;
                     joystickKnob.style.top = `${joystickOriginY + deltaY}px`;
 
-                    // Calculate actual turn value based purely on the X-axis offset (-1 to 1 multiplier)
                     const turnPercent = deltaX / joystickMaxRadius;
                     joystickTurnValue = turnPercent * rotationSpeed;
                 }
@@ -514,7 +525,7 @@
                 let p = particles[i];
                 p.x += p.vx;
                 p.y += p.vy;
-                p.vy += 0.4; // Gravity
+                p.vy += 0.4; 
                 p.life -= p.decay;
                 
                 if(p.life <= 0) {
@@ -541,6 +552,12 @@
                 alert("Please enter at least one word!");
                 return;
             }
+
+            // Set Difficulty Speed Multiplier
+            const diffValue = difficultySelect.value;
+            if (diffValue === 'easy') aiSpeedMultiplier = 0.3;
+            else if (diffValue === 'medium') aiSpeedMultiplier = 0.6;
+            else aiSpeedMultiplier = 1.0;
 
             const cm = parseFloat(radiusInput.value);
             captureRadiusPx = cm * 38;
@@ -612,7 +629,11 @@
                 
                 this.angle = Math.random() * 360; 
                 this.targetAngle = this.angle;
-                this.speed = 3 + Math.random() * 5; 
+                
+                // Base speed is multiplied by the difficulty setting!
+                const baseSpeed = 3 + Math.random() * 5;
+                this.speed = baseSpeed * aiSpeedMultiplier; 
+                
                 this.turnSpeed = 1 + Math.random() * 1.5; 
                 this.color = `hsl(${Math.floor(Math.random() * 360)}, 80%, 50%)`; 
 
@@ -650,14 +671,13 @@
                 this.worldX += Math.cos(rad) * this.speed;
                 this.worldY += Math.sin(rad) * this.speed;
 
-                // Keep AI near the player (wrap around if they get further than 5000px)
+                // Keep AI near the player
                 const boundary = 5000;
                 if (this.worldX > playerX + boundary) this.worldX -= boundary * 2;
                 if (this.worldX < playerX - boundary) this.worldX += boundary * 2;
                 if (this.worldY > playerY + boundary) this.worldY -= boundary * 2;
                 if (this.worldY < playerY - boundary) this.worldY += boundary * 2;
 
-                // Update Main Screen Coordinates
                 const screenX = this.worldX - playerX + screenCX;
                 const screenY = this.worldY - playerY + screenCY;
                 
@@ -666,7 +686,6 @@
                 
                 this.sprite.style.transform = `translate(-50%, -50%) rotate(${this.angle + 90}deg) scale(${currentScale})`;
 
-                // Update Minimap Coordinates
                 const miniX = miniCX + ((this.worldX - playerX) * minimapZoom);
                 const miniY = miniCY + ((this.worldY - playerY) * minimapZoom);
                 
@@ -691,7 +710,6 @@
 
         // --- MAIN GAME LOOP ---
         function update() {
-            // 1. Controls & Scaling (Keyboard + Joystick + Throttle)
             if (keys.Minus) currentScale = Math.max(0.5, currentScale - 0.02);
             if (keys.Equal) currentScale = Math.min(2.0, currentScale + 0.02);
             if (keys.ArrowUp) currentSpeed = Math.min(15, currentSpeed + 0.1);
@@ -699,12 +717,10 @@
             
             throttleSlider.value = currentSpeed; 
             
-            // Combine Keyboard controls and Virtual Joystick inputs
             if (keys.ArrowLeft) angle -= rotationSpeed;
             if (keys.ArrowRight) angle += rotationSpeed;
             angle += joystickTurnValue;
 
-            // 2. World Movement
             const radians = angle * (Math.PI / 180);
             worldX += Math.cos(radians) * currentSpeed;
             worldY += Math.sin(radians) * currentSpeed;
@@ -718,14 +734,12 @@
             plane.style.height = `${baseSize * currentScale}px`;
             plane.style.transform = `translate(-50%, -50%) rotate(${angle + 90}deg)`;
 
-            // 3. Minimap Updates
             minimap.style.backgroundSize = `${8000 * minimapZoom}px ${8000 * minimapZoom}px`;
             const miniCenterX = minimap.clientWidth / 2;
             const miniCenterY = minimap.clientHeight / 2;
             minimap.style.backgroundPosition = `${miniCenterX - (worldX * minimapZoom)}px ${miniCenterY - (worldY * minimapZoom)}px`;
             minimapPlane.style.transform = `translate(-50%, -50%) rotate(${angle + 90}deg)`;
 
-            // 4. Update AI Planes & Collision Checks
             let targetPlaneRef = null;
 
             aiPlanes.forEach(ai => {
@@ -743,7 +757,6 @@
                 }
             });
 
-            // 5. Update Target Compass
             if (targetPlaneRef) {
                 const dx = targetPlaneRef.worldX - worldX;
                 const dy = targetPlaneRef.worldY - worldY;
@@ -751,7 +764,6 @@
                 compassArrow.style.transform = `rotate(${angleToTarget}deg)`;
             }
 
-            // 6. Trails
             frameCount++;
             if (currentSpeed > 0 && frameCount % 6 === 0) { 
                 const dot = document.createElement('div');
@@ -770,13 +782,11 @@
                 dot.style.top = `${screenY - 4}px`;
             });
 
-            // Draw Confetti
             drawConfetti();
 
             requestAnimationFrame(update);
         }
 
-        // Start Loop
         update();
     </script>
 </body>
