@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Word Hunt Flight</title>
+    <style>
+        :root {
+            --world-map: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2000' height='2000'%3E%3Crect width='2000' height='2000' fill='%231976D2'/%3E%3Cpath d='M200 300 Q400 100 600 400 T300 800 Z' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20' stroke-linejoin='round'/%3E%3Cpath d='M1300 900 Q1700 700 1800 1100 T1200 1500 Z' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20' stroke-linejoin='round'/%3E%3Cpath d='M800 1600 Q1000 1300 1300 1800 T700 1950 Z' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20' stroke-linejoin='round'/%3E%3Ccircle cx='0' cy='1000' r='250' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20'/%3E%3Ccircle cx='2000' cy='1000' r='250' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20'/%3E%3Ccircle cx='1000' cy='0' r='180' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20'/%3E%3Ccircle cx='1000' cy='2000' r='180' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20'/%3E%3Cellipse cx='1600' cy='200' rx='200' ry='100' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20' transform='rotate(30 1600 200)'/%3E%3Cellipse cx='400' cy='1600' rx='120' ry='300' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20' transform='rotate(-25 400 1600)'/%3E%3C/svg%3E");
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden; 
+            /* Fix: Force body to take up the full screen so it catches all touches */
+            width: 100vw;
+            height: 100vh;
+            
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-image: var(--world-map);
+            background-size: 8000px 8000px;
+            background-position: 0px 0px;
+            /* Prevents pull-to-refresh and pinch-zoom on iPad */
+            touch-action: none; 
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* --- START MENU --- */
+        #start-menu {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .menu-box {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .menu-box h1 { margin-top: 0; color: #1976D2; }
+        .menu-box textarea {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            resize: vertical;
+        }
+        
+        .menu-box .slider-container { margin-bottom: 25px; }
+        .menu-box input[type=range] { width: 100%; }
+        
+        #start-btn {
+            background: #2E7D32;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        #start-btn:hover { background: #1B5E20; }
+
+        /* --- UI STYLES --- */
+        .ui-panel {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 15px 20px;
+            border-radius: 15px; 
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
+            z-index: 100; 
+            color: #1a1a1a;
+            /* Re-enable interactions for UI elements */
+            touch-action: auto; 
+        }
+
+        #target-ui {
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: none; 
+            align-items: center;
+            gap: 10px;
+        }
+        #target-word-display {
+            color: #D32F2F;
+            font-size: 2rem;
+            text-transform: uppercase;
+        }
+
+        #right-ui {
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            font-weight: 600;
+        }
+        input[type="range"].vertical {
+            -webkit-appearance: slider-vertical;
+            appearance: slider-vertical;
+            width: 30px;
+            height: 200px;
+            cursor: pointer;
+        }
+
+        /* --- VIRTUAL JOYSTICK --- */
+        #joystick-base {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; /* Let touches pass through to document */
+            display: none;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+        #joystick-knob {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            display: none;
+            z-index: 1001;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        }
+
+        /* --- MINIMAP STYLES --- */
+        #minimap-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 200px;
+            background-image: var(--world-map);
+            background-color: rgba(25, 118, 210, 0.4); 
+            background-blend-mode: overlay;
+            border-radius: 50%;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 4px solid rgba(255, 255, 255, 0.8);
+            overflow: hidden; 
+            z-index: 101;
+        }
+        #minimap-plane {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 14px;
+            height: 14px;
+            transform-origin: center center;
+            z-index: 110;
+        }
+        .ai-minimap-dot {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 105;
+        }
+
+        /* --- TARGET COMPASS STYLES --- */
+        #compass-container {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+            border: 4px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            flex-direction: column;
+        }
+
+        #compass-container::before {
+            content: 'TARGET';
+            position: absolute;
+            top: 25px;
+            font-size: 10px;
+            font-weight: 800;
+            color: rgba(0,0,0,0.4);
+            letter-spacing: 1px;
+            z-index: 0;
+        }
+
+        #compass-arrow {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            will-change: transform;
+            transition: transform 0.1s linear; 
+            z-index: 2;
+        }
+
+        /* --- GAME STYLES --- */
+        #plane {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 160px;
+            height: 160px;
+            transform: translate(-50%, -50%) rotate(90deg);
+            transform-origin: center center; 
+            z-index: 20;
+            pointer-events: none; /* Fix: prevents the plane from intercepting touches */
+            filter: drop-shadow(0 10px 10px rgba(0,0,0,0.3));
+        }
+
+        #capture-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 4px dashed rgba(244, 208, 63, 0.8);
+            border-radius: 50%;
+            z-index: 15;
+            pointer-events: none;
+            display: none;
+        }
+
+        .ai-plane-container {
+            position: absolute;
+            width: 0; height: 0;
+            z-index: 10;
+            pointer-events: none; /* Fix: prevents AI planes from intercepting touches */
+        }
+        .plane-sprite {
+            position: absolute;
+            width: 160px; height: 160px;
+            top: 0; left: 0;
+            transform-origin: center center;
+            filter: drop-shadow(0 15px 15px rgba(0,0,0,0.2));
+        }
+        .plane-label {
+            position: absolute;
+            bottom: 60px; 
+            left: 0;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 18px;
+            color: #1a1a1a;
+            border: 2px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 15;
+        }
+
+        .trail-dot {
+            position: absolute;
+            width: 8px; height: 8px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+            animation: fadeOut 1.5s forwards; 
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0.2); }
+        }
+
+        #confetti-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: 9999; 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-menu">
+        <div class="menu-box">
+            <h1>Word Hunt Flight</h1>
+            <p>Enter the names/words for the planes (separated by commas or new lines):</p>
+            <textarea id="word-input" rows="5">Apple, Banana, Cherry, Dog, Elephant, Falcon, Giraffe</textarea>
+            
+            <div class="slider-container">
+                <p>Capture Radius: <span id="radius-val">3</span>cm</p>
+                <input type="range" id="radius-input" min="1" max="5" step="0.5" value="3">
+            </div>
+
+            <button id="start-btn">Start Game</button>
+        </div>
+    </div>
+
+    <div id="target-ui" class="ui-panel">
+        Find: <span id="target-word-display">WAITING</span>
+    </div>
+
+    <div id="right-ui" class="ui-panel">
+        <label for="throttle-slider">Throttle</label>
+        <input type="range" id="throttle-slider" class="vertical" min="0" max="15" step="0.5" value="6">
+    </div>
+
+    <div id="joystick-base"></div>
+    <div id="joystick-knob"></div>
+
+    <div id="minimap-container">
+        <svg id="minimap-plane" viewBox="0 0 210 297">
+            <path style="fill:#ff3333;stroke:#ffffff;stroke-width:8;stroke-linecap:round" d="m 88.775008,80.91066 1.04064,-9.130637 c 0,0 5.21046,-32.117079 18.162332,-31.184383 11.33192,0.816046 14.96453,29.777989 14.96453,29.777989 0,0 2.53605,18.567819 1.46385,24.433803 -1.07249,5.865958 67.05251,54.417588 67.05251,54.417588 0,0 4.90247,4.37353 3.60804,10.57264 -1.16617,5.58508 -4.65826,9.37916 -4.65826,9.37916 0,0 -3.87704,-1.41693 -4.78609,-1.60766 -0.95784,-0.20097 -62.75773,-24.63555 -62.75773,-24.63555 l -4.8346,46.8511 25.33243,20.65877 c 0,0 8.69664,2.54145 5.59289,14.46657 l -35.05767,-8.07722 c 0,0 -0.91503,9.45011 -5.02144,12.31153 0,0 -5.52898,-7.81108 -4.5403,-12.57773 l -35.255618,9.40795 c -1.411104,-6.60246 -2.528702,-9.84616 6.843659,-16.03909 9.249425,-7.59577 23.078197,-18.80285 23.078197,-18.80285 L 91.454538,144.7409 23.85393,173.31874 c 0,0 -3.924529,-2.07494 -3.655453,-7.95036 0.26951,-5.87538 0.34085,-6.42714 0.34085,-6.42714 0,0 -1.3407,-1.07332 4.931441,-6.6358 6.272358,-5.56259 63.58319,-56.456784 63.58319,-56.456784 z" />
+        </svg>
+    </div>
+
+    <div id="compass-container" class="ui-panel">
+        <svg id="compass-arrow" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="6" fill="#1a1a1a" />
+            <polygon points="50,10 35,45 50,40 65,45" fill="#D32F2F" />
+        </svg>
+    </div>
+
+    <div id="capture-ring"></div>
+
+    <svg id="plane" viewBox="0 0 210 297">
+        <path style="fill:#ffffff;stroke:#ffffff;stroke-width:1.926;stroke-linecap:round" d="m 88.775008,80.91066 1.04064,-9.130637 c 0,0 5.21046,-32.117079 18.162332,-31.184383 11.33192,0.816046 14.96453,29.777989 14.96453,29.777989 0,0 2.53605,18.567819 1.46385,24.433803 -1.07249,5.865958 67.05251,54.417588 67.05251,54.417588 0,0 4.90247,4.37353 3.60804,10.57264 -1.16617,5.58508 -4.65826,9.37916 -4.65826,9.37916 0,0 -3.87704,-1.41693 -4.78609,-1.60766 -0.95784,-0.20097 -62.75773,-24.63555 -62.75773,-24.63555 l -4.8346,46.8511 25.33243,20.65877 c 0,0 8.69664,2.54145 5.59289,14.46657 l -35.05767,-8.07722 c 0,0 -0.91503,9.45011 -5.02144,12.31153 0,0 -5.52898,-7.81108 -4.5403,-12.57773 l -35.255618,9.40795 c -1.411104,-6.60246 -2.528702,-9.84616 6.843659,-16.03909 9.249425,-7.59577 23.078197,-18.80285 23.078197,-18.80285 L 91.454538,144.7409 23.85393,173.31874 c 0,0 -3.924529,-2.07494 -3.655453,-7.95036 0.26951,-5.87538 0.34085,-6.42714 0.34085,-6.42714 0,0 -1.3407,-1.07332 4.931441,-6.6358 6.272358,-5.56259 63.58319,-56.456784 63.58319,-56.456784 z" />
+    </svg>
+
+    <canvas id="confetti-canvas"></canvas>
+
+    <script>
+        // --- GAME VARIABLES ---
+        let worldX = 0; let worldY = 0;
+        let angle = 0; let frameCount = 0;
+        const baseSize = 160; 
+        const rotationSpeed = 4.5; 
+        let currentScale = 1;
+        let minimapZoom = 0.08; 
+
+        // Gameplay specific variables
+        let wordsList = [];
+        let currentTargetWord = "";
+        let captureRadiusPx = 100; 
+
+        // Joystick specific variables
+        let isJoystickActive = false;
+        let activeTouchId = null;
+        let joystickOriginX = 0;
+        let joystickOriginY = 0;
+        let joystickTurnValue = 0;
+        const joystickMaxRadius = 60; 
+
+        // --- DOM ELEMENTS ---
+        const plane = document.getElementById('plane');
+        const captureRing = document.getElementById('capture-ring');
+        const throttleSlider = document.getElementById('throttle-slider');
+        const minimap = document.getElementById('minimap-container');
+        const minimapPlane = document.getElementById('minimap-plane');
+        const startMenu = document.getElementById('start-menu');
+        const targetUI = document.getElementById('target-ui');
+        const targetDisplay = document.getElementById('target-word-display');
+        const compassContainer = document.getElementById('compass-container');
+        const compassArrow = document.getElementById('compass-arrow');
+        
+        const joystickBase = document.getElementById('joystick-base');
+        const joystickKnob = document.getElementById('joystick-knob');
+        
+        let currentSpeed = parseFloat(throttleSlider.value);
+
+        // --- VIRTUAL JOYSTICK LOGIC (TOUCH CONTROLS) ---
+        // Fix: Changed from document.body to document to guarantee we capture all touches
+        document.addEventListener('touchstart', (e) => {
+            // Ignore if the touch is on any UI panel (like the throttle, minimap, or start menu)
+            if (e.target.closest && (e.target.closest('.ui-panel') || e.target.closest('#start-menu') || e.target.closest('#minimap-container'))) {
+                return;
+            }
+
+            // Prevent browser scroll/pan behavior
+            e.preventDefault();
+
+            // If we already have an active joystick, don't start a second one
+            if (isJoystickActive) return;
+
+            const touch = e.changedTouches[0];
+            activeTouchId = touch.identifier;
+            isJoystickActive = true;
+            
+            joystickOriginX = touch.clientX;
+            joystickOriginY = touch.clientY;
+            joystickTurnValue = 0;
+
+            // Show joystick at touch location
+            joystickBase.style.left = `${joystickOriginX}px`;
+            joystickBase.style.top = `${joystickOriginY}px`;
+            joystickKnob.style.left = `${joystickOriginX}px`;
+            joystickKnob.style.top = `${joystickOriginY}px`;
+            
+            joystickBase.style.display = 'block';
+            joystickKnob.style.display = 'block';
+        }, { passive: false });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!isJoystickActive) return;
+
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                
+                if (touch.identifier === activeTouchId) {
+                    e.preventDefault();
+
+                    let deltaX = touch.clientX - joystickOriginX;
+                    let deltaY = touch.clientY - joystickOriginY;
+                    
+                    // Constrain visual knob within the base circle
+                    const distance = Math.hypot(deltaX, deltaY);
+                    if (distance > joystickMaxRadius) {
+                        const angle = Math.atan2(deltaY, deltaX);
+                        deltaX = Math.cos(angle) * joystickMaxRadius;
+                        deltaY = Math.sin(angle) * joystickMaxRadius;
+                    }
+
+                    // Move visual knob
+                    joystickKnob.style.left = `${joystickOriginX + deltaX}px`;
+                    joystickKnob.style.top = `${joystickOriginY + deltaY}px`;
+
+                    // Calculate actual turn value based purely on the X-axis offset (-1 to 1 multiplier)
+                    const turnPercent = deltaX / joystickMaxRadius;
+                    joystickTurnValue = turnPercent * rotationSpeed;
+                }
+            }
+        }, { passive: false });
+
+        function endJoystick(e) {
+            if (!isJoystickActive) return;
+
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === activeTouchId) {
+                    isJoystickActive = false;
+                    activeTouchId = null;
+                    joystickTurnValue = 0;
+                    
+                    joystickBase.style.display = 'none';
+                    joystickKnob.style.display = 'none';
+                }
+            }
+        }
+
+        document.addEventListener('touchend', endJoystick);
+        document.addEventListener('touchcancel', endJoystick);
+
+        // --- CONFETTI SYSTEM ---
+        const confCanvas = document.getElementById('confetti-canvas');
+        const cCtx = confCanvas.getContext('2d');
+        let particles = [];
+        
+        function resizeCanvas() {
+            confCanvas.width = window.innerWidth;
+            confCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function triggerConfetti() {
+            for(let i=0; i<150; i++) {
+                particles.push({
+                    x: window.innerWidth / 2,
+                    y: window.innerHeight / 2,
+                    vx: (Math.random() - 0.5) * 25,
+                    vy: (Math.random() - 0.5) * 25,
+                    size: Math.random() * 8 + 6,
+                    color: `hsl(${Math.random()*360}, 100%, 50%)`,
+                    life: 1.0,
+                    decay: Math.random() * 0.02 + 0.015
+                });
+            }
+        }
+
+        function drawConfetti() {
+            cCtx.clearRect(0,0, confCanvas.width, confCanvas.height);
+            for(let i=particles.length-1; i>=0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.4; // Gravity
+                p.life -= p.decay;
+                
+                if(p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                cCtx.globalAlpha = p.life;
+                cCtx.fillStyle = p.color;
+                cCtx.fillRect(p.x, p.y, p.size, p.size);
+            }
+            cCtx.globalAlpha = 1.0;
+        }
+
+        // --- MENU LOGIC ---
+        const radiusInput = document.getElementById('radius-input');
+        const radiusVal = document.getElementById('radius-val');
+        radiusInput.addEventListener('input', (e) => radiusVal.textContent = e.target.value);
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            const rawText = document.getElementById('word-input').value;
+            wordsList = rawText.split(/[\n,]+/).map(w => w.trim()).filter(w => w.length > 0);
+            
+            if (wordsList.length === 0) {
+                alert("Please enter at least one word!");
+                return;
+            }
+
+            const cm = parseFloat(radiusInput.value);
+            captureRadiusPx = cm * 38;
+            captureRing.style.width = `${captureRadiusPx * 2}px`;
+            captureRing.style.height = `${captureRadiusPx * 2}px`;
+            captureRing.style.display = 'block';
+
+            aiPlanes.forEach(p => p.destroy());
+            aiPlanes.length = 0;
+
+            wordsList.forEach(word => addAIPlane(word));
+
+            startMenu.style.display = 'none';
+            targetUI.style.display = 'flex';
+            compassContainer.style.display = 'flex';
+            pickNewTarget();
+        });
+
+        function pickNewTarget() {
+            if (wordsList.length === 0) return;
+            
+            let newTarget;
+            if (wordsList.length === 1) {
+                newTarget = wordsList[0];
+            } else {
+                do {
+                    newTarget = wordsList[Math.floor(Math.random() * wordsList.length)];
+                } while (newTarget === currentTargetWord);
+            }
+            
+            currentTargetWord = newTarget;
+            targetDisplay.textContent = currentTargetWord;
+            
+            targetDisplay.style.transform = "scale(1.3)";
+            setTimeout(() => targetDisplay.style.transform = "scale(1)", 200);
+        }
+
+        // --- CONTROLS (KEYBOARD + UI) ---
+        const keys = {
+            ArrowLeft: false, ArrowRight: false,
+            ArrowUp: false, ArrowDown: false,
+            Minus: false, Equal: false
+        };
+
+        window.addEventListener('keydown', (e) => {
+            if (keys.hasOwnProperty(e.code)) keys[e.code] = true;
+            else if (e.key === '-' || e.key === '_') keys.Minus = true;
+            else if (e.key === '=' || e.key === '+') keys.Equal = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (keys.hasOwnProperty(e.code)) keys[e.code] = false;
+            else if (e.key === '-' || e.key === '_') keys.Minus = false;
+            else if (e.key === '=' || e.key === '+') keys.Equal = false;
+        });
+
+        throttleSlider.addEventListener('input', (e) => currentSpeed = parseFloat(e.target.value));
+
+        // --- AI PLANES LOGIC ---
+        const aiPlanes = [];
+
+        class AIPlane {
+            constructor(word) {
+                this.word = word;
+                
+                const spawnOffset = 2500;
+                this.worldX = worldX + (Math.random() - 0.5) * spawnOffset * 2;
+                this.worldY = worldY + (Math.random() - 0.5) * spawnOffset * 2;
+                
+                this.angle = Math.random() * 360; 
+                this.targetAngle = this.angle;
+                this.speed = 3 + Math.random() * 5; 
+                this.turnSpeed = 1 + Math.random() * 1.5; 
+                this.color = `hsl(${Math.floor(Math.random() * 360)}, 80%, 50%)`; 
+
+                this.element = document.createElement('div');
+                this.element.className = 'ai-plane-container';
+                this.element.innerHTML = `
+                    <div class="plane-label" style="border-color:${this.color}">${this.word}</div>
+                    <div class="plane-sprite">
+                        <svg viewBox="0 0 210 297" width="100%" height="100%">
+                            <path style="fill:${this.color};stroke:#ffffff;stroke-width:2;stroke-linecap:round" d="m 88.775008,80.91066 1.04064,-9.130637 c 0,0 5.21046,-32.117079 18.162332,-31.184383 11.33192,0.816046 14.96453,29.777989 14.96453,29.777989 0,0 2.53605,18.567819 1.46385,24.433803 -1.07249,5.865958 67.05251,54.417588 67.05251,54.417588 0,0 4.90247,4.37353 3.60804,10.57264 -1.16617,5.58508 -4.65826,9.37916 -4.65826,9.37916 0,0 -3.87704,-1.41693 -4.78609,-1.60766 -0.95784,-0.20097 -62.75773,-24.63555 -62.75773,-24.63555 l -4.8346,46.8511 25.33243,20.65877 c 0,0 8.69664,2.54145 5.59289,14.46657 l -35.05767,-8.07722 c 0,0 -0.91503,9.45011 -5.02144,12.31153 0,0 -5.52898,-7.81108 -4.5403,-12.57773 l -35.255618,9.40795 c -1.411104,-6.60246 -2.528702,-9.84616 6.843659,-16.03909 9.249425,-7.59577 23.078197,-18.80285 23.078197,-18.80285 L 91.454538,144.7409 23.85393,173.31874 c 0,0 -3.924529,-2.07494 -3.655453,-7.95036 0.26951,-5.87538 0.34085,-6.42714 0.34085,-6.42714 0,0 -1.3407,-1.07332 4.931441,-6.6358 6.272358,-5.56259 63.58319,-56.456784 63.58319,-56.456784 z" />
+                        </svg>
+                    </div>
+                `;
+                this.sprite = this.element.querySelector('.plane-sprite');
+                document.body.appendChild(this.element);
+
+                this.minimapDot = document.createElement('div');
+                this.minimapDot.className = 'ai-minimap-dot';
+                this.minimapDot.style.backgroundColor = this.color;
+                minimap.appendChild(this.minimapDot);
+            }
+
+            update(playerX, playerY, screenCX, screenCY, miniCX, miniCY) {
+                // Natural Wandering
+                if (Math.random() < 0.05) this.targetAngle += (Math.random() - 0.5) * 120; 
+
+                let diff = this.targetAngle - this.angle;
+                diff = (diff + 540) % 360 - 180;
+
+                if (Math.abs(diff) > this.turnSpeed) this.angle += Math.sign(diff) * this.turnSpeed;
+                else this.angle = this.targetAngle;
+
+                // Move Forward
+                const rad = this.angle * (Math.PI / 180);
+                this.worldX += Math.cos(rad) * this.speed;
+                this.worldY += Math.sin(rad) * this.speed;
+
+                // Keep AI near the player (wrap around if they get further than 5000px)
+                const boundary = 5000;
+                if (this.worldX > playerX + boundary) this.worldX -= boundary * 2;
+                if (this.worldX < playerX - boundary) this.worldX += boundary * 2;
+                if (this.worldY > playerY + boundary) this.worldY -= boundary * 2;
+                if (this.worldY < playerY - boundary) this.worldY += boundary * 2;
+
+                // Update Main Screen Coordinates
+                const screenX = this.worldX - playerX + screenCX;
+                const screenY = this.worldY - playerY + screenCY;
+                
+                this.element.style.left = `${screenX}px`;
+                this.element.style.top = `${screenY}px`;
+                
+                this.sprite.style.transform = `translate(-50%, -50%) rotate(${this.angle + 90}deg) scale(${currentScale})`;
+
+                // Update Minimap Coordinates
+                const miniX = miniCX + ((this.worldX - playerX) * minimapZoom);
+                const miniY = miniCY + ((this.worldY - playerY) * minimapZoom);
+                
+                if (miniX < 0 || miniX > minimap.clientWidth || miniY < 0 || miniY > minimap.clientHeight) {
+                    this.minimapDot.style.display = 'none';
+                } else {
+                    this.minimapDot.style.display = 'block';
+                    this.minimapDot.style.left = `${miniX}px`;
+                    this.minimapDot.style.top = `${miniY}px`;
+                }
+            }
+
+            destroy() {
+                this.element.remove();
+                this.minimapDot.remove();
+            }
+        }
+
+        function addAIPlane(word) {
+            aiPlanes.push(new AIPlane(word));
+        }
+
+        // --- MAIN GAME LOOP ---
+        function update() {
+            // 1. Controls & Scaling (Keyboard + Joystick + Throttle)
+            if (keys.Minus) currentScale = Math.max(0.5, currentScale - 0.02);
+            if (keys.Equal) currentScale = Math.min(2.0, currentScale + 0.02);
+            if (keys.ArrowUp) currentSpeed = Math.min(15, currentSpeed + 0.1);
+            if (keys.ArrowDown) currentSpeed = Math.max(0, currentSpeed - 0.1);
+            
+            throttleSlider.value = currentSpeed; 
+            
+            // Combine Keyboard controls and Virtual Joystick inputs
+            if (keys.ArrowLeft) angle -= rotationSpeed;
+            if (keys.ArrowRight) angle += rotationSpeed;
+            angle += joystickTurnValue;
+
+            // 2. World Movement
+            const radians = angle * (Math.PI / 180);
+            worldX += Math.cos(radians) * currentSpeed;
+            worldY += Math.sin(radians) * currentSpeed;
+
+            const screenCenterX = window.innerWidth / 2;
+            const screenCenterY = window.innerHeight / 2;
+            
+            document.body.style.backgroundPosition = `${screenCenterX - worldX}px ${screenCenterY - worldY}px`;
+            
+            plane.style.width = `${baseSize * currentScale}px`;
+            plane.style.height = `${baseSize * currentScale}px`;
+            plane.style.transform = `translate(-50%, -50%) rotate(${angle + 90}deg)`;
+
+            // 3. Minimap Updates
+            minimap.style.backgroundSize = `${8000 * minimapZoom}px ${8000 * minimapZoom}px`;
+            const miniCenterX = minimap.clientWidth / 2;
+            const miniCenterY = minimap.clientHeight / 2;
+            minimap.style.backgroundPosition = `${miniCenterX - (worldX * minimapZoom)}px ${miniCenterY - (worldY * minimapZoom)}px`;
+            minimapPlane.style.transform = `translate(-50%, -50%) rotate(${angle + 90}deg)`;
+
+            // 4. Update AI Planes & Collision Checks
+            let targetPlaneRef = null;
+
+            aiPlanes.forEach(ai => {
+                ai.update(worldX, worldY, screenCenterX, screenCenterY, miniCenterX, miniCenterY);
+                
+                if (currentTargetWord && ai.word === currentTargetWord) {
+                    targetPlaneRef = ai; 
+                    const distInWorld = Math.hypot(worldX - ai.worldX, worldY - ai.worldY);
+                    const distOnScreen = distInWorld * currentScale;
+                    
+                    if (distOnScreen < captureRadiusPx) {
+                        triggerConfetti();
+                        pickNewTarget();
+                    }
+                }
+            });
+
+            // 5. Update Target Compass
+            if (targetPlaneRef) {
+                const dx = targetPlaneRef.worldX - worldX;
+                const dy = targetPlaneRef.worldY - worldY;
+                const angleToTarget = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+                compassArrow.style.transform = `rotate(${angleToTarget}deg)`;
+            }
+
+            // 6. Trails
+            frameCount++;
+            if (currentSpeed > 0 && frameCount % 6 === 0) { 
+                const dot = document.createElement('div');
+                dot.className = 'trail-dot';
+                const tailDistance = 60 * currentScale; 
+                dot.dataset.worldX = worldX - Math.cos(radians) * tailDistance;
+                dot.dataset.worldY = worldY - Math.sin(radians) * tailDistance;
+                document.body.appendChild(dot);
+                setTimeout(() => dot.remove(), 1500);
+            }
+
+            document.querySelectorAll('.trail-dot').forEach(dot => {
+                const screenX = parseFloat(dot.dataset.worldX) - worldX + screenCenterX;
+                const screenY = parseFloat(dot.dataset.worldY) - worldY + screenCenterY;
+                dot.style.left = `${screenX - 4}px`;
+                dot.style.top = `${screenY - 4}px`;
+            });
+
+            // Draw Confetti
+            drawConfetti();
+
+            requestAnimationFrame(update);
+        }
+
+        // Start Loop
+        update();
+    </script>
+</body>
+</html>
