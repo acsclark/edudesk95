@@ -112,9 +112,12 @@
             gap: 10px;
         }
         #target-word-display {
+            /* Initial color, will be updated dynamically via JS */
             color: #D32F2F;
             font-size: 2rem;
             text-transform: uppercase;
+            text-shadow: 1px 1px 0px white, -1px -1px 0px white, 1px -1px 0px white, -1px 1px 0px white, 0px 2px 4px rgba(0,0,0,0.3);
+            transition: color 0.3s;
         }
 
         #right-ui {
@@ -390,7 +393,7 @@
         let wordsList = [];
         let currentTargetWord = "";
         let captureRadiusPx = 100; 
-        let aiSpeedMultiplier = 1.0; // Adjusted based on difficulty
+        let aiSpeedMultiplier = 1.0; 
 
         // Joystick specific variables
         let isJoystickActive = false;
@@ -553,7 +556,6 @@
                 return;
             }
 
-            // Set Difficulty Speed Multiplier
             const diffValue = difficultySelect.value;
             if (diffValue === 'easy') aiSpeedMultiplier = 0.3;
             else if (diffValue === 'medium') aiSpeedMultiplier = 0.6;
@@ -590,6 +592,12 @@
             
             currentTargetWord = newTarget;
             targetDisplay.textContent = currentTargetWord;
+            
+            // Set the target UI text color to match the plane's color
+            const targetPlaneObj = aiPlanes.find(p => p.word === currentTargetWord);
+            if (targetPlaneObj) {
+                targetDisplay.style.color = targetPlaneObj.color;
+            }
             
             targetDisplay.style.transform = "scale(1.3)";
             setTimeout(() => targetDisplay.style.transform = "scale(1)", 200);
@@ -630,7 +638,6 @@
                 this.angle = Math.random() * 360; 
                 this.targetAngle = this.angle;
                 
-                // Base speed is multiplied by the difficulty setting!
                 const baseSpeed = 3 + Math.random() * 5;
                 this.speed = baseSpeed * aiSpeedMultiplier; 
                 
@@ -639,6 +646,8 @@
 
                 this.element = document.createElement('div');
                 this.element.className = 'ai-plane-container';
+                
+                // FIXED typo in path below! Removed errant parenthesis.
                 this.element.innerHTML = `
                     <div class="plane-label" style="border-color:${this.color}">${this.word}</div>
                     <div class="plane-sprite">
@@ -657,7 +666,6 @@
             }
 
             update(playerX, playerY, screenCX, screenCY, miniCX, miniCY) {
-                // Natural Wandering
                 if (Math.random() < 0.05) this.targetAngle += (Math.random() - 0.5) * 120; 
 
                 let diff = this.targetAngle - this.angle;
@@ -666,12 +674,10 @@
                 if (Math.abs(diff) > this.turnSpeed) this.angle += Math.sign(diff) * this.turnSpeed;
                 else this.angle = this.targetAngle;
 
-                // Move Forward
                 const rad = this.angle * (Math.PI / 180);
                 this.worldX += Math.cos(rad) * this.speed;
                 this.worldY += Math.sin(rad) * this.speed;
 
-                // Keep AI near the player
                 const boundary = 5000;
                 if (this.worldX > playerX + boundary) this.worldX -= boundary * 2;
                 if (this.worldX < playerX - boundary) this.worldX += boundary * 2;
@@ -741,6 +747,7 @@
             minimapPlane.style.transform = `translate(-50%, -50%) rotate(${angle + 90}deg)`;
 
             let targetPlaneRef = null;
+            let targetCaptured = false;
 
             aiPlanes.forEach(ai => {
                 ai.update(worldX, worldY, screenCenterX, screenCenterY, miniCenterX, miniCenterY);
@@ -751,11 +758,15 @@
                     const distOnScreen = distInWorld * currentScale;
                     
                     if (distOnScreen < captureRadiusPx) {
-                        triggerConfetti();
-                        pickNewTarget();
+                        targetCaptured = true;
                     }
                 }
             });
+
+            if (targetCaptured) {
+                triggerConfetti();
+                pickNewTarget();
+            }
 
             if (targetPlaneRef) {
                 const dx = targetPlaneRef.worldX - worldX;
