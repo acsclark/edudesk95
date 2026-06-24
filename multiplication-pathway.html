@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multiplication Pathway</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  /* 3DAV palette — light ocean edition */
+  --hot-pink:#FF2D78; --hot-pink-dark:#C4005A;
+  --orange:#FF6B35; --orange-dark:#C94A10;
+  --grad-s1:linear-gradient(135deg,#FF2D78 0%,#FF6B35 100%);
+  --grad-s1-soft:linear-gradient(135deg,rgba(255,45,120,.12) 0%,rgba(255,107,53,.10) 100%);
+
+  --violet:#7B6FE8; --violet-dark:#5246C4;
+  --grad-s2:linear-gradient(135deg,#9B59F5 0%,#5B8AF5 100%);
+  --grad-s2-soft:linear-gradient(135deg,rgba(155,89,245,.12) 0%,rgba(91,138,245,.10) 100%);
+
+  --ocean:#38C8F0; --ocean-dark:#1593BE;
+  --sky:#6DD5FA;
+  --grad-s3:linear-gradient(135deg,#38C8F0 0%,#2196D3 100%);
+  --grad-s3-soft:linear-gradient(135deg,rgba(56,200,240,.14) 0%,rgba(33,150,211,.10) 100%);
+
+  --green:#00C896; --green-dark:#009E76;
+  --grad-s4:linear-gradient(135deg,#00C896 0%,#00876A 100%);
+  --grad-s4-soft:linear-gradient(135deg,rgba(0,200,150,.14) 0%,rgba(0,135,106,.10) 100%);
+  --glow-green2:0 0 20px rgba(0,200,150,.35);
+
+  --neon-green:#00C896; --neon-green-dark:#009E76;
+  --neon-yellow:#FFB800;
+
+  /* Deep ocean blue — matching screenshot */
+  --bg:#4A6FD4;
+  --bg2:#3858BC;
+  --surface:rgba(255,255,255,0.18);
+  --surface-2:rgba(255,255,255,0.13);
+  --surface-3:rgba(255,255,255,0.08);
+  --border:rgba(255,255,255,0.18);
+  --border-bright:rgba(255,255,255,0.28);
+  --text:#FFFFFF;
+  --text-60:rgba(255,255,255,0.70);
+  --text-30:rgba(255,255,255,0.40);
+  --white:#FFFFFF;
+
+  /* Shared */
+  --rsm:10px; --rmd:14px; --rlg:22px; --rxl:28px; --rfull:999px;
+  --fb:'Outfit',system-ui,sans-serif;
+  --fm:'Space Mono',monospace;
+  --shadow:0 8px 32px rgba(13,42,58,0.12), 0 0 0 1px var(--border);
+  --glow-pink:0 0 20px rgba(255,45,120,.30);
+  --glow-violet:0 0 20px rgba(123,111,232,.30);
+  --glow-blue:0 0 20px rgba(56,200,240,.40);
+  --glow-green:0 0 14px rgba(0,200,150,.30);
+}
+
+html { font-family:var(--fb); background:var(--bg); color:var(--text); min-height:100dvh; }
+body { min-height:100dvh; display:flex; flex-direction:column; background:var(--bg);
+  background-image:
+    radial-gradient(ellipse 70% 55% at 15% 0%, rgba(120,160,255,.45) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 90% 100%, rgba(56,100,220,.50) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 35% at 80% 5%, rgba(255,45,120,.08) 0%, transparent 45%),
+    linear-gradient(160deg, #5B7FE8 0%, #4A6FD4 35%, #3858BC 70%, #2E48A8 100%);
+}
+
+/* ── HEADER ── */
+header {
+  background:rgba(255,255,255,0.12);
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
+  border-bottom:1px solid rgba(255,255,255,0.18);
+  padding:0 1.5rem; height:60px;
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+}
+.logo { display:flex; align-items:center; gap:10px; }
+.logo-mark {
+  width:32px; height:32px;
+  background:var(--grad-s1);
+  border-radius:var(--rsm);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:var(--glow-pink);
+}
+.logo-mark svg { width:16px; height:16px; fill:none; stroke:white; stroke-width:2.5; stroke-linecap:round; }
+.logo-text { font-size:16px; font-weight:700; color:var(--text); letter-spacing:-.02em; }
+#headerPill { font-size:11px; font-weight:700; padding:4px 14px; border-radius:var(--rfull); border:1px solid; letter-spacing:.04em; text-transform:uppercase; }
+.pill-s1 { background:rgba(255,45,120,.15); color:#FF7AAF; border-color:rgba(255,45,120,.3)!important; }
+.pill-s2 { background:rgba(155,89,245,.15); color:#C69EFF; border-color:rgba(155,89,245,.3)!important; }
+.pill-s3 { background:rgba(0,198,255,.12); color:#70DDFF; border-color:rgba(0,198,255,.25)!important; }
+.pill-s4 { background:rgba(0,200,150,.12); color:#7FFFD4; border-color:rgba(0,200,150,.25)!important; }
+
+/* ── STEP STRIP ── */
+.step-strip { display:flex; gap:8px; padding:1.25rem 1.5rem 0; max-width:540px; margin:0 auto; width:100%; }
+.step-node { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; }
+.sbar { height:3px; width:100%; border-radius:var(--rfull); background:rgba(255,255,255,0.18); }
+.sbar.active { background:var(--grad-s1); }
+.sbar.active2 { background:var(--grad-s2); }
+.sbar.active3 { background:var(--grad-s3); }
+.sbar.active4 { background:var(--grad-s4); }
+.sbar.done { background:var(--neon-green); }
+.slbl { font-size:9px; color:var(--text-30); letter-spacing:.06em; font-weight:600; text-transform:uppercase; }
+.slbl.active { color:#FF7AAF; }
+.slbl.active2 { color:#C69EFF; }
+.slbl.active3 { color:#70DDFF; }
+.slbl.active4 { color:#7FFFD4; }
+.slbl.done { color:var(--neon-green); }
+
+main { flex:1; display:flex; flex-direction:column; align-items:center; padding:1.25rem 1.25rem 3rem; }
+
+/* ── SCREENS ── */
+.screen { width:100%; max-width:540px; margin-top:1.25rem; display:none; }
+.screen.active { display:block; }
+.card-shell {
+  background:rgba(255,255,255,0.15);
+  backdrop-filter:blur(28px);
+  -webkit-backdrop-filter:blur(28px);
+  border-radius:var(--rxl);
+  box-shadow:0 8px 40px rgba(30,50,140,0.30), inset 0 1px 0 rgba(255,255,255,0.35);
+  border:1px solid rgba(255,255,255,0.22);
+  overflow:hidden;
+}
+
+/* ── TABLE SELECTOR ── */
+.table-section,.s3-table-select-wrap { padding:1.25rem; border-bottom:1px solid rgba(255,255,255,0.15); }
+.section-label,.queue-label { font-size:10px; font-weight:700; letter-spacing:.08em; color:rgba(255,255,255,0.45); text-transform:uppercase; margin-bottom:10px; }
+.mode-toggle {
+  display:inline-flex; align-items:center; gap:4px;
+  font-family:var(--fb); font-size:10px; font-weight:800;
+  letter-spacing:.08em; text-transform:uppercase;
+  background:var(--grad-s1);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  background-clip:text;
+  border:none; cursor:pointer; padding:0;
+  position:relative;
+  transition:opacity .15s;
+}
+.mode-toggle::after {
+  content:'';
+  position:absolute; bottom:-1px; left:0; right:0;
+  height:1px;
+  background:var(--grad-s1);
+  opacity:0.6;
+}
+.mode-toggle:hover { opacity:.75; }
+.table-btns { display:flex; flex-wrap:wrap; gap:6px; }
+.table-btn {
+  font-family:var(--fm); font-size:12px; font-weight:700;
+  padding:6px 12px; border-radius:var(--rsm);
+  border:1px solid rgba(255,255,255,0.25);
+  background:rgba(255,255,255,0.12);
+  color:var(--text-60); cursor:pointer;
+  transition:all .15s; position:relative;
+}
+.table-btn:hover { border-color:rgba(255,45,120,.5); color:var(--text); }
+.table-btn.active { background:var(--grad-s1); border-color:transparent; color:var(--white); box-shadow:var(--glow-pink); }
+.table-btn.done-table { border-color:rgba(0,245,160,.3); color:var(--neon-green); background:rgba(0,245,160,.08); }
+.table-btn.done-table.active { background:var(--grad-s1); border-color:transparent; color:var(--white); box-shadow:var(--glow-pink); }
+.table-btn .tick { font-size:8px; position:absolute; top:-5px; right:-5px; background:var(--neon-green); color:#0D0E1A; border-radius:50%; width:14px; height:14px; display:flex; align-items:center; justify-content:center; font-weight:700; }
+
+/* ── CALLOUTS ── */
+.callout {
+  border-radius:var(--rmd); padding:14px 16px; display:flex; gap:12px; align-items:flex-start;
+  background:rgba(255,255,255,0.14);
+  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,0.28);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.30), 0 4px 16px rgba(30,50,140,0.15);
+}
+.callout.amber,.callout.purple,.callout.teal,.callout.blue { background:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.28); }
+.callout-icon { width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; margin-top:1px; background:rgba(255,255,255,0.22); border:1px solid rgba(255,255,255,0.30); }
+.callout.amber .callout-icon { background:rgba(255,184,0,.35); }
+.callout.purple .callout-icon { background:rgba(155,89,245,.40); }
+.callout.teal .callout-icon { background:rgba(0,200,150,.35); }
+.callout.blue .callout-icon { background:rgba(56,200,240,.35); }
+.callout-icon svg { width:16px; height:16px; fill:none; stroke:white; stroke-width:2.5; stroke-linecap:round; }
+.callout-text strong { font-size:13px; font-weight:700; display:block; margin-bottom:3px; color:rgba(255,255,255,0.95); }
+.callout.amber .callout-text strong,.callout.purple .callout-text strong,.callout.teal .callout-text strong,.callout.blue .callout-text strong { color:rgba(255,255,255,0.95); }
+.callout-text p { font-size:12px; line-height:1.6; color:rgba(255,255,255,0.75); }
+.callout.amber .callout-text p,.callout.purple .callout-text p,.callout.teal .callout-text p,.callout.blue .callout-text p { color:rgba(255,255,255,0.75); }
+
+/* ── WHY CALLOUT ── */
+.why-callout { margin:0 1.25rem 1.25rem; border-left:3px solid rgba(255,255,255,0.40); padding:12px 14px; border-radius:0 var(--rsm) var(--rsm) 0; background:rgba(255,255,255,0.10); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+.why-callout.coral { border-left-color:rgba(255,107,53,0.60); }
+.why-callout.coral p { color:rgba(255,255,255,0.75); }
+.why-callout.purple { border-left-color:rgba(155,89,245,0.60); }
+.why-callout.purple p { color:rgba(255,255,255,0.75); }
+.why-callout.blue { border-left-color:rgba(56,200,240,0.60); }
+.why-callout.blue p { color:rgba(255,255,255,0.75); }
+.why-callout p { font-size:12px; line-height:1.6; font-style:italic; }
+
+/* ── START HERO ── */
+.start-hero { padding:2rem 1.5rem; display:flex; flex-direction:column; align-items:center; text-align:center; gap:1.25rem; }
+.icon-ring { width:76px; height:76px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+.icon-ring.coral { background:var(--grad-s1); box-shadow:var(--glow-pink); }
+.icon-ring.blue { background:var(--grad-s3); box-shadow:var(--glow-blue); }
+.icon-ring.purple { background:var(--grad-s2); box-shadow:var(--glow-violet); }
+.icon-ring svg { width:34px; height:34px; fill:none; stroke:white; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.start-title { font-size:26px; font-weight:800; color:var(--text); letter-spacing:-.03em; line-height:1.1; }
+.start-desc { font-size:14px; color:var(--text-60); line-height:1.7; max-width:340px; }
+.start-footer { padding:0 1.5rem 1.5rem; display:flex; flex-direction:column; gap:8px; }
+
+/* ── BUTTONS ── */
+.btn-primary {
+  width:100%; padding:15px;
+  border:none; border-radius:var(--rmd);
+  font-family:var(--fb); font-size:16px; font-weight:700;
+  cursor:pointer; letter-spacing:-.01em;
+  transition:opacity .15s, transform .1s; color:var(--white);
+}
+.btn-primary.coral { background:var(--grad-s1); box-shadow:var(--glow-pink); }
+.btn-primary.purple { background:var(--grad-s2); box-shadow:var(--glow-violet); }
+.btn-primary.blue { background:var(--grad-s3); box-shadow:var(--glow-blue); }
+.btn-primary:hover { opacity:.9; }
+.btn-primary:active { transform:scale(.98); }
+
+.btn-sec {
+  font-family:var(--fb); font-size:13px; font-weight:600; cursor:pointer;
+  background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.28);
+  border-radius:var(--rsm); padding:9px 18px;
+  color:rgba(255,255,255,0.85); transition:all .15s;
+}
+.btn-sec:hover { background:rgba(255,255,255,0.25); color:#fff; }
+
+.btn-next { font-family:var(--fb); font-size:14px; font-weight:700; cursor:pointer; border:none; border-radius:var(--rsm); padding:10px 20px; color:var(--white); transition:opacity .15s; }
+.btn-next.purple { background:var(--grad-s2); box-shadow:var(--glow-violet); }
+.btn-next.coral { background:var(--grad-s1); box-shadow:var(--glow-pink); }
+.btn-next.blue { background:var(--grad-s3); box-shadow:var(--glow-blue); }
+.btn-next.green { background:var(--grad-s4); box-shadow:var(--glow-green2); }
+.btn-primary.green { background:var(--grad-s4); box-shadow:var(--glow-green2); }
+.btn-primary.green:hover { opacity:.9; }
+.pbar-fill.green { background:var(--grad-s4); }
+.btn-next:hover { opacity:.85; }
+
+/* ── PROGRESS BAR ── */
+.progress-section { padding:.9rem 1.25rem; display:flex; align-items:center; gap:10px; border-bottom:1px solid rgba(255,255,255,0.15); }
+.pbar-wrap { flex:1; height:4px; background:rgba(255,255,255,0.18); border-radius:var(--rfull); overflow:hidden; }
+.pbar-fill { height:100%; border-radius:var(--rfull); transition:width .4s cubic-bezier(.4,0,.2,1); }
+.pbar-fill.coral { background:var(--grad-s1); }
+.pbar-fill.purple { background:var(--grad-s2); }
+.pbar-fill.blue { background:var(--grad-s3); }
+.pbar-label { font-family:var(--fm); font-size:11px; color:var(--text-30); min-width:44px; text-align:right; }
+
+/* ── FLASH CARDS ── */
+.flash-scene { position:relative; height:250px; display:flex; align-items:center; justify-content:center; padding:1rem; }
+.card-stack { position:relative; width:270px; height:178px; }
+.flash-card {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  background:rgba(30,55,140,0.85);
+  border:1px solid rgba(255,255,255,0.20);
+  border-radius:var(--rlg);
+  box-shadow:0 4px 24px rgba(20,40,120,0.40), inset 0 1px 0 rgba(255,255,255,0.12);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  user-select:none; touch-action:none; will-change:transform;
+}
+.flash-card.top { z-index:10; cursor:grab; }
+.flash-card.top:active { cursor:grabbing; }
+.flash-card.behind-1 { transform:rotate(-2.5deg) translateY(8px) scale(.96); z-index:1; background:rgba(25,48,125,0.75); }
+.flash-card.behind-2 { transform:rotate(2deg) translateY(14px) scale(.92); z-index:0; background:rgba(20,42,110,0.60); }
+.card-times-label { font-size:9px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,0.45); margin-bottom:8px; }
+.card-question { font-size:42px; font-weight:800; color:#FFFFFF; letter-spacing:-.03em; line-height:1; font-family:var(--fb); }
+.card-answer { font-size:30px; font-weight:700; color:#7FFFD4; font-family:var(--fb); margin-top:8px; opacity:0; transition:opacity .25s ease; }
+.flash-card.revealed .card-answer { opacity:1; }
+.countdown-wrap { position:absolute; top:10px; right:10px; width:36px; height:36px; }
+.countdown-svg { width:36px; height:36px; transform:rotate(-90deg); }
+.countdown-track { fill:none; stroke:rgba(255,255,255,0.22); stroke-width:3; }
+.countdown-arc { fill:none; stroke:var(--hot-pink); stroke-width:3; stroke-linecap:round; transition:stroke .3s; }
+.countdown-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--fm); font-size:12px; font-weight:700; color:var(--text-60); }
+
+/* card swipe tints */
+.card-tint-nailed,.card-tint-notyet { position:absolute; inset:0; border-radius:var(--rlg); opacity:0; pointer-events:none; transition:opacity .1s; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; }
+.card-tint-nailed { background:rgba(0,245,160,.15); color:var(--neon-green); }
+.card-tint-notyet { background:rgba(255,45,120,.15); color:#FF7AAF; }
+
+/* ── SWIPE UI ── */
+.swipe-hint { text-align:center; font-size:13px; color:var(--text-30); padding:0 1.25rem .75rem; min-height:20px; }
+.swipe-labels { display:flex; gap:10px; padding:0 1.25rem 1.25rem; }
+.swipe-label {
+  flex:1; display:flex; align-items:center; justify-content:center; gap:7px;
+  padding:12px; border-radius:var(--rmd); font-size:14px; font-weight:700;
+  border:1px solid; cursor:pointer; transition:all .15s;
+  opacity:.3; pointer-events:none;
+}
+.swipe-label.enabled { opacity:1; pointer-events:auto; }
+.swipe-label.notyet { background:rgba(255,45,120,.18); color:#FF9EC0; border-color:rgba(255,122,175,.35); }
+.swipe-label.notyet.enabled:hover { background:rgba(255,45,120,.28); }
+.swipe-label.nailed { background:rgba(0,200,150,.18); color:#7FFFD4; border-color:rgba(127,255,212,.35); }
+.swipe-label.nailed.enabled:hover { background:rgba(0,200,150,.28); }
+.swipe-label svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+
+/* ── PILE COUNTS ── */
+.pile-counts { display:flex; gap:10px; padding:0 1.25rem 1.25rem; }
+.pile-count { flex:1; border-radius:var(--rmd); border:1px solid rgba(255,255,255,0.20); background:rgba(255,255,255,0.10); padding:10px 14px; }
+.pile-count-title { font-size:10px; font-weight:700; color:var(--text-30); margin-bottom:2px; text-transform:uppercase; letter-spacing:.05em; }
+.pile-count-title.nailed { color:#7FFFD4; }
+.pile-count-title.notyet { color:#FF9EC0; }
+.pile-count-num { font-size:28px; font-weight:800; color:var(--text); font-family:var(--fb); }
+
+/* ── FLY LABEL ── */
+.fly-label { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:16px; font-weight:700; opacity:0; pointer-events:none; border-radius:var(--rfull); padding:8px 22px; z-index:20; transition:opacity .15s; }
+.fly-label.nailed { background:rgba(0,200,150,.15); color:var(--neon-green-dark); border:1px solid rgba(0,200,150,.4); }
+.fly-label.notyet { background:rgba(255,45,120,.2); color:#FF7AAF; border:1px solid rgba(255,45,120,.4); }
+.fly-label.correct { background:rgba(0,200,150,.15); color:var(--neon-green-dark); border:1px solid rgba(0,200,150,.4); }
+.fly-label.wrong { background:rgba(255,45,120,.2); color:#FF7AAF; border:1px solid rgba(255,45,120,.4); }
+
+/* ── DONE SCREENS ── */
+.done-inner { padding:2rem 1.5rem; text-align:center; }
+.done-icon { width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1rem; }
+.done-icon svg { width:28px; height:28px; stroke:white; stroke-width:2.5; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.done-title { font-size:24px; font-weight:800; color:var(--text); margin-bottom:6px; letter-spacing:-.03em; }
+.done-sub { font-size:14px; color:var(--text-60); margin-bottom:1.5rem; line-height:1.7; }
+.done-piles { display:flex; gap:12px; justify-content:center; margin-bottom:1.25rem; }
+.done-pile { flex:1; max-width:160px; padding:14px 16px; border-radius:var(--rmd); border:1px solid; }
+.done-pile.nailed { background:rgba(0,200,150,.20); border-color:rgba(127,255,212,.40); }
+.done-pile.notyet { background:rgba(255,45,120,.18); border-color:rgba(255,122,175,.35); }
+.done-pile-num { font-size:38px; font-weight:800; font-family:var(--fb); }
+.done-pile.nailed .done-pile-num { color:var(--neon-green-dark); }
+.done-pile.notyet .done-pile-num { color:#FF7AAF; }
+.done-pile-lbl { font-size:11px; font-weight:600; margin-top:2px; text-transform:uppercase; letter-spacing:.05em; }
+.done-pile.nailed .done-pile-lbl { color:var(--neon-green-dark); }
+.done-pile.notyet .done-pile-lbl { color:#FF7AAF; }
+.done-note { font-size:13px; color:rgba(255,255,255,0.80); margin-bottom:1.25rem; line-height:1.6; background:rgba(255,255,255,0.12); border-radius:var(--rmd); padding:12px 14px; border:1px solid rgba(255,255,255,0.20); }
+.done-note strong { color:var(--text); }
+.done-actions { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+
+/* ── NOT ENOUGH GATE ── */
+.gate-card { background:rgba(255,255,255,0.15); backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px); border-radius:var(--rxl); box-shadow:0 8px 40px rgba(30,50,140,0.30), inset 0 1px 0 rgba(255,255,255,0.35); border:1px solid rgba(255,255,255,0.22); overflow:hidden; }
+.gate-hero { padding:1.75rem 1.5rem; display:flex; flex-direction:column; align-items:center; text-align:center; gap:1rem; }
+.gate-bank { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+.gate-bank-tag { font-family:var(--fm); font-size:11px; padding:3px 10px; border-radius:var(--rfull); background:rgba(255,255,255,.14); color:rgba(255,255,255,.85); border:1px solid rgba(255,255,255,.25); }
+.gate-progress-bar { width:100%; height:6px; background:rgba(255,255,255,0.15); border-radius:var(--rfull); overflow:hidden; }
+.gate-progress-fill { height:100%; background:var(--grad-s1); border-radius:var(--rfull); transition:width .4s; }
+.gate-progress-label { font-size:11px; color:var(--text-30); font-family:var(--fm); }
+.gate-table-next { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); border-radius:var(--rmd); padding:12px 16px; width:100%; }
+.gate-table-next-q { font-family:var(--fb); font-size:18px; font-weight:800; color:var(--text); background:var(--grad-s1); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; border-radius:var(--rsm); padding:4px 10px; white-space:nowrap; border:1px solid rgba(255,45,120,.3); }
+.gate-table-next-txt { flex:1; font-size:13px; color:var(--text-60); line-height:1.5; text-align:left; }
+
+/* ── STEP 2 PRACTISE ── */
+.p2-card-wrap { padding:1.25rem; }
+.p2-phase { text-align:center; margin-bottom:.75rem; }
+.p2-phase-label { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:4px 14px; border-radius:var(--rfull); }
+.phase-look { background:rgba(255,224,61,.15); color:var(--neon-yellow); }
+.phase-cover { background:var(--surface-3); color:var(--text-30); }
+.phase-write { background:rgba(155,89,245,.15); color:#C69EFF; }
+.phase-check { background:rgba(0,245,160,.12); color:var(--neon-green); }
+
+.p2-fact-display {
+  background:rgba(30,55,140,0.80);
+  border:1px solid rgba(255,255,255,0.18);
+  border-radius:var(--rlg); padding:2rem 1rem; text-align:center; margin-bottom:1rem;
+  position:relative; min-height:136px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+}
+.p2-fact-q { font-size:46px; font-weight:800; color:var(--text); letter-spacing:-.03em; line-height:1; font-family:var(--fb); }
+.p2-fact-cover { font-size:13px; color:var(--text-30); letter-spacing:.04em; }
+.p2-streak { position:absolute; top:12px; right:14px; display:flex; gap:5px; }
+.p2-dot { width:10px; height:10px; border-radius:50%; border:1.5px solid rgba(255,255,255,0.30); background:rgba(255,255,255,0.12); transition:all .2s; }
+.p2-dot.filled { background:#7FFFD4; border-color:#7FFFD4; }
+.p2-source-tag { position:absolute; top:12px; left:14px; font-size:9px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; padding:3px 8px; border-radius:var(--rfull); background:rgba(255,255,255,0.18); color:rgba(255,255,255,0.75); }
+
+.p2-input-row { display:flex; gap:8px; margin-bottom:1rem; }
+.p2-input {
+  flex:1; height:54px; border:2px solid rgba(255,255,255,0.30);
+  border-radius:var(--rmd); font-family:var(--fb); font-size:30px; font-weight:800;
+  color:#FFFFFF; text-align:center; background:rgba(255,255,255,0.15); outline:none; transition:border-color .15s; caret-color:white;
+}
+.p2-input:focus { border-color:rgba(255,255,255,0.65); box-shadow:0 0 0 3px rgba(255,255,255,0.12); }
+.p2-input.correct { border-color:#7FFFD4; background:rgba(0,200,150,.18); color:#7FFFD4; }
+.p2-input.wrong { border-color:#FF7AAF; background:rgba(255,45,120,.18); color:#FF9EC0; }
+.p2-submit { height:54px; padding:0 20px; border:none; border-radius:var(--rmd); background:var(--grad-s2); color:var(--white); font-family:var(--fb); font-size:15px; font-weight:700; cursor:pointer; transition:opacity .15s; box-shadow:var(--glow-violet); }
+.p2-submit:hover { opacity:.85; }
+.p2-submit:disabled { background:var(--surface-3); color:var(--text-30); cursor:default; box-shadow:none; }
+
+.p2-action-row { display:flex; gap:8px; margin-bottom:1rem; }
+.p2-action-btn { flex:1; padding:12px; border-radius:var(--rmd); font-family:var(--fb); font-size:14px; font-weight:700; cursor:pointer; transition:all .15s; border:1px solid; }
+.p2-btn-wrong { background:rgba(255,45,120,.18); color:#FF9EC0; border-color:rgba(255,122,175,.35); }
+.p2-btn-wrong:hover { background:rgba(255,45,120,.28); }
+.p2-btn-correct { background:rgba(0,200,150,.18); color:#7FFFD4; border-color:rgba(127,255,212,.35); }
+.p2-btn-correct:hover { background:rgba(0,200,150,.28); }
+
+.p2-hint-text { font-size:12px; color:var(--text-30); text-align:center; margin-bottom:.5rem; min-height:16px; }
+.queue-section { padding:0 1.25rem 1.25rem; }
+.p2-queue { display:flex; gap:6px; flex-wrap:wrap; }
+.p2-queue-item { font-family:var(--fm); font-size:11px; padding:4px 10px; border-radius:var(--rfull); border:1px solid; }
+.p2-queue-item.pending { background:rgba(255,255,255,0.10); border-color:rgba(255,255,255,0.20); color:rgba(255,255,255,0.40); }
+.p2-queue-item.active { background:rgba(255,255,255,.20); border-color:rgba(255,255,255,.40); color:#FFFFFF; font-weight:700; }
+.p2-queue-item.done { background:rgba(0,200,150,.20); border-color:rgba(127,255,212,.35); color:#7FFFD4; }
+
+.key-hint { text-align:center; font-size:11px; color:var(--text-30); margin-top:1rem; }
+kbd { display:inline-block; font-family:var(--fm); font-size:10px; padding:2px 8px; border:1px solid rgba(255,255,255,0.25); border-radius:var(--rsm); background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.65); }
+
+/* ── STEP 3 SPRINT ── */
+.s3-timer-ring-wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:1.5rem 1rem .5rem; gap:8px; }
+.s3-ring-svg { width:110px; height:110px; transform:rotate(-90deg); }
+.s3-ring-track { fill:none; stroke:rgba(255,255,255,0.18); stroke-width:7; }
+.s3-ring-arc { fill:none; stroke:var(--electric); stroke-width:7; stroke-linecap:round; transition:stroke-dashoffset .08s linear, stroke .5s; filter:drop-shadow(0 0 8px rgba(0,198,255,.6)); }
+.s3-timer-num { font-family:var(--fb); font-size:36px; font-weight:800; color:var(--text); letter-spacing:-.03em; }
+.s3-timer-label { font-size:10px; color:var(--text-30); text-transform:uppercase; letter-spacing:.08em; font-weight:600; }
+.s3-question-wrap { padding:1rem 1.25rem .5rem; text-align:center; }
+.s3-question { font-family:var(--fb); font-size:56px; font-weight:800; color:var(--text); letter-spacing:-.04em; line-height:1; }
+.s3-question-label { font-size:10px; color:var(--text-30); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; font-weight:600; }
+.s3-feedback { min-height:30px; display:flex; align-items:center; justify-content:center; margin-top:6px; }
+.s3-feedback-text { font-size:20px; font-weight:800; opacity:0; transition:opacity .1s; }
+.s3-feedback-text.show { opacity:1; }
+.s3-feedback-text.ok { color:var(--neon-green-dark); }
+.s3-feedback-text.bad { color:#FF7AAF; }
+.s3-input-row { display:flex; gap:8px; padding:.75rem 1.25rem; }
+.s3-input {
+  flex:1; height:60px;
+  border:2px solid rgba(255,255,255,0.30);
+  border-radius:var(--rmd); font-family:var(--fb); font-size:36px; font-weight:800;
+  color:#FFFFFF; text-align:center; background:rgba(255,255,255,0.15); outline:none; caret-color:white;
+  transition:border-color .15s;
+}
+.s3-input:focus { border-color:rgba(255,255,255,0.65); box-shadow:0 0 0 3px rgba(255,255,255,0.12); }
+.s3-input.flash-ok { border-color:#7FFFD4; background:rgba(0,200,150,.20); }
+.s3-input.flash-bad { border-color:#FF7AAF; background:rgba(255,45,120,.20); }
+.s3-submit { height:60px; padding:0 22px; border:none; border-radius:var(--rmd); background:var(--grad-s3); color:var(--bg); font-family:var(--fb); font-size:15px; font-weight:800; cursor:pointer; transition:opacity .15s; box-shadow:var(--glow-blue); white-space:nowrap; }
+.s3-submit:hover { opacity:.85; }
+.s3-scores-row { display:flex; gap:8px; padding:0 1.25rem 1rem; }
+.s3-score-box { flex:1; border-radius:var(--rmd); border:1px solid rgba(255,255,255,0.20); background:rgba(255,255,255,0.10); padding:8px 10px; text-align:center; }
+.s3-score-box-label { font-size:9px; font-weight:700; color:var(--text-30); text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
+.s3-score-box-num { font-family:var(--fb); font-size:26px; font-weight:800; color:var(--text); }
+.s3-score-box.correct .s3-score-box-num { color:var(--neon-green-dark); }
+.s3-score-box.wrong .s3-score-box-num { color:var(--hot-pink-dark); }
+/* Done */
+.s3-score-card { display:flex; flex-direction:column; align-items:center; gap:6px; margin-bottom:1.25rem; }
+.s3-big-score { font-family:var(--fb); font-size:72px; font-weight:800; background:var(--grad-s3); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; letter-spacing:-.05em; filter:drop-shadow(0 2px 8px rgba(56,200,240,.3)); }
+.s3-big-score-label { font-size:13px; color:var(--text-60); }
+.s3-accuracy-bar-wrap { width:100%; height:6px; background:var(--surface-3); border-radius:var(--rfull); overflow:hidden; margin-top:4px; }
+.s3-accuracy-bar { height:100%; border-radius:var(--rfull); background:var(--grad-s3); transition:width .6s cubic-bezier(.4,0,.2,1); }
+.s3-accuracy-label { font-size:12px; color:var(--text-60); font-family:var(--fm); }
+.s3-pb-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(255,224,61,.12); border:1px solid rgba(255,224,61,.3); border-radius:var(--rfull); padding:4px 14px; font-size:12px; font-weight:700; color:var(--neon-yellow); }
+
+/* ── STEP 4 TRACK ── */
+.s4-table-section { padding:1.25rem; border-bottom:1px solid rgba(255,255,255,0.15); }
+.s4-chart-wrap { padding:1.25rem 1.25rem 0; }
+.s4-chart-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:12px; }
+.s4-chart-title { font-size:13px; font-weight:700; color:rgba(255,255,255,.85); }
+.s4-chart-sub { font-size:11px; color:rgba(255,255,255,.40); font-family:var(--fm); }
+.s4-target-label { font-size:10px; font-weight:700; color:#7FFFD4; letter-spacing:.04em; text-transform:uppercase; }
+.s4-graph { position:relative; height:200px; background:rgba(255,255,255,.06); border-radius:var(--rmd); border:1px solid rgba(255,255,255,.12); overflow:hidden; display:flex; align-items:flex-end; gap:3px; padding:0 10px 28px; }
+.s4-target-line {
+  position:absolute; left:0; right:0;
+  border-top:2px dashed rgba(127,255,212,.55);
+  pointer-events:none; z-index:2;
+}
+.s4-target-line-label {
+  position:absolute; right:8px; top:-18px;
+  font-size:9px; font-weight:700; color:#7FFFD4; letter-spacing:.05em; text-transform:uppercase;
+}
+.s4-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:3px; min-width:0; }
+.s4-bar {
+  width:100%; border-radius:4px 4px 0 0;
+  background:var(--grad-s3);
+  transition:height .5s cubic-bezier(.4,0,.2,1);
+  position:relative; min-height:0;
+}
+.s4-bar.is-pb { background:var(--grad-s4); box-shadow:0 0 10px rgba(0,200,150,.4); }
+.s4-bar.at-target { background:var(--grad-s4); box-shadow:0 0 12px rgba(0,200,150,.5); }
+.s4-bar-val { font-family:var(--fm); font-size:9px; font-weight:700; color:rgba(255,255,255,.70); position:absolute; top:-16px; left:50%; transform:translateX(-50%); white-space:nowrap; }
+.s4-bar-date { font-size:8px; color:rgba(255,255,255,.30); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.s4-empty-state { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; text-align:center; padding:1rem; }
+.s4-empty-state p { font-size:13px; color:rgba(255,255,255,.40); }
+.s4-stats-row { display:flex; gap:8px; padding:1rem 1.25rem; }
+.s4-stat { flex:1; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); border-radius:var(--rmd); padding:10px 12px; text-align:center; }
+.s4-stat-num { font-family:var(--fb); font-size:24px; font-weight:800; color:#fff; }
+.s4-stat-num.green { color:#7FFFD4; }
+.s4-stat-label { font-size:9px; font-weight:700; color:rgba(255,255,255,.35); text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
+.s4-fluency-bar-wrap { padding:0 1.25rem 1.25rem; }
+.s4-fluency-label { display:flex; justify-content:space-between; font-size:11px; color:rgba(255,255,255,.50); margin-bottom:6px; font-family:var(--fm); }
+.s4-fluency-track { height:8px; background:rgba(255,255,255,.10); border-radius:var(--rfull); overflow:hidden; }
+.s4-fluency-fill { height:100%; border-radius:var(--rfull); background:var(--grad-s4); transition:width .7s cubic-bezier(.4,0,.2,1); }
+
+@media(max-width:420px){
+  .card-stack{width:238px;height:160px;} .card-question{font-size:36px;} .flash-scene{height:220px;} .p2-fact-q{font-size:36px;} .s3-question{font-size:44px;}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}}
+
+.header-menu-btn {
+  font-family:var(--fb); font-size:12px; font-weight:700;
+  background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22);
+  border-radius:var(--rfull); padding:5px 14px; color:rgba(255,255,255,0.80);
+  cursor:pointer; transition:all .15s; letter-spacing:.01em;
+}
+.header-menu-btn:hover { background:rgba(255,255,255,0.22); color:#fff; }
+
+.confirm-overlay {
+  position:fixed; inset:0; z-index:999;
+  background:rgba(20,35,100,0.65);
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  display:flex; align-items:center; justify-content:center; padding:1.5rem;
+  opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.confirm-overlay.show { opacity:1; pointer-events:auto; }
+.confirm-box {
+  background:rgba(255,255,255,0.16);
+  backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px);
+  border:1px solid rgba(255,255,255,0.28);
+  border-radius:var(--rxl);
+  box-shadow:0 8px 40px rgba(20,35,100,0.40);
+  padding:2rem 1.5rem; text-align:center;
+  width:100%; max-width:320px;
+  display:flex; flex-direction:column; gap:1rem; align-items:center;
+}
+.confirm-box h3 { font-size:18px; font-weight:800; color:#fff; letter-spacing:-.02em; }
+.confirm-box p { font-size:13px; color:rgba(255,255,255,0.70); line-height:1.6; }
+.confirm-btns { display:flex; gap:8px; width:100%; }
+.confirm-btns .btn-cancel {
+  flex:1; font-family:var(--fb); font-size:14px; font-weight:600;
+  background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22);
+  border-radius:var(--rmd); padding:11px; color:rgba(255,255,255,0.80); cursor:pointer; transition:all .15s;
+}
+.confirm-btns .btn-cancel:hover { background:rgba(255,255,255,0.22); color:#fff; }
+.confirm-btns .btn-confirm {
+  flex:1; font-family:var(--fb); font-size:14px; font-weight:700;
+  background:var(--grad-s1); border:none; border-radius:var(--rmd);
+  padding:11px; color:#fff; cursor:pointer; box-shadow:var(--glow-pink); transition:opacity .15s;
+}
+.confirm-btns .btn-confirm:hover { opacity:.85; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark"><svg viewBox="0 0 16 16"><path d="M3 8h10M8 3v10"/></svg></div>
+    <span class="logo-text">× ÷ Pathway</span>
+  </div>
+  <span id="headerPill" class="pill-s1">Step 1 of 4 · Sort</span>
+  <button class="header-menu-btn" id="headerMenuBtn" onclick="confirmMenu()" style="display:none">↩ Menu</button>
+</header>
+
+<main>
+  <div class="step-strip">
+    <div class="step-node"><div class="sbar active" id="sb1"></div><span class="slbl active" id="sl1">Sort</span></div>
+    <div class="step-node"><div class="sbar" id="sb2"></div><span class="slbl" id="sl2">Practise</span></div>
+    <div class="step-node"><div class="sbar" id="sb3"></div><span class="slbl" id="sl3">Test</span></div>
+    <div class="step-node"><div class="sbar" id="sb4"></div><span class="slbl" id="sl4">Record</span></div>
+  </div>
+
+  <!-- S1 START -->
+  <div class="screen active" id="scrS1Start">
+    <div class="card-shell">
+      <div class="table-section">
+        <div class="section-label">Choose your <button class="mode-toggle" id="modeToggle" onclick="toggleMode()"><span id="modeWord">times</span></button> table</div>
+        <div class="table-btns" id="tableSelect"></div>
+      </div>
+      <div class="start-hero">
+        <div class="icon-ring coral">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+        </div>
+        <h1 class="start-title" id="s1StartTitle">Sort your flash cards</h1>
+        <p class="start-desc" id="s1StartDesc">Say each answer aloud — the answer reveals automatically after 3 seconds. Sort into <strong>Nailed It</strong> or <strong>Not Yet</strong>.</p>
+        <div class="callout amber" style="width:100%">
+          <div class="callout-icon"><svg viewBox="0 0 16 16"><polyline points="8 2 8 9"/><circle cx="8" cy="12" r="1" fill="white"/></svg></div>
+          <div class="callout-text">
+            <strong>Why 3 seconds?</strong>
+            <p>Fluency means knowing a fact automatically. If the answer hasn't come in 3 seconds, it's a "Not Yet" for now.</p>
+          </div>
+        </div>
+      </div>
+      <div class="start-footer">
+        <button class="btn-primary coral" onclick="showScreen('scrS1Game');initS1()">Start sorting →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- S1 GAME -->
+  <div class="screen" id="scrS1Game">
+    <div class="card-shell">
+      <div class="progress-section">
+        <div class="pbar-wrap"><div class="pbar-fill coral" id="s1ProgFill" style="width:0%"></div></div>
+        <span class="pbar-label" id="s1ProgText">0 / 12</span>
+      </div>
+      <div class="flash-scene">
+        <div class="card-stack" id="cardStack"></div>
+        <div class="fly-label" id="flyLabel"></div>
+      </div>
+      <p class="swipe-hint" id="s1Hint">Say the answer aloud…</p>
+      <div class="swipe-labels">
+        <div class="swipe-label notyet" id="btnNotYet" onclick="swipeCard('left')" role="button" tabindex="0">
+          <svg viewBox="0 0 16 16"><polyline points="10 4 6 8 10 12"/></svg> Not Yet
+        </div>
+        <div class="swipe-label nailed" id="btnNailed" onclick="swipeCard('right')" role="button" tabindex="0">
+          Nailed It <svg viewBox="0 0 16 16"><polyline points="6 4 10 8 6 12"/></svg>
+        </div>
+      </div>
+      <div class="pile-counts">
+        <div class="pile-count"><div class="pile-count-title notyet">Not Yet</div><div class="pile-count-num" id="notYetCount">0</div></div>
+        <div class="pile-count"><div class="pile-count-title nailed">Nailed It</div><div class="pile-count-num" id="nailedCount">0</div></div>
+      </div>
+      <div class="why-callout coral"><p>Sorting externalises what you know — it removes cognitive load and gives a visible, growing sense of progress as the "Nailed It" pile builds.</p></div>
+    </div>
+    <p class="key-hint"><kbd>←</kbd> Not Yet · <kbd>→</kbd> Nailed It</p>
+  </div>
+
+  <!-- S1 DONE -->
+  <div class="screen" id="scrS1Done">
+    <div class="card-shell">
+      <div class="done-inner">
+        <div class="done-icon" id="s1DoneIcon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <h2 class="done-title" id="s1DoneTitle"></h2>
+        <p class="done-sub" id="s1DoneSub"></p>
+        <div class="done-piles">
+          <div class="done-pile nailed"><div class="done-pile-num" id="s1DoneNailed">0</div><div class="done-pile-lbl">Nailed It</div></div>
+          <div class="done-pile notyet"><div class="done-pile-num" id="s1DoneNotYet">0</div><div class="done-pile-lbl">Not Yet</div></div>
+        </div>
+        <div class="done-note" id="s1DoneNote"></div>
+        <div class="done-actions" id="s1DoneActions"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GATE: not enough not-yets yet -->
+  <div class="screen" id="scrGate">
+    <div class="gate-card">
+      <div class="gate-hero">
+        <div class="icon-ring coral">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-6 4 2 7-6-4-6 4 2-7-6-4h7z"/></svg>
+        </div>
+        <h2 class="start-title">Keep collecting Not Yets!</h2>
+        <p class="start-desc" id="gateDesc"></p>
+
+        <!-- bank of collected not-yets -->
+        <div style="width:100%">
+          <div class="queue-label" style="margin-bottom:6px">Your Not Yet bank</div>
+          <div class="gate-bank" id="gateBankTags"></div>
+        </div>
+
+        <!-- progress toward 5 -->
+        <div style="width:100%;display:flex;flex-direction:column;gap:6px">
+          <div class="gate-progress-bar"><div class="gate-progress-fill" id="gateProgFill" style="width:0%"></div></div>
+          <div style="display:flex;justify-content:space-between">
+            <span class="gate-progress-label" id="gateProgLabel">0 collected</span>
+            <span class="gate-progress-label">5 needed to practise</span>
+          </div>
+        </div>
+
+        <!-- next table recommendation -->
+        <div class="gate-table-next" id="gateNextTableWrap">
+          <div class="gate-table-next-q" id="gateNextTableQ"></div>
+          <div class="gate-table-next-txt" id="gateNextTableTxt"></div>
+        </div>
+      </div>
+      <div class="start-footer">
+        <button class="btn-primary coral" id="gateSortNextBtn" onclick="sortNextTable()"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- S2 START -->
+  <div class="screen" id="scrS2Start">
+    <div class="card-shell">
+      <div class="start-hero">
+        <div class="icon-ring purple">
+          <svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 4-3 6-4 9H9c-1-3-4-5-4-9a7 7 0 0 1 7-7z"/><line x1="9" y1="21" x2="15" y2="21"/><line x1="9" y1="18" x2="15" y2="18"/></svg>
+        </div>
+        <h1 class="start-title">Practise your Not Yet facts</h1>
+        <p class="start-desc" id="s2StartDesc"></p>
+        <div class="callout purple" style="width:100%">
+          <div class="callout-icon"><svg viewBox="0 0 16 16"><path d="M8 2 L14 8 L8 14 L2 8 Z"/></svg></div>
+          <div class="callout-text">
+            <strong>Why this works</strong>
+            <p>Retrieving facts from memory — not re-reading them — is what builds long-term retention. Get each fact right 3 times in a row to nail it.</p>
+          </div>
+        </div>
+      </div>
+      <div class="start-footer">
+        <button class="btn-primary purple" onclick="showScreen('scrS2Game');initS2()">Start practising →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- S2 GAME -->
+  <div class="screen" id="scrS2Game">
+    <div class="card-shell">
+      <div class="progress-section">
+        <div class="pbar-wrap"><div class="pbar-fill purple" id="s2ProgFill" style="width:0%"></div></div>
+        <span class="pbar-label" id="s2ProgText">0 / 0</span>
+      </div>
+      <div class="p2-card-wrap">
+        <div class="p2-phase"><span class="p2-phase-label" id="p2PhaseLabel">Look</span></div>
+        <div class="p2-fact-display">
+          <div class="p2-streak" id="p2Streak">
+            <div class="p2-dot" id="d0"></div><div class="p2-dot" id="d1"></div><div class="p2-dot" id="d2"></div>
+          </div>
+          <div class="p2-source-tag" id="p2SourceTag"></div>
+          <span class="p2-fact-q" id="p2Question"></span>
+          <span id="p2Answer" style="font-size:26px;font-family:var(--fm);color:var(--teal-500);opacity:0;transition:opacity .25s;"></span>
+          <span class="p2-fact-cover" id="p2CoverHint"></span>
+        </div>
+        <div id="p2WriteRow" class="p2-input-row" style="display:none">
+          <input type="number" inputmode="numeric" class="p2-input" id="p2Input" placeholder="?" autocomplete="off"/>
+          <button class="p2-submit" id="p2SubmitBtn" type="button">Check</button>
+        </div>
+        <div id="p2ActionRow" class="p2-action-row" style="display:none">
+          <button class="p2-action-btn p2-btn-wrong" onclick="markWrong()">✗ Not quite</button>
+          <button class="p2-action-btn p2-btn-correct" onclick="markCorrect()">✓ Got it!</button>
+        </div>
+        <p class="p2-hint-text" id="p2HintText"></p>
+        <button class="btn-primary purple" id="p2ActionBtn" onclick="p2Next()" style="margin-bottom:1rem;">Cover the answer →</button>
+      </div>
+      <div class="queue-section">
+        <div class="queue-label">All Not Yet facts</div>
+        <div class="p2-queue" id="p2Queue"></div>
+      </div>
+      <div class="why-callout purple"><p>Each retrieval strengthens the memory trace. Three successful recalls in a row means the fact is becoming automatic.</p></div>
+    </div>
+  </div>
+
+  <!-- S2 DONE -->
+  <div class="screen" id="scrS2Done">
+    <div class="card-shell">
+      <div class="done-inner">
+        <div class="done-icon" style="background:var(--purple-500)"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <h2 class="done-title" id="s2DoneTitle"></h2>
+        <p class="done-sub" id="s2DoneSub"></p>
+        <div class="done-piles">
+          <div class="done-pile nailed"><div class="done-pile-num" id="s2DoneNailed">0</div><div class="done-pile-lbl">Nailed It</div></div>
+          <div class="done-pile notyet"><div class="done-pile-num" id="s2DoneStillNotYet">0</div><div class="done-pile-lbl">Still Not Yet</div></div>
+        </div>
+        <div class="done-note" id="s2DoneNote"></div>
+        <div class="done-actions">
+          <button class="btn-sec" onclick="showScreen('scrS1Start')">↩ Start over</button>
+          <button class="btn-sec" onclick="showScreen('scrS2Game');initS2()">↺ Practise again</button>
+          <button class="btn-next blue" onclick="goToStep3()">Step 3: Sprint →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════
+       SCREEN: Step 3 Start
+  ════════════════════════════════ -->
+  <div class="screen" id="scrS3Start">
+    <div class="card-shell">
+      <!-- Table picker (sprint is per-table) -->
+      <div class="s3-table-select-wrap">
+        <div class="section-label">Sprint: <span id="s3ModeLabel">times</span> table</div>
+        <div class="table-btns" id="s3TableSelect"></div>
+      </div>
+      <div class="start-hero">
+        <div class="icon-ring blue">
+          <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+        <h1 class="start-title">Sprint!</h1>
+        <p class="start-desc">You have <strong>60 seconds</strong> to answer as many facts from the times table as you can. Type each answer and hit Enter — move fast!</p>
+        <div class="callout blue" style="width:100%">
+          <div class="callout-icon"><svg viewBox="0 0 16 16"><polyline points="13 2 8 9 11 9 3 14 8 7 5 7"/></svg></div>
+          <div class="callout-text">
+            <strong>Why this works</strong>
+            <p>The sprint builds retrieval speed — training you to access what you know quickly and with confidence.</p>
+          </div>
+        </div>
+      </div>
+      <div class="start-footer">
+        <button class="btn-primary blue" onclick="startSprint()">Start sprint →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════
+       SCREEN: Step 3 Game
+  ════════════════════════════════ -->
+  <div class="screen" id="scrS3Game">
+    <div class="card-shell">
+      <!-- Timer ring -->
+      <div class="s3-timer-ring-wrap">
+        <div style="position:relative;width:100px;height:100px;">
+          <svg class="s3-ring-svg" viewBox="0 0 100 100">
+            <circle class="s3-ring-track" cx="50" cy="50" r="44"/>
+            <circle class="s3-ring-arc" id="s3RingArc" cx="50" cy="50" r="44"
+              stroke-dasharray="276.46" stroke-dashoffset="0"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0">
+            <span class="s3-timer-num" id="s3TimerNum">60</span>
+          </div>
+        </div>
+        <span class="s3-timer-label">seconds left</span>
+      </div>
+
+      <!-- Question -->
+      <div class="s3-question-wrap">
+        <div class="s3-question-label" id="s3TableLabel"></div>
+        <div class="s3-question" id="s3Question">—</div>
+        <div class="s3-feedback"><span class="s3-feedback-text" id="s3Feedback"></span></div>
+      </div>
+
+      <!-- Input -->
+      <div class="s3-input-row">
+        <input type="number" inputmode="numeric" class="s3-input" id="s3Input"
+          placeholder="?" autocomplete="off"/>
+        <button class="s3-submit" onclick="s3Submit()">Enter</button>
+      </div>
+
+      <!-- Score -->
+      <div class="s3-scores-row">
+        <div class="s3-score-box correct">
+          <div class="s3-score-box-label">Correct</div>
+          <div class="s3-score-box-num" id="s3CorrectCount">0</div>
+        </div>
+        <div class="s3-score-box">
+          <div class="s3-score-box-label">Attempted</div>
+          <div class="s3-score-box-num" id="s3AttemptCount">0</div>
+        </div>
+        <div class="s3-score-box wrong">
+          <div class="s3-score-box-label">Skipped</div>
+          <div class="s3-score-box-num" id="s3SkipCount">0</div>
+        </div>
+      </div>
+      <div class="why-callout blue"><p>Speed matters here — if you hesitate more than a second or two, skip and keep moving. The goal is fluency, not perfection.</p></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════
+       SCREEN: Step 3 Done
+  ════════════════════════════════ -->
+  <div class="screen" id="scrS3Done">
+    <div class="card-shell">
+      <div class="done-inner">
+        <div class="done-icon" style="background:var(--blue-500)">
+          <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" stroke-width="2"/></svg>
+        </div>
+        <h2 class="done-title" id="s3DoneTitle"></h2>
+        <p class="done-sub" id="s3DoneSub"></p>
+
+        <div class="s3-score-card">
+          <div class="s3-big-score" id="s3BigScore">0</div>
+          <div class="s3-big-score-label">correct in 60 seconds</div>
+          <div id="s3PbBadge" style="display:none" class="s3-pb-badge">⭐ New personal best!</div>
+        </div>
+
+        <div style="width:100%;margin-bottom:1.25rem">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span class="s3-accuracy-label" id="s3AccLabel"></span>
+            <span class="s3-accuracy-label" id="s3AccPct"></span>
+          </div>
+          <div class="s3-accuracy-bar-wrap"><div class="s3-accuracy-bar" id="s3AccBar" style="width:0%"></div></div>
+        </div>
+
+        <!-- Per-fact breakdown -->
+        <div class="queue-section" style="padding:0;margin-bottom:1.25rem;width:100%">
+          <div class="queue-label" style="margin-bottom:8px">Fact by fact</div>
+          <div class="p2-queue" id="s3FactBreakdown"></div>
+        </div>
+
+        <div class="done-note" id="s3DoneNote"></div>
+        <div class="done-actions">
+          <button class="btn-sec" onclick="showScreen('scrS3Start')">↺ Sprint again</button>
+          <button class="btn-sec" onclick="showScreen('scrS1Start')">↩ Start over</button>
+          <button class="btn-next green" id="btnGoS4" onclick="goToStep4()" style="display:none">Step 4: Track →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ════════════════════════════════
+       SCREEN: Step 4 Track
+  ════════════════════════════════ -->
+  <div class="screen" id="scrS4">
+    <div class="card-shell">
+
+      <!-- Table picker -->
+      <div class="s4-table-section">
+        <div class="section-label">Track progress for</div>
+        <div class="table-btns" id="s4TableSelect"></div>
+      </div>
+
+      <!-- Chart -->
+      <div class="s4-chart-wrap">
+        <div class="s4-chart-header">
+          <div>
+            <div class="s4-chart-title" id="s4ChartTitle">Sprint scores</div>
+            <div class="s4-chart-sub" id="s4ChartSub">Last 10 sessions</div>
+          </div>
+          <div class="s4-target-label">Target: 40</div>
+        </div>
+
+        <div class="s4-graph" id="s4Graph">
+          <div class="s4-empty-state" id="s4EmptyState">
+            <p>No scores yet for this table.<br>Complete a sprint to see your progress!</p>
+          </div>
+          <!-- bars rendered by JS -->
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="s4-stats-row">
+        <div class="s4-stat">
+          <div class="s4-stat-num green" id="s4PbStat">—</div>
+          <div class="s4-stat-label">Personal Best</div>
+        </div>
+        <div class="s4-stat">
+          <div class="s4-stat-num" id="s4LastStat">—</div>
+          <div class="s4-stat-label">Last Score</div>
+        </div>
+        <div class="s4-stat">
+          <div class="s4-stat-num" id="s4SessionsStat">0</div>
+          <div class="s4-stat-label">Sprints Done</div>
+        </div>
+      </div>
+
+      <!-- Fluency progress toward 40 -->
+      <div class="s4-fluency-bar-wrap">
+        <div class="s4-fluency-label">
+          <span>Progress toward fluency (40/min)</span>
+          <span id="s4FluencyPct">0%</span>
+        </div>
+        <div class="s4-fluency-track">
+          <div class="s4-fluency-fill" id="s4FluencyFill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="why-callout blue" style="margin:0 1.25rem 1.25rem">
+        <p>Self-tracking builds intrinsic motivation — when you can see your own progress, you become invested in improving it. Target: 40 correct answers per minute.</p>
+      </div>
+
+      <div style="padding:0 1.25rem 1.25rem;display:flex;gap:8px">
+        <button class="btn-primary green" onclick="showScreen('scrS3Start')">Sprint again →</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ── CONFIRM RETURN TO MENU OVERLAY ── -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <h3>Return to menu?</h3>
+    <p>Your progress in this session will be reset. Are you sure?</p>
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="closeConfirm()">Keep going</button>
+      <button class="btn-confirm" onclick="resetAll()">Yes, menu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════
+   GLOBALS
+═══════════════════════════════════ */
+const TABLES = [2,3,4,5,6,7,8,9,10,11,12];
+const MIN_BANK = 5;
+
+// Only show Step 4 (Track) when running locally — localStorage is reliable there
+// and teachers embedding this in a webpage can skip the tracking screen entirely
+const IS_LOCAL = window.location.protocol === 'file:';
+
+let currentTable = 2;
+let currentMode = 'times'; // 'times' | 'division'
+// Map: table → array of {q, a} that were Not Yet
+let notYetBank = {}; // e.g. { 2: [{q:'2×3',a:'6'},...], 3: [...] }
+let completedTables = new Set(); // tables that have been sorted
+
+// Step 1 state
+let s1Cards=[], s1Idx=0, s1Nailed=0, s1NotYet=0;
+let s1Revealed=false, s1TopCard=null, s1Animating=false;
+let s1CdTimer=null, s1CdStart=null;
+const CIRC=2*Math.PI*15, CD_MS=3000;
+
+// Step 2 state
+let s2Facts=[], s2QueueOrder=[], s2Current=0, s2Phase='look', s2TotalDone=0;
+
+// Step 3 state
+let s3Table=2, s3Questions=[], s3QIdx=0, s3Correct=0, s3Attempts=0, s3Skips=0;
+let s3TimeLeft=60, s3Timer=null, s3RingCirc=276.46, s3Results=[], s3PersonalBests={};
+
+// Step 4 state
+let s4Table=2;
+const S4_TARGET=40;
+const S4_STORAGE_KEY='multipath_scores'; // localStorage key
+
+/* ═══════════════════════════════════
+   MODE TOGGLE
+═══════════════════════════════════ */
+function toggleMode(){
+  currentMode = currentMode === 'times' ? 'division' : 'times';
+  const isDivision = currentMode === 'division';
+  // Update toggle button word
+  document.getElementById('modeWord').textContent = isDivision ? 'divided by' : 'times';
+  // Sync s3 label
+  const s3lbl = document.getElementById('s3ModeLabel');
+  if(s3lbl) s3lbl.textContent = isDivision ? 'divided by' : 'times';
+  // Update start screen subtitle
+  const descEl = document.getElementById('s1StartDesc');
+  if(descEl) descEl.innerHTML = isDivision
+    ? 'Each card shows a division fact. Say your answer aloud — the answer reveals after 3 seconds. Sort into <strong>Nailed It</strong> or <strong>Not Yet</strong>.'
+    : 'Say each answer aloud — the answer reveals automatically after 3 seconds. Sort into <strong>Nailed It</strong> or <strong>Not Yet</strong>.';
+  // Reset bank and completed since we're switching operation
+  notYetBank = {};
+  completedTables = new Set();
+  // Rebuild selectors with new mode symbols
+  buildTableSelect();
+  buildS3TableSelect();
+}
+
+/* ═══════════════════════════════════
+   SCREEN MANAGER
+═══════════════════════════════════ */
+const ALL_SCREENS=['scrS1Start','scrS1Game','scrS1Done','scrGate','scrS2Start','scrS2Game','scrS2Done','scrS3Start','scrS3Game','scrS3Done','scrS4'];
+
+function showScreen(id){
+  ALL_SCREENS.forEach(s=>{
+    document.getElementById(s).classList.toggle('active',s===id);
+  });
+  updateStepUI(id);
+  // Show the ↩ Menu button on all active game/step screens; hide on start screens
+  const isStartOrDone = id==='scrS1Start';
+  document.getElementById('headerMenuBtn').style.display = isStartOrDone ? 'none' : 'block';
+}
+
+function confirmMenu(){
+  document.getElementById('confirmOverlay').classList.add('show');
+  // Pause countdown if mid-sort
+  clearS1Cd();
+  // Pause sprint timer if mid-sprint
+  if(s3Timer){ clearInterval(s3Timer); }
+}
+
+function closeConfirm(){
+  document.getElementById('confirmOverlay').classList.remove('show');
+  // Resume countdown if we're on the sort screen mid-card
+  const s1Active = document.getElementById('scrS1Game').classList.contains('active');
+  if(s1Active && !s1Revealed){ startS1Cd(); }
+  // Resume sprint timer if we were in sprint
+  const s3Active = document.getElementById('scrS3Game').classList.contains('active');
+  if(s3Active && s3TimeLeft>0){ s3Timer=setInterval(s3Tick,1000); }
+}
+
+function resetAll(){
+  // Clear all timers
+  clearS1Cd();
+  clearInterval(s3Timer);
+  s3Timer=null;
+  // Reset all state
+  notYetBank={};
+  completedTables=new Set();
+  s1Cards=[]; s1Idx=0; s1Nailed=0; s1NotYet=0; s1Revealed=false; s1Animating=false;
+  s2Facts=[]; s2QueueOrder=[]; s2Current=0; s2Phase='look'; s2TotalDone=0;
+  s3Questions=[]; s3QIdx=0; s3Correct=0; s3Attempts=0; s3Skips=0; s3TimeLeft=60; s3Results=[];
+  currentTable=2; s4Table=2; currentMode='times';
+  // Reset mode toggle text
+  document.getElementById('modeWord').textContent='times';
+  // Close overlay
+  document.getElementById('confirmOverlay').classList.remove('show');
+  // Rebuild selectors fresh
+  buildTableSelect();
+  buildS3TableSelect();
+  buildS4TableSelect();
+  // Go home
+  showScreen('scrS1Start');
+}
+
+function updateStepUI(id){
+  const pill=document.getElementById('headerPill');
+  ['sb1','sb2','sb3','sb4'].forEach((b,i)=>{
+    document.getElementById(b).className='sbar';
+    document.getElementById('sl'+(i+1)).className='slbl';
+  });
+  if(id.startsWith('scrS1')||id==='scrGate'){
+    pill.className='pill-s1';
+    pill.textContent='Step 1 of 4 · Sort';
+    if(id==='scrS1Done'||id==='scrGate'){
+      document.getElementById('sb1').classList.add('done');
+      document.getElementById('sl1').classList.add('done');
+    } else {
+      document.getElementById('sb1').classList.add('active');
+      document.getElementById('sl1').classList.add('active');
+    }
+  } else if(id.startsWith('scrS2')){
+    pill.className='pill-s2';
+    pill.textContent='Step 2 of 4 · Practise';
+    document.getElementById('sb1').classList.add('done');
+    document.getElementById('sl1').classList.add('done');
+    if(id==='scrS2Done'){
+      document.getElementById('sb2').classList.add('done');
+      document.getElementById('sl2').classList.add('done');
+    } else {
+      document.getElementById('sb2').classList.add('active2');
+      document.getElementById('sl2').classList.add('active2');
+    }
+  } else if(id.startsWith('scrS3')){
+    pill.className='pill-s3';
+    pill.textContent='Step 3 of 4 · Sprint';
+    document.getElementById('sb1').classList.add('done'); document.getElementById('sl1').classList.add('done');
+    document.getElementById('sb2').classList.add('done'); document.getElementById('sl2').classList.add('done');
+    if(id==='scrS3Done'){
+      document.getElementById('sb3').classList.add('done'); document.getElementById('sl3').classList.add('done');
+    } else {
+      document.getElementById('sb3').classList.add('active3'); document.getElementById('sl3').classList.add('active3');
+    }
+  } else if(id==='scrS4'){
+    pill.className='pill-s4';
+    pill.textContent='Step 4 of 4 · Track';
+    document.getElementById('sb1').classList.add('done'); document.getElementById('sl1').classList.add('done');
+    document.getElementById('sb2').classList.add('done'); document.getElementById('sl2').classList.add('done');
+    document.getElementById('sb3').classList.add('done'); document.getElementById('sl3').classList.add('done');
+    document.getElementById('sb4').classList.add('active4'); document.getElementById('sl4').classList.add('active4');
+  }
+}
+
+/* ═══════════════════════════════════
+   TABLE SELECTOR
+═══════════════════════════════════ */
+function buildTableSelect(){
+  const el=document.getElementById('tableSelect');
+  el.innerHTML='';
+  const sym = currentMode==='division' ? '÷' : '×';
+  TABLES.forEach(t=>{
+    const btn=document.createElement('button');
+    const isDone=completedTables.has(t);
+    btn.className='table-btn'+(t===currentTable?' active':'')+(isDone?' done-table':'');
+    btn.innerHTML=t+sym+(isDone?'<span class="tick">✓</span>':'');
+    btn.onclick=()=>{
+      currentTable=t;
+      document.querySelectorAll('.table-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+    el.appendChild(btn);
+  });
+}
+
+/* ═══════════════════════════════════
+   STEP 1 — SORT
+═══════════════════════════════════ */
+function buildS1Cards(t){
+  if(currentMode === 'division'){
+    // e.g. 6 ÷ 2 = 3, 12 ÷ 2 = 6 ...
+    return Array.from({length:12},(_,i)=>({
+      q:`${t*(i+1)} ÷ ${t}`,
+      a:`${i+1}`,
+      isNotYet:false
+    })).sort(()=>Math.random()-.5);
+  }
+  return Array.from({length:12},(_,i)=>({q:`${t} × ${i+1}`,a:`${t*(i+1)}`,isNotYet:false}))
+    .sort(()=>Math.random()-.5);
+}
+
+function initS1(){
+  clearS1Cd();
+  s1Cards=buildS1Cards(currentTable);
+  s1Idx=0;s1Nailed=0;s1NotYet=0;s1Revealed=false;
+  updateS1Counts();updateS1Prog();
+  renderS1Stack();
+  s1Hint('Say the answer aloud…');
+  s1Btns(false);
+}
+
+function renderS1Stack(){
+  const stack=document.getElementById('cardStack');
+  stack.innerHTML='';s1TopCard=null;
+  [s1Idx,s1Idx+1,s1Idx+2].filter(i=>i<s1Cards.length).reverse().forEach(ci=>{
+    const isTop=ci===s1Idx;
+    const card=document.createElement('div');
+    card.className='flash-card'+(isTop?' top':ci===s1Idx+1?' behind-1':' behind-2');
+    card.innerHTML=`
+      <span class="card-times-label">${currentMode==='division'?'÷':'×'} ${currentTable} table</span>
+      <span class="card-question">${s1Cards[ci].q}</span>
+      <span class="card-answer">= ${s1Cards[ci].a}</span>
+      <div class="card-tint-nailed">Nailed It ✓</div>
+      <div class="card-tint-notyet">Not Yet</div>
+      ${isTop?`<div class="countdown-wrap" id="cdWrap">
+        <svg class="countdown-svg" viewBox="0 0 36 36">
+          <circle class="countdown-track" cx="18" cy="18" r="15"/>
+          <circle class="countdown-arc" id="cdArc" cx="18" cy="18" r="15" stroke-dasharray="${CIRC}" stroke-dashoffset="0"/>
+        </svg>
+        <div class="countdown-num" id="cdNum">3</div>
+      </div>`:''}`;
+    if(isTop){setupS1Drag(card);s1TopCard=card;}
+    stack.appendChild(card);
+  });
+  s1Revealed=false;
+  startS1Cd();
+}
+
+function startS1Cd(){
+  clearS1Cd();
+  s1CdStart=performance.now();
+  const arc=document.getElementById('cdArc'),num=document.getElementById('cdNum');
+  if(!arc||!num)return;
+  function tick(now){
+    const elapsed=now-s1CdStart,rem=Math.max(0,CD_MS-elapsed),frac=rem/CD_MS;
+    arc.style.strokeDashoffset=CIRC*(1-frac);
+    num.textContent=Math.ceil(rem/1000)||'';
+    arc.style.stroke=frac>.5?'var(--coral-500)':frac>.2?'var(--amber-300)':'var(--teal-500)';
+    if(rem>0)s1CdTimer=requestAnimationFrame(tick); else autoRevS1();
+  }
+  s1CdTimer=requestAnimationFrame(tick);
+}
+function clearS1Cd(){if(s1CdTimer){cancelAnimationFrame(s1CdTimer);s1CdTimer=null;}}
+
+function autoRevS1(){
+  if(s1Revealed)return;
+  clearS1Cd();
+  const w=document.getElementById('cdWrap');if(w)w.style.opacity='0';
+  if(s1TopCard)s1TopCard.classList.add('revealed');
+  s1Revealed=true;
+  s1Hint('Did you get it in time?');
+  s1Btns(true);
+}
+function s1Btns(on){['btnNotYet','btnNailed'].forEach(id=>{const el=document.getElementById(id);if(on)el.classList.add('enabled');else el.classList.remove('enabled');});}
+function s1Hint(m){document.getElementById('s1Hint').textContent=m;}
+function updateS1Counts(){document.getElementById('nailedCount').textContent=s1Nailed;document.getElementById('notYetCount').textContent=s1NotYet;}
+function updateS1Prog(){
+  const pct=s1Cards.length?(s1Idx/s1Cards.length)*100:0;
+  document.getElementById('s1ProgFill').style.width=pct+'%';
+  document.getElementById('s1ProgText').textContent=s1Idx+' / '+s1Cards.length;
+}
+
+function swipeCard(dir){
+  if(s1Animating||s1Idx>=s1Cards.length||!s1Revealed)return;
+  s1Animating=true;
+  clearS1Cd();
+  const tx=dir==='right'?560:-560,rot=dir==='right'?18:-18;
+  if(s1TopCard){
+    s1TopCard.style.transition='transform .38s cubic-bezier(.4,0,.2,1),opacity .38s';
+    s1TopCard.style.transform=`translateX(${tx}px) rotate(${rot}deg)`;
+    s1TopCard.style.opacity='0';
+    const tint=s1TopCard.querySelector(dir==='right'?'.card-tint-nailed':'.card-tint-notyet');
+    if(tint)tint.style.opacity='.5';
+  }
+  s1Cards[s1Idx].isNotYet=(dir==='left');
+  flash1(dir==='right'?'nailed':'notyet');
+  setTimeout(()=>{
+    if(dir==='right')s1Nailed++;else s1NotYet++;
+    s1Idx++;
+    updateS1Counts();updateS1Prog();
+    if(s1Idx>=s1Cards.length)finishS1();
+    else{s1Btns(false);renderS1Stack();s1Hint('Say the answer aloud…');}
+    s1Animating=false;
+  },360);
+}
+
+function flash1(type){
+  const l=document.getElementById('flyLabel');
+  l.textContent=type==='nailed'?'Nailed It!':'Not Yet';
+  l.className='fly-label '+type;l.style.opacity='1';
+  setTimeout(()=>l.style.opacity='0',700);
+}
+
+function finishS1(){
+  clearS1Cd();
+  // Record not-yets into bank for this table
+  const newNotYets=s1Cards.filter(c=>c.isNotYet).map(c=>({q:c.q,a:c.a,table:currentTable}));
+  notYetBank[currentTable]=newNotYets;
+  completedTables.add(currentTable);
+
+  // Update table selector ticks
+  buildTableSelect();
+
+  // Count total bank size
+  const totalBank=allBankFacts();
+  const pct=Math.round((s1Nailed/s1Cards.length)*100);
+  const icon=document.getElementById('s1DoneIcon');
+  let title,sub;
+  if(pct===100){icon.style.background='var(--neon-green-dark)';title='Perfect fluency!';sub=`You recalled all 12 ${currentMode==='division'?'division':''} facts for ${currentMode==='division'?'÷':''}${currentTable} within 3 seconds.`;}
+  else if(pct>=70){icon.style.background='var(--neon-green-dark)';title='Strong round!';sub=`You recalled ${s1Nailed} of ${s1Cards.length} facts within 3 seconds.`;}
+  else{icon.style.background='#D85A30';title='Keep going!';sub=`You sorted all ${s1Cards.length} cards for the ${currentTable}${currentMode==='division'?'÷':'×'} table.`;}
+  document.getElementById('s1DoneTitle').textContent=title;
+  document.getElementById('s1DoneSub').textContent=sub;
+  document.getElementById('s1DoneNailed').textContent=s1Nailed;
+  document.getElementById('s1DoneNotYet').textContent=s1NotYet;
+
+  const noteEl=document.getElementById('s1DoneNote');
+  const actEl=document.getElementById('s1DoneActions');
+  actEl.innerHTML='';
+
+  const addBtn=(label,cls,fn)=>{
+    const b=document.createElement('button');
+    b.className=cls;b.textContent=label;b.onclick=fn;actEl.appendChild(b);
+  };
+  addBtn('↺ Sort again','btn-sec',()=>{showScreen('scrS1Game');initS1();});
+  addBtn('↩ Change table','btn-sec',()=>showScreen('scrS1Start'));
+
+  if(totalBank.length>=MIN_BANK){
+    // Enough to practise
+    noteEl.innerHTML=`You now have <strong>${totalBank.length} Not Yet</strong> facts in your bank across ${completedTables.size} table${completedTables.size>1?'s':''}. Ready to practise!`;
+    addBtn('Step 2: Practise →','btn-next purple',()=>goToStep2());
+  } else if(s1NotYet===0){
+    // Perfect — nudge to next table
+    noteEl.textContent=`You nailed everything! Try the next times table to build up your Not Yet bank.`;
+    addBtn('Sort next table →','btn-next coral',()=>sortNextTable());
+  } else {
+    // Has some not-yets but total bank not at 5 yet
+    noteEl.innerHTML=`You have <strong>${totalBank.length}</strong> of <strong>${MIN_BANK}</strong> Not Yet facts collected. Sort one more times table to unlock Step 2.`;
+    addBtn('Sort next table →','btn-next coral',()=>showGate());
+  }
+  showScreen('scrS1Done');
+}
+
+/* ═══════════════════════════════════
+   GATE SCREEN
+═══════════════════════════════════ */
+function allBankFacts(){
+  return Object.values(notYetBank).flat();
+}
+
+function nextUncompletedTable(){
+  return TABLES.find(t=>!completedTables.has(t));
+}
+
+function showGate(){
+  const bank=allBankFacts();
+  const next=nextUncompletedTable();
+  const pct=Math.min((bank.length/MIN_BANK)*100,100);
+
+  const sym = currentMode==='division' ? '÷' : '×';
+  const modeWord = currentMode==='division' ? 'division' : 'times';
+  document.getElementById('gateDesc').innerHTML=
+    `You have <strong>${bank.length}</strong> Not Yet fact${bank.length!==1?'s':''} so far — you need at least <strong>${MIN_BANK}</strong> before practising. Collect more by sorting another ${modeWord} table.`;
+
+  // Bank tags
+  const tagEl=document.getElementById('gateBankTags');
+  tagEl.innerHTML='';
+  bank.forEach(f=>{
+    const d=document.createElement('div');
+    d.className='gate-bank-tag';
+    d.textContent=f.q;
+    tagEl.appendChild(d);
+  });
+
+  // Progress bar
+  document.getElementById('gateProgFill').style.width=pct+'%';
+  document.getElementById('gateProgLabel').textContent=bank.length+' collected';
+
+  // Next table suggestion
+  if(next){
+    document.getElementById('gateNextTableQ').textContent=next+sym+' table';
+    document.getElementById('gateNextTableTxt').textContent=
+      `Sort the ${next} ${modeWord} table next to add more Not Yet facts to your bank.`;
+    document.getElementById('gateNextTableWrap').style.display='flex';
+    document.getElementById('gateSortNextBtn').textContent=`Sort the ${next}${sym} table →`;
+  } else {
+    document.getElementById('gateNextTableWrap').style.display='none';
+    document.getElementById('gateSortNextBtn').textContent='Sort a table again →';
+  }
+  showScreen('scrGate');
+}
+
+function sortNextTable(){
+  const next=nextUncompletedTable();
+  if(next){
+    currentTable=next;
+    buildTableSelect();
+  }
+  showScreen('scrS1Game');
+  initS1();
+}
+
+/* ═══════════════════════════════════
+   STEP 2 — PRACTISE
+═══════════════════════════════════ */
+function goToStep2(){
+  const bank=allBankFacts();
+  s2Facts=bank.map(f=>({...f,streak:0,done:false}));
+  const tableList=[...completedTables].filter(t=>notYetBank[t]&&notYetBank[t].length>0).sort((a,b)=>a-b);
+  const modeSymbol = currentMode==='division' ? '÷' : '×';
+  const modeWord = currentMode==='division' ? 'division' : 'times';
+  document.getElementById('s2StartDesc').innerHTML=
+    `You have <strong>${s2Facts.length} Not Yet fact${s2Facts.length!==1?'s':''}</strong> from the ${tableList.map(t=>t+modeSymbol).join(', ')} ${modeWord} table${tableList.length>1?'s':''}. Work through each using <strong>look → cover → write → check</strong>. Get a fact right 3 times in a row and it's Nailed It.`;
+  showScreen('scrS2Start');
+}
+
+function initS2(){
+  s2Facts.forEach(f=>{f.streak=0;f.done=false;});
+  s2QueueOrder=s2Facts.map((_,i)=>i);
+  s2Current=0;s2TotalDone=0;
+  renderS2Queue();updateS2Prog();loadS2Card();
+}
+
+function loadS2Card(){
+  while(s2Current<s2QueueOrder.length&&s2Facts[s2QueueOrder[s2Current]].done)s2Current++;
+  if(s2Current>=s2QueueOrder.length){
+    const rem=s2Facts.filter(f=>!f.done);
+    if(rem.length===0){showS2Done();return;}
+    s2QueueOrder=s2Facts.map((_,i)=>i).filter(i=>!s2Facts[i].done).sort(()=>Math.random()-.5);
+    s2Current=0;
+  }
+  s2Phase='look';renderS2Phase();renderS2Queue();
+}
+
+function renderS2Phase(){
+  const fact=s2Facts[s2QueueOrder[s2Current]];
+  const qEl=document.getElementById('p2Question');
+  const aEl=document.getElementById('p2Answer');
+  const phLbl=document.getElementById('p2PhaseLabel');
+  const coverHint=document.getElementById('p2CoverHint');
+  const writeRow=document.getElementById('p2WriteRow');
+  const actionRow=document.getElementById('p2ActionRow');
+  const actionBtn=document.getElementById('p2ActionBtn');
+  const hintText=document.getElementById('p2HintText');
+  const input=document.getElementById('p2Input');
+  const srcTag=document.getElementById('p2SourceTag');
+
+  qEl.textContent=fact.q;
+  srcTag.textContent=fact.table+(currentMode==='division'?'÷':'×')+' table';
+  updateS2Dots(fact.streak);
+
+  if(s2Phase==='look'){
+    phLbl.textContent='Look';phLbl.className='p2-phase-label phase-look';
+    aEl.style.opacity='1';aEl.textContent='= '+fact.a;
+    coverHint.textContent='';
+    writeRow.style.display='none';actionRow.style.display='none';
+    actionBtn.style.display='block';actionBtn.textContent='Cover the answer →';
+    hintText.textContent='Study the fact and its answer.';
+  } else if(s2Phase==='cover'){
+    phLbl.textContent='Cover';phLbl.className='p2-phase-label phase-cover';
+    aEl.style.opacity='0';
+    coverHint.textContent='Answer hidden — what is it?';
+    writeRow.style.display='none';actionRow.style.display='none';
+    actionBtn.style.display='block';actionBtn.textContent='Write your answer →';
+    hintText.textContent='Cover the answer or look away.';
+  } else if(s2Phase==='write'){
+    phLbl.textContent='Write';phLbl.className='p2-phase-label phase-write';
+    aEl.style.opacity='0';
+    coverHint.textContent='Type your answer from memory';
+    writeRow.style.display='flex';actionRow.style.display='none';
+    actionBtn.style.display='none';
+    input.value='';input.className='p2-input';input.focus();
+    hintText.textContent='Type the answer and tap Check.';
+  } else if(s2Phase==='check'){
+    phLbl.textContent='Check';phLbl.className='p2-phase-label phase-check';
+    aEl.style.opacity='1';aEl.textContent='= '+fact.a;
+    coverHint.textContent='';
+    writeRow.style.display='none';actionRow.style.display='flex';
+    actionBtn.style.display='none';
+    hintText.textContent='How did you go?';
+  }
+}
+
+function p2Next(){
+  if(s2Phase==='look')s2Phase='cover';
+  else if(s2Phase==='cover')s2Phase='write';
+  renderS2Phase();
+}
+
+function checkAnswer(){
+  if(s2Phase!=='write')return;
+  const fact=s2Facts[s2QueueOrder[s2Current]];
+  const input=document.getElementById('p2Input');
+  const val=input.value.trim();
+  if(val==='')return; // don't submit empty
+  const isCorrect=(val===fact.a);
+  input.className='p2-input '+(isCorrect?'correct':'wrong');
+  document.getElementById('p2Answer').style.opacity='1';
+  document.getElementById('p2Answer').textContent='= '+fact.a;
+  document.getElementById('p2HintText').textContent=isCorrect?'✓ Correct! Confirm below.':'✗ The answer is '+fact.a+'. Confirm below.';
+  document.getElementById('p2ActionRow').style.display='flex';
+  document.getElementById('p2WriteRow').style.display='none';
+  document.getElementById('p2PhaseLabel').textContent='Check';
+  document.getElementById('p2PhaseLabel').className='p2-phase-label phase-check';
+  s2Phase='check';
+}
+
+function markCorrect(){
+  const fi=s2QueueOrder[s2Current];
+  s2Facts[fi].streak++;
+  updateS2Dots(s2Facts[fi].streak);
+  if(s2Facts[fi].streak>=3){
+    s2Facts[fi].done=true;s2TotalDone++;
+    flash2('correct','Nailed It! ✓');
+  } else {
+    flash2('correct','Got it! +1');
+  }
+  updateS2Prog();renderS2Queue();
+  setTimeout(()=>{s2Current++;loadS2Card();},600);
+}
+
+function markWrong(){
+  const fi=s2QueueOrder[s2Current];
+  s2Facts[fi].streak=0;
+  updateS2Dots(0);
+  flash2('wrong','Not yet — try again');
+  s2QueueOrder.push(fi);
+  renderS2Queue();
+  setTimeout(()=>{s2Current++;loadS2Card();},600);
+}
+
+function flash2(type,msg){
+  const l=document.getElementById('flyLabel');
+  l.textContent=msg;l.className='fly-label '+type;l.style.opacity='1';
+  setTimeout(()=>l.style.opacity='0',800);
+}
+
+function updateS2Dots(streak){[0,1,2].forEach(i=>{document.getElementById('d'+i).className='p2-dot'+(i<streak?' filled':'');});}
+function updateS2Prog(){
+  const total=s2Facts.length,done=s2TotalDone,pct=total?(done/total)*100:0;
+  document.getElementById('s2ProgFill').style.width=pct+'%';
+  document.getElementById('s2ProgText').textContent=done+' / '+total+' nailed';
+}
+
+function renderS2Queue(){
+  const el=document.getElementById('p2Queue');el.innerHTML='';
+  const curFi=s2QueueOrder[s2Current];
+  s2Facts.forEach((f,i)=>{
+    const div=document.createElement('div');
+    const isCur=(i===curFi&&!f.done);
+    div.className='p2-queue-item '+(f.done?'done':isCur?'active':'pending');
+    div.textContent=f.q+(f.done?' ✓':f.streak>0?' ('+f.streak+'/3)':'');
+    el.appendChild(div);
+  });
+}
+
+function showS2Done(){
+  const nailed=s2Facts.filter(f=>f.done).length;
+  const still=s2Facts.length-nailed;
+  document.getElementById('s2DoneNailed').textContent=nailed;
+  document.getElementById('s2DoneStillNotYet').textContent=still;
+  let title,sub,note;
+  if(still===0){
+    title='All facts nailed!';
+    sub=`You recalled all ${s2Facts.length} Not Yet facts 3 times in a row. Brilliant!`;
+    note='These facts are becoming automatic. Keep practising over multiple sessions.';
+  } else {
+    title='Good session!';
+    sub=`You nailed ${nailed} of ${s2Facts.length} facts this session.`;
+    note=still+' fact'+(still>1?'s':'')+' still need more practice. Run Step 2 again tomorrow — spaced repetition is key.';
+  }
+  document.getElementById('s2DoneTitle').textContent=title;
+  document.getElementById('s2DoneSub').textContent=sub;
+  document.getElementById('s2DoneNote').textContent=note;
+  showScreen('scrS2Done');
+}
+
+/* ═══════════════════════════════════
+   STEP 3 — SPRINT
+═══════════════════════════════════ */
+function goToStep3(){
+  s3Table = currentTable; // default to last used table
+  buildS3TableSelect();
+  showScreen('scrS3Start');
+}
+
+function buildS3TableSelect(){
+  const el=document.getElementById('s3TableSelect');
+  el.innerHTML='';
+  const sym = currentMode==='division' ? '÷' : '×';
+  TABLES.forEach(t=>{
+    const btn=document.createElement('button');
+    const pb=s3PersonalBests[t];
+    btn.className='table-btn'+(t===s3Table?' active':'');
+    btn.innerHTML=t+sym+(pb?`<span class="tick">${pb}</span>`:'');
+    btn.title=pb?`PB: ${pb} correct`:'';
+    btn.onclick=()=>{
+      s3Table=t;
+      document.querySelectorAll('#s3TableSelect .table-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+    el.appendChild(btn);
+  });
+  // sync mode label
+  const lbl=document.getElementById('s3ModeLabel');
+  if(lbl) lbl.textContent = currentMode==='division' ? 'divided by' : 'times';
+}
+
+function buildS3Questions(t){
+  let base;
+  if(currentMode==='division'){
+    base=Array.from({length:12},(_,i)=>({q:`${t*(i+1)} ÷ ${t}`,a:`${i+1}`}));
+  } else {
+    base=Array.from({length:12},(_,i)=>({q:`${t} × ${i+1}`,a:`${t*(i+1)}`}));
+  }
+  const shuffled=[...base].sort(()=>Math.random()-.5);
+  return [...shuffled,...shuffled,...shuffled];
+}
+
+function startSprint(){
+  clearInterval(s3Timer);
+  s3Questions=buildS3Questions(s3Table);
+  s3QIdx=0; s3Correct=0; s3Attempts=0; s3Skips=0; s3TimeLeft=60; s3Results=[];
+  // UI reset
+  document.getElementById('s3CorrectCount').textContent='0';
+  document.getElementById('s3AttemptCount').textContent='0';
+  document.getElementById('s3SkipCount').textContent='0';
+  document.getElementById('s3TableLabel').textContent=currentMode==='division'?`÷ ${s3Table} division table`:`${s3Table}× times table`;
+  document.getElementById('s3Input').value='';
+  document.getElementById('s3Input').className='s3-input';
+  document.getElementById('s3Feedback').textContent='';
+  document.getElementById('s3Feedback').className='s3-feedback-text';
+  updateS3Ring();
+  loadS3Question();
+  showScreen('scrS3Game');
+  setTimeout(()=>document.getElementById('s3Input').focus(),100);
+  s3Timer=setInterval(s3Tick,1000);
+}
+
+function s3Tick(){
+  s3TimeLeft--;
+  updateS3Ring();
+  if(s3TimeLeft<=0){ clearInterval(s3Timer); s3TimeLeft=0; updateS3Ring(); showS3Done(); }
+}
+
+function updateS3Ring(){
+  const frac=s3TimeLeft/60;
+  const arc=document.getElementById('s3RingArc');
+  const num=document.getElementById('s3TimerNum');
+  if(!arc||!num)return;
+  arc.style.strokeDashoffset=s3RingCirc*(1-frac);
+  num.textContent=s3TimeLeft;
+  // colour: blue → amber → coral as time runs out
+  arc.style.stroke=s3TimeLeft>20?'var(--ocean)':s3TimeLeft>10?'var(--neon-yellow)':'var(--hot-pink)';
+}
+
+function loadS3Question(){
+  if(s3QIdx>=s3Questions.length)s3QIdx=0;
+  document.getElementById('s3Question').textContent=s3Questions[s3QIdx].q;
+  document.getElementById('s3Input').value='';
+  document.getElementById('s3Input').className='s3-input';
+  document.getElementById('s3Input').focus();
+}
+
+function s3OnInput(){
+  // auto-submit if 2+ digits entered and matches answer length
+  const val=document.getElementById('s3Input').value.trim();
+  const ans=s3Questions[s3QIdx].a;
+  if(val.length>=ans.length && val.length>=2) s3Submit();
+}
+
+function s3OnKey(e){
+  if(e.key==='Enter') s3Submit();
+}
+
+function s3Submit(){
+  if(s3TimeLeft<=0)return;
+  const val=document.getElementById('s3Input').value.trim();
+  let wasCorrect=false;
+  if(val===''){
+    // skip
+    s3Results.push({q:s3Questions[s3QIdx].q,a:s3Questions[s3QIdx].a,given:'—',ok:false,skipped:true});
+    s3Skips++; s3Attempts++;
+    s3ShowFeedback(false,'Skipped');
+    wasCorrect=false;
+  } else {
+    wasCorrect=(val===s3Questions[s3QIdx].a);
+    s3Results.push({q:s3Questions[s3QIdx].q,a:s3Questions[s3QIdx].a,given:val,ok:wasCorrect,skipped:false});
+    if(wasCorrect)s3Correct++; else s3Skips++;
+    s3Attempts++;
+    s3ShowFeedback(wasCorrect, wasCorrect?'✓':'✗ '+s3Questions[s3QIdx].a);
+  }
+  document.getElementById('s3CorrectCount').textContent=s3Correct;
+  document.getElementById('s3AttemptCount').textContent=s3Attempts;
+  document.getElementById('s3SkipCount').textContent=s3Skips;
+  s3QIdx++;
+  setTimeout(()=>{ loadS3Question(); }, wasCorrect ? 180 : 350);
+}
+
+function s3ShowFeedback(ok,msg){
+  const el=document.getElementById('s3Feedback');
+  el.textContent=msg;
+  el.className='s3-feedback-text show '+(ok?'ok':'bad');
+  setTimeout(()=>el.classList.remove('show'),400);
+}
+
+function showS3Done(){
+  clearInterval(s3Timer);
+  // Auto-save score to history
+  saveScore(s3Table, currentMode, s3Correct);
+  const total=s3Attempts, acc=total>0?Math.round((s3Correct/total)*100):0;
+  const isPB=(!s3PersonalBests[s3Table]||s3Correct>s3PersonalBests[s3Table]);
+  if(s3Correct>0||(s3PersonalBests[s3Table]===undefined))s3PersonalBests[s3Table]=Math.max(s3Correct,s3PersonalBests[s3Table]||0);
+
+  document.getElementById('s3BigScore').textContent=s3Correct;
+  document.getElementById('s3PbBadge').style.display=isPB&&s3Correct>0?'inline-flex':'none';
+  document.getElementById('s3AccLabel').textContent=s3Correct+' correct of '+total+' attempted';
+  document.getElementById('s3AccPct').textContent=acc+'%';
+  setTimeout(()=>document.getElementById('s3AccBar').style.width=acc+'%',100);
+
+  let title,sub;
+  const modeLabel = currentMode==='division' ? `÷${s3Table} division` : `${s3Table}×`;
+  if(s3Correct>=10){title='Lightning fast!';sub=`You answered ${s3Correct} facts correctly in 60 seconds. Outstanding fluency!`;}
+  else if(s3Correct>=6){title='Great sprint!';sub=`${s3Correct} correct in 60 seconds for the ${modeLabel} table. Keep building that speed.`;}
+  else if(s3Correct>=3){title='Good start!';sub=`${s3Correct} correct in 60 seconds. The more you sort and practise, the faster you'll get.`;}
+  else{title='Keep going!';sub=`${s3Correct} correct this sprint. Every run builds retrieval speed — try again!`;}
+  document.getElementById('s3DoneTitle').textContent=title;
+  document.getElementById('s3DoneSub').textContent=sub;
+  document.getElementById('s3DoneNote').textContent=isPB&&s3Correct>0?
+    `New personal best for the ${s3Table}× table! 🎉 Your score of ${s3Correct} is your highest yet.`:
+    `Your best for the ${s3Table}× table is ${s3PersonalBests[s3Table]||0}. Sprint again to beat it!`;
+
+  // Rebuild s3TableSelect to show updated PBs
+  buildS3TableSelect();
+
+  // Per-fact breakdown (show last attempt per fact)
+  const seen={}, breakdown=[];
+  for(let r of [...s3Results].reverse()){ if(!seen[r.q]){seen[r.q]=r;breakdown.unshift(r);} }
+  const bdEl=document.getElementById('s3FactBreakdown');bdEl.innerHTML='';
+  breakdown.forEach(r=>{
+    const d=document.createElement('div');
+    d.className='p2-queue-item '+(r.ok?'done':r.skipped?'pending':'notyet');
+    d.style.borderColor=r.ok?'rgba(0,200,150,.35)':r.skipped?'rgba(56,200,240,.20)':'rgba(255,45,120,.25)';
+    d.style.background=r.ok?'rgba(0,200,150,.10)':r.skipped?'rgba(56,200,240,.08)':'rgba(255,45,120,.08)';
+    d.style.color=r.ok?'var(--neon-green-dark)':r.skipped?'var(--text-30)':'var(--hot-pink-dark)';
+    d.textContent=r.q+' = '+r.a+(r.ok?' ✓':r.skipped?' (skipped)':' (said '+r.given+')');
+    bdEl.appendChild(d);
+  });
+
+  showScreen('scrS3Done');
+}
+
+/* ═══════════════════════════════════
+   STEP 4 — TRACK
+═══════════════════════════════════ */
+function getStoredScores(){
+  try { return JSON.parse(localStorage.getItem(S4_STORAGE_KEY)||'{}'); } catch(e){ return {}; }
+}
+
+function saveScore(table, mode, score){
+  const key = table+'_'+mode;
+  const data = getStoredScores();
+  if(!data[key]) data[key]=[];
+  data[key].push({ score, date: new Date().toLocaleDateString('en-AU',{day:'numeric',month:'short'}), ts: Date.now() });
+  // Keep last 20 sessions per table/mode
+  if(data[key].length>20) data[key]=data[key].slice(-20);
+  try { localStorage.setItem(S4_STORAGE_KEY, JSON.stringify(data)); } catch(e){}
+}
+
+function goToStep4(){
+  // Save this sprint score into history
+  s4Table = s3Table;
+  saveScore(s3Table, currentMode, s3Correct);
+  buildS4TableSelect();
+  renderS4Chart(s4Table);
+  showScreen('scrS4');
+}
+
+function buildS4TableSelect(){
+  const el=document.getElementById('s4TableSelect');
+  el.innerHTML='';
+  const sym = currentMode==='division'?'÷':'×';
+  const data = getStoredScores();
+  TABLES.forEach(t=>{
+    const key=t+'_'+currentMode;
+    const hasData = data[key]&&data[key].length>0;
+    const btn=document.createElement('button');
+    btn.className='table-btn'+(t===s4Table?' active':'')+(hasData?' done-table':'');
+    btn.textContent=t+sym;
+    btn.onclick=()=>{
+      s4Table=t;
+      document.querySelectorAll('#s4TableSelect .table-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderS4Chart(t);
+    };
+    el.appendChild(btn);
+  });
+}
+
+function renderS4Chart(table){
+  const sym = currentMode==='division'?'÷':'×';
+  const data = getStoredScores();
+  const key = table+'_'+currentMode;
+  const sessions = (data[key]||[]).slice(-10); // last 10
+  const graph = document.getElementById('s4Graph');
+  const empty = document.getElementById('s4EmptyState');
+  document.getElementById('s4ChartTitle').textContent=`${table}${sym} sprint scores`;
+  document.getElementById('s4ChartSub').textContent=sessions.length>0?`Last ${sessions.length} session${sessions.length>1?'s':''}`:' ';
+
+  // Clear old bars but keep empty state
+  Array.from(graph.querySelectorAll('.s4-bar-col')).forEach(b=>b.remove());
+  const targetLine = graph.querySelector('.s4-target-line');
+  if(targetLine) targetLine.remove();
+
+  if(sessions.length===0){
+    empty.style.display='flex';
+    document.getElementById('s4PbStat').textContent='—';
+    document.getElementById('s4LastStat').textContent='—';
+    document.getElementById('s4SessionsStat').textContent='0';
+    document.getElementById('s4FluencyFill').style.width='0%';
+    document.getElementById('s4FluencyPct').textContent='0%';
+    return;
+  }
+
+  empty.style.display='none';
+  const pb = Math.max(...sessions.map(s=>s.score));
+  const last = sessions[sessions.length-1].score;
+  const maxVal = Math.max(pb, S4_TARGET, 10);
+
+  // Target line
+  const lineEl = document.createElement('div');
+  lineEl.className='s4-target-line';
+  const targetPct = (S4_TARGET/maxVal)*100;
+  // position from bottom of chart area (graph height 200px - 28px padding = 172px usable)
+  lineEl.style.bottom = `calc(28px + ${(S4_TARGET/maxVal)*172}px)`;
+  lineEl.innerHTML='<span class="s4-target-line-label">40 target</span>';
+  graph.appendChild(lineEl);
+
+  // Bars
+  sessions.forEach((s,i)=>{
+    const col=document.createElement('div');
+    col.className='s4-bar-col';
+    const isPb=(s.score===pb && i===sessions.map(x=>x.score).lastIndexOf(pb));
+    const atTarget=s.score>=S4_TARGET;
+    const barH=Math.max(2,(s.score/maxVal)*160);
+    col.innerHTML=`
+      <div class="s4-bar${isPb?' is-pb':''}${atTarget?' at-target':''}" style="height:${barH}px">
+        <span class="s4-bar-val">${s.score}</span>
+      </div>
+      <span class="s4-bar-date">${s.date}</span>
+    `;
+    graph.appendChild(col);
+  });
+
+  // Stats
+  document.getElementById('s4PbStat').textContent=pb;
+  document.getElementById('s4LastStat').textContent=last;
+  document.getElementById('s4SessionsStat').textContent=(data[key]||[]).length;
+  const fluencyPct=Math.min(Math.round((pb/S4_TARGET)*100),100);
+  document.getElementById('s4FluencyFill').style.width=fluencyPct+'%';
+  document.getElementById('s4FluencyPct').textContent=fluencyPct+'%';
+}
+
+/* ═══════════════════════════════════
+   DRAG
+═══════════════════════════════════ */
+function setupS1Drag(card){
+  let active=false, sx=0, sy=0, cx=0, cy=0;
+  let committed=false;
+  const nt=card.querySelector('.card-tint-nailed'), ny=card.querySelector('.card-tint-notyet');
+
+  function start(e){
+    if(!s1Revealed||committed)return;
+    active=true;
+    sx=e.touches?e.touches[0].clientX:e.clientX;
+    sy=e.touches?e.touches[0].clientY:e.clientY;
+    card.style.transition='none';
+  }
+
+  function move(e){
+    if(!active||committed)return;
+    cx=(e.touches?e.touches[0].clientX:e.clientX)-sx;
+    cy=(e.touches?e.touches[0].clientY:e.clientY)-sy;
+    card.style.transform=`translateX(${cx}px) translateY(${cy*.25}px) rotate(${cx*.07}deg)`;
+    const p=Math.min(Math.abs(cx)/100,1);
+    if(cx>8){nt.style.opacity=p*.8;ny.style.opacity='0';}
+    else if(cx<-8){ny.style.opacity=p*.8;nt.style.opacity='0';}
+    else{nt.style.opacity='0';ny.style.opacity='0';}
+  }
+
+  function end(){
+    if(!active)return;
+    active=false;
+    if(committed)return;
+    nt.style.opacity='0'; ny.style.opacity='0';
+    // 15px in either direction is enough — card flies itself the rest of the way
+    if(cx>15) commit('right');
+    else if(cx<-15) commit('left');
+    else{
+      card.style.transition='transform .3s cubic-bezier(.4,0,.2,1)';
+      card.style.transform='';
+    }
+    cx=0; cy=0;
+  }
+
+  function commit(dir){
+    if(committed)return;
+    committed=true;
+    active=false;
+    s1Animating=true;
+    clearS1Cd();
+    nt.style.opacity='0'; ny.style.opacity='0';
+    const tx=dir==='right'?560:-560;
+    const rot=dir==='right'?18:-18;
+    card.style.transition='transform .38s cubic-bezier(.4,0,.2,1), opacity .38s';
+    card.style.transform=`translateX(${tx}px) rotate(${rot}deg)`;
+    card.style.opacity='0';
+    const tint=card.querySelector(dir==='right'?'.card-tint-nailed':'.card-tint-notyet');
+    if(tint) tint.style.opacity='.5';
+    flash1(dir==='right'?'nailed':'notyet');
+    setTimeout(()=>{
+      s1Cards[s1Idx].isNotYet=(dir==='left');
+      if(dir==='right') s1Nailed++; else s1NotYet++;
+      s1Idx++;
+      updateS1Counts(); updateS1Prog();
+      if(s1Idx>=s1Cards.length) finishS1();
+      else{ s1Btns(false); renderS1Stack(); s1Hint('Say the answer aloud…'); }
+      s1Animating=false;
+    },360);
+    cx=0; cy=0;
+  }
+
+  card.addEventListener('mousedown',start);
+  card.addEventListener('touchstart',start,{passive:true});
+  window.addEventListener('mousemove',move);
+  window.addEventListener('touchmove',move,{passive:true});
+  window.addEventListener('mouseup',end);
+  window.addEventListener('touchend',end);
+}
+
+/* ═══════════════════════════════════
+   KEYBOARD + TOUCH LISTENERS
+═══════════════════════════════════ */
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('scrS1Game').classList.contains('active')){
+    if(e.key==='ArrowLeft')swipeCard('left');
+    else if(e.key==='ArrowRight')swipeCard('right');
+  }
+  if(document.getElementById('scrS2Game').classList.contains('active')){
+    if(e.key==='Enter'&&s2Phase==='write')checkAnswer();
+  }
+});
+
+// Step 2 input — Enter key
+document.getElementById('p2Input').addEventListener('keydown',e=>{
+  if(e.key==='Enter') checkAnswer();
+});
+
+// Step 2 Check button — use both touchend AND mousedown so it works on
+// iPad (where onclick can be swallowed when the keyboard is open)
+(function(){
+  const btn = document.getElementById('p2SubmitBtn');
+  let tapped = false;
+  btn.addEventListener('touchend', e => {
+    e.preventDefault(); // stop ghost click
+    tapped = true;
+    checkAnswer();
+    setTimeout(()=>{ tapped=false; }, 400);
+  });
+  btn.addEventListener('mousedown', e => {
+    if(tapped) return; // already handled by touchend
+    checkAnswer();
+  });
+})();
+
+// Step 3 Sprint input — Enter key + auto-submit
+document.getElementById('s3Input').addEventListener('keydown', e => {
+  if(e.key==='Enter') s3Submit();
+});
+document.getElementById('s3Input').addEventListener('input', () => s3OnInput());
+
+// Step 3 Submit button — same touch fix
+(function(){
+  const btn = document.querySelector('.s3-submit');
+  let tapped = false;
+  btn.addEventListener('touchend', e => {
+    e.preventDefault();
+    tapped = true;
+    s3Submit();
+    setTimeout(()=>{ tapped=false; }, 400);
+  });
+  btn.addEventListener('mousedown', e => {
+    if(tapped) return;
+    s3Submit();
+  });
+})();
+
+/* ═══════════════════════════════════
+   INIT
+═══════════════════════════════════ */
+buildTableSelect();
+buildS3TableSelect();
+buildS4TableSelect();
+// Show Step 4 Track only when running locally
+if(IS_LOCAL){
+  document.getElementById('btnGoS4').style.display='inline-block';
+} else {
+  // Hide the Step 4 node in the step strip when embedded
+  const s4node = document.getElementById('sb4') ? document.getElementById('sb4').closest('.step-node') : null;
+  if(s4node) s4node.style.display = IS_LOCAL ? '' : 'none';
+}
+showScreen('scrS1Start');
+</script>
+</body>
+</html>
