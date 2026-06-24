@@ -119,6 +119,33 @@
             transition: color 0.3s;
         }
 
+        /* --- TIMER UI --- */
+        #timer-ui {
+            top: 80px; /* Positioned below the Menu button */
+            left: 20px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+            min-width: 140px;
+            display: none; 
+        }
+
+        .time-text {
+            font-size: 28px;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            color: #D32F2F;
+            margin: 0;
+        }
+
+        .fastest-text {
+            font-size: 14px;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0;
+        }
+
         #right-ui {
             right: 20px;
             top: 50%;
@@ -416,6 +443,11 @@
         Find: <span id="target-word-display">WAITING</span>
     </div>
 
+    <div id="timer-ui" class="ui-panel">
+        <div id="current-time" class="time-text">0.00s</div>
+        <div id="fastest-time" class="fastest-text">Fastest: ---</div>
+    </div>
+
     <div id="right-ui" class="ui-panel">
         <label for="throttle-slider">Throttle</label>
         <input type="range" id="throttle-slider" class="vertical" min="0" max="15" step="0.5" value="6">
@@ -457,7 +489,7 @@
         let minimapZoom = 0.08; 
 
         // Gameplay specific variables
-        let globalTargets = []; // Stores { display: "Question", match: "Answer" }
+        let globalTargets = []; 
         let currentTargetObj = null;
         let captureRadiusPx = 100; 
         let aiSpeedMultiplier = 1.0; 
@@ -470,6 +502,12 @@
         let joystickOriginY = 0;
         let joystickTurnValue = 0;
         const joystickMaxRadius = 60; 
+
+        // Timer specific variables
+        let timeElapsed = 0;
+        let fastestTime = Infinity;
+        let lastFrameTime = performance.now();
+        let isGameRunning = false; 
 
         // --- DOM ELEMENTS ---
         const plane = document.getElementById('plane');
@@ -491,6 +529,10 @@
         const difficultySelect = document.getElementById('difficulty-select');
         const backBtn = document.getElementById('back-btn');
         
+        const timerUI = document.getElementById('timer-ui');
+        const currentTimeText = document.getElementById('current-time');
+        const fastestTimeText = document.getElementById('fastest-time');
+
         const joystickBase = document.getElementById('joystick-base');
         const joystickKnob = document.getElementById('joystick-knob');
         
@@ -512,6 +554,8 @@
             compassContainer.style.display = 'none';
             backBtn.style.display = 'none';
             captureRing.style.display = 'none';
+            timerUI.style.display = 'none';
+            isGameRunning = false; 
         });
 
         // --- SMOKE TOGGLE LOGIC ---
@@ -700,6 +744,15 @@
             targetUI.style.display = 'flex';
             compassContainer.style.display = 'flex';
             backBtn.style.display = 'block';
+            timerUI.style.display = 'flex'; // Show timer
+
+            // Reset Timer state for new game
+            timeElapsed = 0;
+            fastestTime = Infinity;
+            fastestTimeText.innerText = 'Fastest: ---';
+            lastFrameTime = performance.now();
+            isGameRunning = true;
+
             pickNewTarget();
         });
 
@@ -843,6 +896,17 @@
 
         // --- MAIN GAME LOOP ---
         function update() {
+            // --- TIMER CALCULATION ---
+            const now = performance.now();
+            const deltaTime = (now - lastFrameTime) / 1000; 
+            lastFrameTime = now;
+
+            if (isGameRunning) {
+                timeElapsed += deltaTime;
+                currentTimeText.innerText = timeElapsed.toFixed(2) + 's';
+            }
+
+            // --- CONTROLS ---
             if (keys.Minus) currentScale = Math.max(0.5, currentScale - 0.02);
             if (keys.Equal) currentScale = Math.min(2.0, currentScale + 0.02);
             if (keys.ArrowUp) currentSpeed = Math.min(15, currentSpeed + 0.1);
@@ -891,6 +955,13 @@
             });
 
             if (targetCaptured && startMenu.style.display === 'none') {
+                // Update Fastest Time Record! (Avoids instant 0.01 catches just to be safe)
+                if (timeElapsed < fastestTime && timeElapsed > 0.5) {
+                    fastestTime = timeElapsed;
+                    fastestTimeText.innerText = 'Fastest: ' + fastestTime.toFixed(2) + 's';
+                }
+                timeElapsed = 0; // Reset Timer
+
                 triggerConfetti();
                 pickNewTarget();
             }
