@@ -112,7 +112,6 @@
             gap: 10px;
         }
         #target-word-display {
-            /* Initial color, will be updated dynamically via JS */
             color: #D32F2F;
             font-size: 2rem;
             text-transform: uppercase;
@@ -136,6 +135,24 @@
             width: 30px;
             height: 200px;
             cursor: pointer;
+        }
+
+        /* Smoke Button */
+        #smoke-btn {
+            background: #ffffff;
+            color: #333;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        #smoke-btn.active {
+            background: #D32F2F;
+            color: white;
+            border-color: #D32F2F;
         }
 
         /* --- VIRTUAL JOYSTICK --- */
@@ -297,6 +314,7 @@
             z-index: 15;
         }
 
+        /* --- TRAILS & SMOKE --- */
         .trail-dot {
             position: absolute;
             width: 8px; height: 8px;
@@ -307,9 +325,27 @@
             animation: fadeOut 1.5s forwards; 
         }
 
+        .smoke-dot {
+            position: absolute;
+            width: 16px; height: 16px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 4; 
+            animation: smokeFade 10s forwards; /* CHANGED to 10 seconds */
+            will-change: transform, opacity;
+        }
+
         @keyframes fadeOut {
             0% { opacity: 1; transform: scale(1); }
             100% { opacity: 0; transform: scale(0.2); }
+        }
+
+        @keyframes smokeFade {
+            0% { opacity: 0.9; transform: scale(1); }
+            15% { opacity: 0.8; transform: scale(1.5); }
+            80% { opacity: 0.4; transform: scale(2.5); }
+            100% { opacity: 0; transform: scale(3.5); }
         }
 
         #confetti-canvas {
@@ -343,6 +379,8 @@
                 <input type="range" id="radius-input" min="1" max="5" step="0.5" value="3">
             </div>
 
+            <p style="font-size: 0.9rem; color: #555;"><i>Tip: You can press the Spacebar during the game to write messages in the sky!</i></p>
+
             <button id="start-btn">Start Game</button>
         </div>
     </div>
@@ -354,6 +392,8 @@
     <div id="right-ui" class="ui-panel">
         <label for="throttle-slider">Throttle</label>
         <input type="range" id="throttle-slider" class="vertical" min="0" max="15" step="0.5" value="6">
+        
+        <button id="smoke-btn">Smoke: OFF</button>
     </div>
 
     <div id="joystick-base"></div>
@@ -394,6 +434,7 @@
         let currentTargetWord = "";
         let captureRadiusPx = 100; 
         let aiSpeedMultiplier = 1.0; 
+        let isSmokeOn = false;
 
         // Joystick specific variables
         let isJoystickActive = false;
@@ -407,6 +448,7 @@
         const plane = document.getElementById('plane');
         const captureRing = document.getElementById('capture-ring');
         const throttleSlider = document.getElementById('throttle-slider');
+        const smokeBtn = document.getElementById('smoke-btn');
         const minimap = document.getElementById('minimap-container');
         const minimapPlane = document.getElementById('minimap-plane');
         const startMenu = document.getElementById('start-menu');
@@ -420,6 +462,20 @@
         const joystickKnob = document.getElementById('joystick-knob');
         
         let currentSpeed = parseFloat(throttleSlider.value);
+
+        // --- SMOKE TOGGLE LOGIC ---
+        function toggleSmoke() {
+            isSmokeOn = !isSmokeOn;
+            if (isSmokeOn) {
+                smokeBtn.textContent = "Smoke: ON";
+                smokeBtn.classList.add("active");
+            } else {
+                smokeBtn.textContent = "Smoke: OFF";
+                smokeBtn.classList.remove("active");
+            }
+        }
+        
+        smokeBtn.addEventListener('click', toggleSmoke);
 
         // --- VIRTUAL JOYSTICK LOGIC (TOUCH CONTROLS) ---
         document.addEventListener('touchstart', (e) => {
@@ -593,7 +649,6 @@
             currentTargetWord = newTarget;
             targetDisplay.textContent = currentTargetWord;
             
-            // Set the target UI text color to match the plane's color
             const targetPlaneObj = aiPlanes.find(p => p.word === currentTargetWord);
             if (targetPlaneObj) {
                 targetDisplay.style.color = targetPlaneObj.color;
@@ -614,6 +669,11 @@
             if (keys.hasOwnProperty(e.code)) keys[e.code] = true;
             else if (e.key === '-' || e.key === '_') keys.Minus = true;
             else if (e.key === '=' || e.key === '+') keys.Equal = true;
+            
+            if (e.code === 'Space' && startMenu.style.display === 'none') {
+                e.preventDefault(); 
+                toggleSmoke();
+            }
         });
 
         window.addEventListener('keyup', (e) => {
@@ -646,8 +706,6 @@
 
                 this.element = document.createElement('div');
                 this.element.className = 'ai-plane-container';
-                
-                // FIXED typo in path below! Removed errant parenthesis.
                 this.element.innerHTML = `
                     <div class="plane-label" style="border-color:${this.color}">${this.word}</div>
                     <div class="plane-sprite">
@@ -775,22 +833,43 @@
                 compassArrow.style.transform = `rotate(${angleToTarget}deg)`;
             }
 
+            // --- SMOKE & TRAILS ---
             frameCount++;
-            if (currentSpeed > 0 && frameCount % 6 === 0) { 
-                const dot = document.createElement('div');
-                dot.className = 'trail-dot';
-                const tailDistance = 60 * currentScale; 
-                dot.dataset.worldX = worldX - Math.cos(radians) * tailDistance;
-                dot.dataset.worldY = worldY - Math.sin(radians) * tailDistance;
-                document.body.appendChild(dot);
-                setTimeout(() => dot.remove(), 1500);
+            if (currentSpeed > 0) {
+                // Regular short trail 
+                if (frameCount % 6 === 0) { 
+                    const dot = document.createElement('div');
+                    dot.className = 'trail-dot';
+                    const tailDistance = 60 * currentScale; 
+                    dot.dataset.worldX = worldX - Math.cos(radians) * tailDistance;
+                    dot.dataset.worldY = worldY - Math.sin(radians) * tailDistance;
+                    document.body.appendChild(dot);
+                    setTimeout(() => dot.remove(), 1500);
+                }
+                
+                // Long-lasting smoke trail
+                if (isSmokeOn && frameCount % 2 === 0) {
+                    const sdot = document.createElement('div');
+                    sdot.className = 'smoke-dot';
+                    const tailDistance = 70 * currentScale; 
+                    sdot.dataset.worldX = worldX - Math.cos(radians) * tailDistance;
+                    sdot.dataset.worldY = worldY - Math.sin(radians) * tailDistance;
+                    document.body.appendChild(sdot);
+                    setTimeout(() => sdot.remove(), 10000); // CHANGED: Wait exactly 10 seconds to remove
+                }
             }
 
-            document.querySelectorAll('.trail-dot').forEach(dot => {
+            // Position updates for both trail types relative to camera
+            document.querySelectorAll('.trail-dot, .smoke-dot').forEach(dot => {
                 const screenX = parseFloat(dot.dataset.worldX) - worldX + screenCenterX;
                 const screenY = parseFloat(dot.dataset.worldY) - worldY + screenCenterY;
-                dot.style.left = `${screenX - 4}px`;
-                dot.style.top = `${screenY - 4}px`;
+                
+                // The smoke dots are wider (16px) than trail dots (8px), so we offset them differently to keep them centered
+                const isSmoke = dot.classList.contains('smoke-dot');
+                const offset = isSmoke ? 8 : 4;
+                
+                dot.style.left = `${screenX - offset}px`;
+                dot.style.top = `${screenY - offset}px`;
             });
 
             drawConfetti();
