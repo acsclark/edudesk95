@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Word Hunt Flight</title>
+    <title>Word & Math Flight</title>
     <style>
         :root {
             --world-map: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2000' height='2000'%3E%3Crect width='2000' height='2000' fill='%231976D2'/%3E%3Cpath d='M200 300 Q400 100 600 400 T300 800 Z' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20' stroke-linejoin='round'/%3E%3Cpath d='M1300 900 Q1700 700 1800 1100 T1200 1500 Z' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20' stroke-linejoin='round'/%3E%3Cpath d='M800 1600 Q1000 1300 1300 1800 T700 1950 Z' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20' stroke-linejoin='round'/%3E%3Ccircle cx='0' cy='1000' r='250' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20'/%3E%3Ccircle cx='2000' cy='1000' r='250' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20'/%3E%3Ccircle cx='1000' cy='0' r='180' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20'/%3E%3Ccircle cx='1000' cy='2000' r='180' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20'/%3E%3Cellipse cx='1600' cy='200' rx='200' ry='100' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20' transform='rotate(30 1600 200)'/%3E%3Cellipse cx='400' cy='1600' rx='120' ry='300' fill='%232E7D32' stroke='%23F4D03F' stroke-width='20' transform='rotate(-25 400 1600)'/%3E%3C/svg%3E");
@@ -62,7 +62,7 @@
         .menu-box .slider-container { margin-bottom: 20px; }
         .menu-box input[type=range] { width: 100%; }
         
-        #difficulty-select {
+        select {
             width: 100%;
             padding: 10px;
             border-radius: 8px;
@@ -135,6 +135,20 @@
             width: 30px;
             height: 200px;
             cursor: pointer;
+        }
+
+        /* Back to Menu Button */
+        #back-btn {
+            top: 20px;
+            left: 20px;
+            background: #D32F2F;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            display: none;
         }
 
         /* Smoke Button */
@@ -305,7 +319,7 @@
             padding: 6px 14px;
             border-radius: 8px;
             font-weight: 800;
-            font-size: 18px;
+            font-size: 20px;
             color: #1a1a1a;
             border: 2px solid #ccc;
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
@@ -332,7 +346,7 @@
             border-radius: 50%;
             pointer-events: none;
             z-index: 4; 
-            animation: smokeFade 10s forwards; /* CHANGED to 10 seconds */
+            animation: smokeFade 10s forwards; 
             will-change: transform, opacity;
         }
 
@@ -361,9 +375,20 @@
 
     <div id="start-menu">
         <div class="menu-box">
-            <h1>Word Hunt Flight</h1>
-            <p>Enter the names/words for the planes (separated by commas or new lines):</p>
-            <textarea id="word-input" rows="5">Apple, Banana, Cherry, Dog, Elephant, Falcon, Giraffe</textarea>
+            <h1>Flight Control</h1>
+            
+            <div class="slider-container">
+                <p style="margin: 0 0 5px 0;">Game Mode:</p>
+                <select id="mode-select">
+                    <option value="words">Word Hunt</option>
+                    <option value="math">Math Hunt (Multiplication)</option>
+                </select>
+            </div>
+
+            <div id="word-input-area" class="slider-container">
+                <p style="margin: 0 0 5px 0;">Enter Names/Words (comma separated):</p>
+                <textarea id="word-input" rows="4">Apple, Banana, Cherry, Dog, Elephant, Falcon, Giraffe</textarea>
+            </div>
             
             <div class="slider-container">
                 <p style="margin: 0 0 5px 0;">Difficulty:</p>
@@ -379,11 +404,13 @@
                 <input type="range" id="radius-input" min="1" max="5" step="0.5" value="3">
             </div>
 
-            <p style="font-size: 0.9rem; color: #555;"><i>Tip: You can press the Spacebar during the game to write messages in the sky!</i></p>
+            <p style="font-size: 0.85rem; color: #555;"><i>Tip: You can press Spacebar during the game to write messages in the sky!</i></p>
 
             <button id="start-btn">Start Game</button>
         </div>
     </div>
+
+    <button id="back-btn" class="ui-panel">Menu</button>
 
     <div id="target-ui" class="ui-panel">
         Find: <span id="target-word-display">WAITING</span>
@@ -430,8 +457,8 @@
         let minimapZoom = 0.08; 
 
         // Gameplay specific variables
-        let wordsList = [];
-        let currentTargetWord = "";
+        let globalTargets = []; // Stores { display: "Question", match: "Answer" }
+        let currentTargetObj = null;
         let captureRadiusPx = 100; 
         let aiSpeedMultiplier = 1.0; 
         let isSmokeOn = false;
@@ -451,17 +478,41 @@
         const smokeBtn = document.getElementById('smoke-btn');
         const minimap = document.getElementById('minimap-container');
         const minimapPlane = document.getElementById('minimap-plane');
+        
         const startMenu = document.getElementById('start-menu');
+        const modeSelect = document.getElementById('mode-select');
+        const wordInputArea = document.getElementById('word-input-area');
+        const wordInput = document.getElementById('word-input');
+        
         const targetUI = document.getElementById('target-ui');
         const targetDisplay = document.getElementById('target-word-display');
         const compassContainer = document.getElementById('compass-container');
         const compassArrow = document.getElementById('compass-arrow');
         const difficultySelect = document.getElementById('difficulty-select');
+        const backBtn = document.getElementById('back-btn');
         
         const joystickBase = document.getElementById('joystick-base');
         const joystickKnob = document.getElementById('joystick-knob');
         
         let currentSpeed = parseFloat(throttleSlider.value);
+
+        // --- UI TOGGLES ---
+        modeSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'math') {
+                wordInputArea.style.display = 'none';
+            } else {
+                wordInputArea.style.display = 'block';
+            }
+        });
+
+        // Toggle back to menu
+        backBtn.addEventListener('click', () => {
+            startMenu.style.display = 'flex';
+            targetUI.style.display = 'none';
+            compassContainer.style.display = 'none';
+            backBtn.style.display = 'none';
+            captureRing.style.display = 'none';
+        });
 
         // --- SMOKE TOGGLE LOGIC ---
         function toggleSmoke() {
@@ -474,17 +525,12 @@
                 smokeBtn.classList.remove("active");
             }
         }
-        
         smokeBtn.addEventListener('click', toggleSmoke);
 
         // --- VIRTUAL JOYSTICK LOGIC (TOUCH CONTROLS) ---
         document.addEventListener('touchstart', (e) => {
-            if (e.target.closest && (e.target.closest('.ui-panel') || e.target.closest('#start-menu') || e.target.closest('#minimap-container'))) {
-                return;
-            }
-
+            if (e.target.closest && (e.target.closest('.ui-panel') || e.target.closest('#start-menu') || e.target.closest('#minimap-container'))) return;
             e.preventDefault();
-
             if (isJoystickActive) return;
 
             const touch = e.changedTouches[0];
@@ -509,7 +555,6 @@
 
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
-                
                 if (touch.identifier === activeTouchId) {
                     e.preventDefault();
 
@@ -534,7 +579,6 @@
 
         function endJoystick(e) {
             if (!isJoystickActive) return;
-
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
                 if (touch.identifier === activeTouchId) {
@@ -604,12 +648,36 @@
         radiusInput.addEventListener('input', (e) => radiusVal.textContent = e.target.value);
 
         document.getElementById('start-btn').addEventListener('click', () => {
-            const rawText = document.getElementById('word-input').value;
-            wordsList = rawText.split(/[\n,]+/).map(w => w.trim()).filter(w => w.length > 0);
+            const mode = modeSelect.value;
+            globalTargets = [];
             
-            if (wordsList.length === 0) {
-                alert("Please enter at least one word!");
-                return;
+            if (mode === 'words') {
+                const rawText = wordInput.value;
+                let wordsList = rawText.split(/[\n,]+/).map(w => w.trim()).filter(w => w.length > 0);
+                if (wordsList.length === 0) {
+                    alert("Please enter at least one word!");
+                    return;
+                }
+                globalTargets = wordsList.map(w => ({ display: w, match: w }));
+                
+            } else if (mode === 'math') {
+                let allPairs = [];
+                for(let i = 2; i <= 12; i++) {
+                    for(let j = 2; j <= 12; j++) {
+                        allPairs.push({ display: `${i} x ${j}`, match: (i * j).toString() });
+                    }
+                }
+                
+                allPairs.sort(() => Math.random() - 0.5);
+                
+                let uniqueAnswers = new Set();
+                for (let pair of allPairs) {
+                    if (!uniqueAnswers.has(pair.match)) {
+                        uniqueAnswers.add(pair.match);
+                        globalTargets.push(pair);
+                    }
+                    if (globalTargets.length >= 15) break;
+                }
             }
 
             const diffValue = difficultySelect.value;
@@ -626,32 +694,33 @@
             aiPlanes.forEach(p => p.destroy());
             aiPlanes.length = 0;
 
-            wordsList.forEach(word => addAIPlane(word));
+            globalTargets.forEach(target => addAIPlane(target.match));
 
             startMenu.style.display = 'none';
             targetUI.style.display = 'flex';
             compassContainer.style.display = 'flex';
+            backBtn.style.display = 'block';
             pickNewTarget();
         });
 
         function pickNewTarget() {
-            if (wordsList.length === 0) return;
+            if (globalTargets.length === 0) return;
             
             let newTarget;
-            if (wordsList.length === 1) {
-                newTarget = wordsList[0];
+            if (globalTargets.length === 1) {
+                newTarget = globalTargets[0];
             } else {
                 do {
-                    newTarget = wordsList[Math.floor(Math.random() * wordsList.length)];
-                } while (newTarget === currentTargetWord);
+                    newTarget = globalTargets[Math.floor(Math.random() * globalTargets.length)];
+                } while (currentTargetObj && newTarget.display === currentTargetObj.display);
             }
             
-            currentTargetWord = newTarget;
-            targetDisplay.textContent = currentTargetWord;
+            currentTargetObj = newTarget;
+            targetDisplay.textContent = currentTargetObj.display;
             
-            const targetPlaneObj = aiPlanes.find(p => p.word === currentTargetWord);
-            if (targetPlaneObj) {
-                targetDisplay.style.color = targetPlaneObj.color;
+            const targetPlaneRef = aiPlanes.find(p => p.word === currentTargetObj.match);
+            if (targetPlaneRef) {
+                targetDisplay.style.color = targetPlaneRef.color;
             }
             
             targetDisplay.style.transform = "scale(1.3)";
@@ -689,7 +758,7 @@
 
         class AIPlane {
             constructor(word) {
-                this.word = word;
+                this.word = word; 
                 
                 const spawnOffset = 2500;
                 this.worldX = worldX + (Math.random() - 0.5) * spawnOffset * 2;
@@ -810,7 +879,7 @@
             aiPlanes.forEach(ai => {
                 ai.update(worldX, worldY, screenCenterX, screenCenterY, miniCenterX, miniCenterY);
                 
-                if (currentTargetWord && ai.word === currentTargetWord) {
+                if (currentTargetObj && ai.word === currentTargetObj.match) {
                     targetPlaneRef = ai; 
                     const distInWorld = Math.hypot(worldX - ai.worldX, worldY - ai.worldY);
                     const distOnScreen = distInWorld * currentScale;
@@ -821,7 +890,7 @@
                 }
             });
 
-            if (targetCaptured) {
+            if (targetCaptured && startMenu.style.display === 'none') {
                 triggerConfetti();
                 pickNewTarget();
             }
@@ -836,7 +905,6 @@
             // --- SMOKE & TRAILS ---
             frameCount++;
             if (currentSpeed > 0) {
-                // Regular short trail 
                 if (frameCount % 6 === 0) { 
                     const dot = document.createElement('div');
                     dot.className = 'trail-dot';
@@ -847,7 +915,6 @@
                     setTimeout(() => dot.remove(), 1500);
                 }
                 
-                // Long-lasting smoke trail
                 if (isSmokeOn && frameCount % 2 === 0) {
                     const sdot = document.createElement('div');
                     sdot.className = 'smoke-dot';
@@ -855,16 +922,14 @@
                     sdot.dataset.worldX = worldX - Math.cos(radians) * tailDistance;
                     sdot.dataset.worldY = worldY - Math.sin(radians) * tailDistance;
                     document.body.appendChild(sdot);
-                    setTimeout(() => sdot.remove(), 10000); // CHANGED: Wait exactly 10 seconds to remove
+                    setTimeout(() => sdot.remove(), 10000); 
                 }
             }
 
-            // Position updates for both trail types relative to camera
             document.querySelectorAll('.trail-dot, .smoke-dot').forEach(dot => {
                 const screenX = parseFloat(dot.dataset.worldX) - worldX + screenCenterX;
                 const screenY = parseFloat(dot.dataset.worldY) - worldY + screenCenterY;
                 
-                // The smoke dots are wider (16px) than trail dots (8px), so we offset them differently to keep them centered
                 const isSmoke = dot.classList.contains('smoke-dot');
                 const offset = isSmoke ? 8 : 4;
                 
